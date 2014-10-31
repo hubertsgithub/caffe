@@ -275,8 +275,10 @@ class TwoImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
   shared_ptr<Caffe::RNG> prefetch_rng_;
   virtual void ShuffleImages();
   virtual void InternalThreadEntry();
-  virtual void LoadImageToSlot(bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color);
+  virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color);
 
+  Blob<Dtype> transformed_label_;
   vector<std::pair<std::string, std::string> > lines_;
   int lines_id_;
 };

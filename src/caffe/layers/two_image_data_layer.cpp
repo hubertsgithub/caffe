@@ -19,8 +19,9 @@ TwoImageDataLayer<Dtype>::~TwoImageDataLayer<Dtype>() {
 }
 
 template <typename Dtype>
-void TwoImageDataLayer<Dtype>::LoadImageToSlot(bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color) {
-  std::shared_ptr<Blob<Dtype>> blob;
+void TwoImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color) {
+  Blob<Dtype>* blob;
   if (isTop) {
   	  blob = top[index];
   } else {
@@ -89,10 +90,10 @@ void TwoImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom
     lines_id_ = skip;
   }
   std::string imgPath = root_folder + lines_[lines_id_].first;
-  this->LoadImageToSlot(true, 0, imgPath, new_height, new_width, is_color);
+  this->LoadImageToSlot(bottom, top, true, 0, imgPath, new_height, new_width, is_color);
   // label image
   imgPath = root_folder + lines_[lines_id_].second;
-  this->LoadImageToSlot(true, 1, imgPath, new_height, new_width, is_color);
+  this->LoadImageToSlot(bottom, top, true, 1, imgPath, new_height, new_width, is_color);
 }
 
 template <typename Dtype>
@@ -132,6 +133,12 @@ void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
     if (!cv_img.data) {
       continue;
     }
+    cv::Mat cv_img_label = ReadImageToCVMat(root_folder + lines_[lines_id_].second,
+                                    new_height, new_width, is_color);
+    if (!cv_img_label.data) {
+      continue;
+    }
+
     read_time += timer.MicroSeconds();
     timer.Start();
     // Apply transformations (mirror, crop...) to the image
@@ -140,7 +147,11 @@ void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
     this->data_transformer_.Transform(cv_img, &(this->transformed_data_));
     trans_time += timer.MicroSeconds();
 
-    top_label[item_id] = lines_[lines_id_].second;
+    offset = this->prefetch_label_.offset(item_id);
+    this->transformed_label_.set_cpu_data(top_label + offset);
+    this->data_transformer_.Transform(cv_img_label, &(this->transformed_label_));
+    trans_time += timer.MicroSeconds();
+
     // go to the next iter
     lines_id_++;
     if (lines_id_ >= lines_size) {
