@@ -251,6 +251,39 @@ class ImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
 };
 
 /**
+ * @brief Provides data to the Net from image files. Uses another image file as label.
+ * It is useful for intrinsic images where we compute the loss using another image.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class TwoImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit TwoImageDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~TwoImageDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_TWO_IMAGE_DATA;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
+
+ protected:
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleImages();
+  virtual void InternalThreadEntry();
+  virtual void LoadImageToSlot(bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color);
+
+  vector<std::pair<std::string, std::string> > lines_;
+  int lines_id_;
+};
+
+
+
+/**
  * @brief Provides data to the Net from memory.
  *
  * TODO(dox): thorough documentation for Forward and proto params.
