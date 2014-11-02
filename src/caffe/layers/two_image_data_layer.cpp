@@ -14,12 +14,12 @@
 namespace caffe {
 
 template <typename Dtype>
-TwoImageDataLayer<Dtype>::~TwoImageDataLayer<Dtype>() {
+MultiImageDataLayer<Dtype>::~MultiImageDataLayer<Dtype>() {
   this->JoinPrefetchThread();
 }
 
 template <typename Dtype>
-void TwoImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
+void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color) {
   Blob<Dtype>* blob;
   if (isTop) {
@@ -50,12 +50,13 @@ void TwoImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& botto
       << blob->width();
 }
 template <typename Dtype>
-void TwoImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   const int new_height = this->layer_param_.image_data_param().new_height();
   const int new_width  = this->layer_param_.image_data_param().new_width();
   const bool is_color  = this->layer_param_.image_data_param().is_color();
   string root_folder = this->layer_param_.image_data_param().root_folder();
+  // The BasePrefetchingMultiDataLayer took care of allocating the right number of label blobs
 
   CHECK((new_height == 0 && new_width == 0) ||
       (new_height > 0 && new_width > 0)) << "Current implementation requires "
@@ -66,9 +67,15 @@ void TwoImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom
   std::ifstream infile(source.c_str());
   // The file and the label are both images
   string filename;
-  string label;
-  while (infile >> filename >> label) {
-    lines_.push_back(std::make_pair(filename, label));
+  vector<string> labels;
+  while (true) {
+  	infile >> filename;
+  	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+  		string label;
+  		infile >> label;
+  		labels.push_back(label);
+  	}
+    lines_.push_back(std::make_pair(filename, labels));
   }
 
   if (this->layer_param_.image_data_param().shuffle()) {
@@ -91,13 +98,20 @@ void TwoImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom
   }
   std::string imgPath = root_folder + lines_[lines_id_].first;
   this->LoadImageToSlot(bottom, top, true, 0, imgPath, new_height, new_width, is_color);
-  // label image
-  imgPath = root_folder + lines_[lines_id_].second;
-  this->LoadImageToSlot(bottom, top, true, 1, imgPath, new_height, new_width, is_color);
+  // label images
+  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+	  imgPath = root_folder + lines_[lines_id_].second[i];
+	  this->LoadImageToSlot(bottom, top, true, 1+i, imgPath, new_height, new_width, is_color);
+  }
+  // Set up transformed label array, it should have the same size as prefetch_labels
+  this->transformed_labels_.resize(this->prefetch_labels_.size());
+  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+  	  this->transformed_labels_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+  }
 }
 
 template <typename Dtype>
-void TwoImageDataLayer<Dtype>::ShuffleImages() {
+void MultiImageDataLayer<Dtype>::ShuffleImages() {
   caffe::rng_t* prefetch_rng =
       static_cast<caffe::rng_t*>(prefetch_rng_->generator());
   shuffle(lines_.begin(), lines_.end(), prefetch_rng);
@@ -105,7 +119,7 @@ void TwoImageDataLayer<Dtype>::ShuffleImages() {
 
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
-void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
+void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
   CPUTimer batch_timer;
   batch_timer.Start();
   double read_time = 0;
@@ -113,8 +127,13 @@ void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
   CPUTimer timer;
   CHECK(this->prefetch_data_.count());
   CHECK(this->transformed_data_.count());
+
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
-  Dtype* top_label = this->prefetch_label_.mutable_cpu_data();
+  vector<Dtype*> top_labels;
+  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+  	  top_labels.push_back(this->prefetch_labels_[i]->mutable_cpu_data());
+  }
+
   ImageDataParameter image_data_param = this->layer_param_.image_data_param();
   const int batch_size = image_data_param.batch_size();
   const int new_height = image_data_param.new_height();
@@ -128,16 +147,24 @@ void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
     // get a blob
     timer.Start();
     CHECK_GT(lines_size, lines_id_);
-    cv::Mat cv_img = ReadImageToCVMat(root_folder + lines_[lines_id_].first,
+	string img_path = root_folder + lines_[lines_id_].first;
+    cv::Mat cv_img = ReadImageToCVMat(img_path,
                                     new_height, new_width, is_color);
     if (!cv_img.data) {
+      DLOG(ERROR) << "Couldn't load image " << img_path;
       continue;
     }
-    cv::Mat cv_img_label = ReadImageToCVMat(root_folder + lines_[lines_id_].second,
+    vector<cv::Mat> cv_img_labels;
+    for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+		string img_path = root_folder + lines_[lines_id_].second[i];
+		cv::Mat cv_img_label = ReadImageToCVMat(img_path,
                                     new_height, new_width, is_color);
-    if (!cv_img_label.data) {
-      continue;
-    }
+		if (!cv_img_label.data) {
+		  DLOG(ERROR) << "Couldn't load image " << img_path;
+		  continue;
+		}
+    	cv_img_labels.push_back(cv_img_label);
+	}
 
     read_time += timer.MicroSeconds();
     timer.Start();
@@ -145,11 +172,12 @@ void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
     int offset = this->prefetch_data_.offset(item_id);
     this->transformed_data_.set_cpu_data(top_data + offset);
     this->data_transformer_.Transform(cv_img, &(this->transformed_data_));
-    trans_time += timer.MicroSeconds();
 
-    offset = this->prefetch_label_.offset(item_id);
-    this->transformed_label_.set_cpu_data(top_label + offset);
-    this->data_transformer_.Transform(cv_img_label, &(this->transformed_label_));
+    for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+		offset = this->prefetch_labels_[i]->offset(item_id);
+		this->transformed_labels_[i]->set_cpu_data(top_labels[i] + offset);
+		this->data_transformer_.Transform(cv_img_labels[i], &(*this->transformed_labels_[i]));
+	}
     trans_time += timer.MicroSeconds();
 
     // go to the next iter
@@ -169,6 +197,6 @@ void TwoImageDataLayer<Dtype>::InternalThreadEntry() {
   DLOG(INFO) << "Transform time: " << trans_time / 1000 << " ms.";
 }
 
-INSTANTIATE_CLASS(TwoImageDataLayer);
-REGISTER_LAYER_CLASS(TWO_IMAGE_DATA, TwoImageDataLayer);
+INSTANTIATE_CLASS(MultiImageDataLayer);
+REGISTER_LAYER_CLASS(MULTI_IMAGE_DATA, MultiImageDataLayer);
 }  // namespace caffe

@@ -244,6 +244,7 @@ message LayerParameter {
     DROPOUT = 6;
     DUMMY_DATA = 32;
     EUCLIDEAN_LOSS = 7;
+    EUCLIDEAN_MASKED_LOSS = 234238239;
     ELTWISE = 25;
     EXP = 38;
     FLATTEN = 8;
@@ -252,7 +253,7 @@ message LayerParameter {
     HINGE_LOSS = 28;
     IM2COL = 11;
     IMAGE_DATA = 12;
-    TWO_IMAGE_DATA = 122309427;
+    MULTI_IMAGE_DATA = 122309427;
     INFOGAIN_LOSS = 13;
     INNER_PRODUCT = 14;
     LRN = 15;
@@ -313,6 +314,7 @@ message LayerParameter {
   optional HDF5DataParameter hdf5_data_param = 13;
   optional HDF5OutputParameter hdf5_output_param = 14;
   optional HingeLossParameter hinge_loss_param = 29;
+  optional MultiPrefetchDataParameter multi_prefetch_data_param = 98342374;
   optional ImageDataParameter image_data_param = 15;
   optional InfogainLossParameter infogain_loss_param = 16;
   optional InnerProductParameter inner_product_param = 17;
@@ -514,6 +516,11 @@ message HingeLossParameter {
   }
   // Specify the Norm to use L1 or L2
   optional Norm norm = 1 [default = L1];
+}
+
+//Message that stores parameters used by BasePrefetchingMultiDataLayer
+message MultiPrefetchDataParameter {
+  optional uint32 label_num = 1 [default = 1];
 }
 
 // Message that stores parameters used by ImageDataLayer
