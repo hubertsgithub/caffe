@@ -28,6 +28,20 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
   	  blob = bottom[index];
   }
 
+  Blob<Dtype>* prefetch_d;
+  Blob<Dtype>* trafo_d;
+  if (index == 0) {
+  	  prefetch_d = &this->prefetch_data_;
+  	  trafo_d = &this->transformed_data_;
+  } else {
+  	  prefetch_d = this->prefetch_labels_[index-1].get();
+  	  trafo_d = this->transformed_labels_[index-1].get();
+  }
+
+  LOG(INFO) << "blob: " << blob;
+  LOG(INFO) << "prefetch_d: " << prefetch_d;
+  LOG(INFO) << "trafo_d: " << trafo_d;
+
   // Read an image, and use it to initialize the top blob.
   cv::Mat cv_img = ReadImageToCVMat(imgPath, new_height, new_width, is_color);
   const int channels = cv_img.channels();
@@ -38,17 +52,23 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
   const int batch_size = this->layer_param_.image_data_param().batch_size();
   if (crop_size > 0) {
     blob->Reshape(batch_size, channels, crop_size, crop_size);
-    this->prefetch_data_.Reshape(batch_size, channels, crop_size, crop_size);
-    this->transformed_data_.Reshape(1, channels, crop_size, crop_size);
+    prefetch_d->Reshape(batch_size, channels, crop_size, crop_size);
+    trafo_d->Reshape(1, channels, crop_size, crop_size);
   } else {
     blob->Reshape(batch_size, channels, height, width);
-    this->prefetch_data_.Reshape(batch_size, channels, height, width);
-    this->transformed_data_.Reshape(1, channels, height, width);
+    prefetch_d->Reshape(batch_size, channels, height, width);
+    trafo_d->Reshape(1, channels, height, width);
   }
   LOG(INFO) << "output data size: " << blob->num() << ","
       << blob->channels() << "," << blob->height() << ","
       << blob->width();
 }
+
+template <typename Dtype>
+int MultiImageDataLayer<Dtype>::ExactNumTopBlobs() const {
+	return this->layer_param_.multi_prefetch_data_param().label_num()+1;
+}
+
 template <typename Dtype>
 void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
@@ -68,12 +88,16 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   // The file and the label are both images
   string filename;
   vector<string> labels;
-  while (true) {
-  	infile >> filename;
+  string line;
+  while (getline(infile, line)) {
+  	stringstream ss(line);
+  	ss >> filename;
+  	LOG(INFO) << "Image data: " << filename;
   	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
   		string label;
-  		infile >> label;
+  		ss >> label;
   		labels.push_back(label);
+  		LOG(INFO) << "Image label: " << label;
   	}
     lines_.push_back(std::make_pair(filename, labels));
   }
@@ -96,17 +120,18 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
     CHECK_GT(lines_.size(), skip) << "Not enough points to skip";
     lines_id_ = skip;
   }
+  // Set up transformed label array, it should have the same size as prefetch_labels
+  this->transformed_labels_.resize(this->prefetch_labels_.size());
+  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+  	  this->transformed_labels_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+  }
+
   std::string imgPath = root_folder + lines_[lines_id_].first;
   this->LoadImageToSlot(bottom, top, true, 0, imgPath, new_height, new_width, is_color);
   // label images
   for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
 	  imgPath = root_folder + lines_[lines_id_].second[i];
 	  this->LoadImageToSlot(bottom, top, true, 1+i, imgPath, new_height, new_width, is_color);
-  }
-  // Set up transformed label array, it should have the same size as prefetch_labels
-  this->transformed_labels_.resize(this->prefetch_labels_.size());
-  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
-  	  this->transformed_labels_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
   }
 }
 

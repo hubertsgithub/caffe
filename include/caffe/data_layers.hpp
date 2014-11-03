@@ -298,8 +298,7 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
     return LayerParameter_LayerType_MULTI_IMAGE_DATA;
   }
   virtual inline int ExactNumBottomBlobs() const { return 0; }
-  virtual inline int ExactNumTopBlobs() const { return 2; }
-
+  virtual inline int ExactNumTopBlobs() const;
  protected:
   shared_ptr<Caffe::RNG> prefetch_rng_;
   virtual void ShuffleImages();

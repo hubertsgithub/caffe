@@ -89,18 +89,22 @@ void BasePrefetchingDataLayer<Dtype>::Forward_cpu(
 template <typename Dtype>
 void BasePrefetchingMultiDataLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-  BaseDataLayer<Dtype>::LayerSetUp(bottom, top);
+  // Create the desired number of blobs for prefetch labels
   const int label_num = this->layer_param_.multi_prefetch_data_param().label_num();
+  this->prefetch_labels_.resize(label_num);
+  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+	this->prefetch_labels_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+  }
+
+  BaseDataLayer<Dtype>::LayerSetUp(bottom, top);
   // Now, start the prefetch thread. Before calling prefetch, we make two
   // cpu_data calls so that the prefetch thread does not accidentally make
   // simultaneous cudaMalloc calls when the main thread is running. In some
   // GPUs this seems to cause failures if we do not so.
   this->prefetch_data_.mutable_cpu_data();
-  this->prefetch_labels_.resize(label_num);
 
   if (this->output_labels_) {
   	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
-  		this->prefetch_labels_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
 		this->prefetch_labels_[i]->mutable_cpu_data();
 	}
   }
