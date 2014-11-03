@@ -18,9 +18,6 @@ void EuclideanMaskedLossLayer<Dtype>::Reshape(
   CHECK_EQ(bottom[1]->height(), bottom[2]->height());
   CHECK_EQ(bottom[1]->width(), bottom[2]->width());
   CHECK_EQ(bottom[1]->height(), bottom[2]->height());
-  CHECK_EQ(bottom[2]->width(), bottom[0]->width());
-  CHECK_EQ(bottom[2]->height(), bottom[0]->height());
-  CHECK_EQ(bottom[2]->width(), bottom[0]->width());
   diff_.Reshape(bottom[0]->num(), bottom[0]->channels(),
       bottom[0]->height(), bottom[0]->width());
 }
@@ -28,13 +25,18 @@ void EuclideanMaskedLossLayer<Dtype>::Reshape(
 template <typename Dtype>
 void EuclideanMaskedLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-  // TODO: Implement masked caffe_sub!!!!!
   int count = bottom[0]->count();
   caffe_sub(
       count,
       bottom[0]->cpu_data(),
       bottom[1]->cpu_data(),
       diff_.mutable_cpu_data());
+  // The 3rd bottom is the mask
+  for (int i = 0; i < count; ++i) {
+  	  if (bottom[2]->cpu_data()[i] <  0.01) {
+		  diff_.mutable_cpu_data()[i] = 0;
+	  }
+  }
   Dtype dot = caffe_cpu_dot(count, diff_.cpu_data(), diff_.cpu_data());
   Dtype loss = dot / bottom[0]->num() / Dtype(2);
   top[0]->mutable_cpu_data()[0] = loss;
@@ -53,6 +55,12 @@ void EuclideanMaskedLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& t
           diff_.cpu_data(),                   // a
           Dtype(0),                           // beta
           bottom[i]->mutable_cpu_diff());  // b
+      // TODO: I hope this is right...
+	  for (int j = 0; j < bottom[i]->count(); ++j) {
+		  if (bottom[2]->cpu_data()[j] <  0.01) {
+			  bottom[i]->mutable_cpu_diff()[j] = 0;
+		  }
+	  }
     }
   }
 }
