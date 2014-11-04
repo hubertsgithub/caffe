@@ -32,11 +32,12 @@ void EuclideanMaskedLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
       bottom[1]->cpu_data(),
       diff_.mutable_cpu_data());
   // The 3rd bottom is the mask
-  for (int i = 0; i < count; ++i) {
-  	  if (bottom[2]->cpu_data()[i] <  0.01) {
-		  diff_.mutable_cpu_data()[i] = 0;
-	  }
-  }
+  // If the mask is 0, 1, the 0 elements will be masked out
+  caffe_mul(count,
+  		  diff_.cpu_data(),
+  		  bottom[2]->cpu_data(),
+  		  diff_.mutable_cpu_data());
+
   Dtype dot = caffe_cpu_dot(count, diff_.cpu_data(), diff_.cpu_data());
   Dtype loss = dot / bottom[0]->num() / Dtype(2);
   top[0]->mutable_cpu_data()[0] = loss;
@@ -45,22 +46,24 @@ void EuclideanMaskedLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
 template <typename Dtype>
 void EuclideanMaskedLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+  int count = bottom[0]->count();
+  // Do not compute back propagation for the mask layer!
   for (int i = 0; i < 2; ++i) {
     if (propagate_down[i]) {
       const Dtype sign = (i == 0) ? 1 : -1;
       const Dtype alpha = sign * top[0]->cpu_diff()[0] / bottom[i]->num();
       caffe_cpu_axpby(
-          bottom[i]->count(),              // count
+          count,              // count
           alpha,                              // alpha
           diff_.cpu_data(),                   // a
           Dtype(0),                           // beta
           bottom[i]->mutable_cpu_diff());  // b
-      // TODO: I hope this is right...
-	  for (int j = 0; j < bottom[i]->count(); ++j) {
-		  if (bottom[2]->cpu_data()[j] <  0.01) {
-			  bottom[i]->mutable_cpu_diff()[j] = 0;
-		  }
-	  }
+	  // The 3rd bottom is the mask
+	  // If the mask is 0, 1, the 0 elements will be masked out
+	  caffe_mul(count,
+			  bottom[i]->cpu_diff(),
+			  bottom[2]->cpu_data(),
+			  bottom[i]->mutable_cpu_diff());
     }
   }
 }
