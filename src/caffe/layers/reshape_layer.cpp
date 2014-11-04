@@ -11,10 +11,10 @@ void ReshapeLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
 
     ReshapeParameter reshape_param = this->layer_param_.reshape_param();
-    int num = static_cast<Dtype>(reshape_param.num());
-    int channels = static_cast<Dtype>(reshape_param.channels());
-    int height = static_cast<Dtype>(reshape_param.height());
-    int width = static_cast<Dtype>(reshape_param.width());
+    int num = reshape_param.num();
+    int channels = reshape_param.channels();
+    int height = reshape_param.height();
+    int width = reshape_param.width();
 
     if (num == 0)
         num = bottom[0]->num();
