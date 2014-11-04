@@ -14,6 +14,12 @@
 namespace caffe {
 
 template <typename Dtype>
+MultiImageDataLayer<Dtype>::MultiImageDataLayer(const LayerParameter& param)
+      : BasePrefetchingMultiDataLayer<Dtype>(param),
+      	label_transform_param_(param.label_transform_param()),
+      label_transformer_(label_transform_param_) {}
+
+template <typename Dtype>
 MultiImageDataLayer<Dtype>::~MultiImageDataLayer<Dtype>() {
   this->JoinPrefetchThread();
 }
@@ -28,14 +34,18 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
   	  blob = bottom[index];
   }
 
+  // NOTE: The crop size should be the same for the labels and the data!
+  int crop_size;
   Blob<Dtype>* prefetch_d;
   Blob<Dtype>* trafo_d;
   if (index == 0) {
   	  prefetch_d = &this->prefetch_data_;
   	  trafo_d = &this->transformed_data_;
+ 	  crop_size = this->layer_param_.transform_param().crop_size();
   } else {
   	  prefetch_d = this->prefetch_labels_[index-1].get();
   	  trafo_d = this->transformed_labels_[index-1].get();
+ 	  crop_size = this->layer_param_.label_transform_param().crop_size();
   }
 
   LOG(INFO) << "blob: " << blob;
@@ -48,7 +58,6 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
   const int height = cv_img.rows;
   const int width = cv_img.cols;
   // image
-  const int crop_size = this->layer_param_.transform_param().crop_size();
   const int batch_size = this->layer_param_.image_data_param().batch_size();
   if (crop_size > 0) {
     blob->Reshape(batch_size, channels, crop_size, crop_size);
@@ -201,7 +210,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
     for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
 		offset = this->prefetch_labels_[i]->offset(item_id);
 		this->transformed_labels_[i]->set_cpu_data(top_labels[i] + offset);
-		this->data_transformer_.Transform(cv_img_labels[i], &(*this->transformed_labels_[i]));
+		this->label_transformer_.Transform(cv_img_labels[i], &(*this->transformed_labels_[i]));
 	}
     trans_time += timer.MicroSeconds();
 

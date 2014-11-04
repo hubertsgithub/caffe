@@ -288,8 +288,7 @@ class ImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
 template <typename Dtype>
 class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
  public:
-  explicit MultiImageDataLayer(const LayerParameter& param)
-      : BasePrefetchingMultiDataLayer<Dtype>(param) {}
+  explicit MultiImageDataLayer(const LayerParameter& param);
   virtual ~MultiImageDataLayer();
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
@@ -306,6 +305,8 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
   virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color);
 
+  TransformationParameter label_transform_param_;
+  DataTransformer<Dtype> label_transformer_;
   vector<shared_ptr<Blob<Dtype> > > transformed_labels_;
   vector<std::pair<std::string, vector<std::string> > > lines_;
   int lines_id_;
