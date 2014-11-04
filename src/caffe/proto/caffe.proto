@@ -248,6 +248,7 @@ message LayerParameter {
     ELTWISE = 25;
     EXP = 38;
     FLATTEN = 8;
+    RESHAPE = 23481;
     HDF5_DATA = 9;
     HDF5_OUTPUT = 10;
     HINGE_LOSS = 28;
@@ -330,6 +331,7 @@ message LayerParameter {
   optional TanHParameter tanh_param = 37;
   optional ThresholdParameter threshold_param = 25;
   optional WindowDataParameter window_data_param = 20;
+  optional ReshapeParameter reshape_param = 2091;
 
   // Parameters for data pre-processing.
   optional TransformationParameter transform_param = 36;
@@ -344,6 +346,15 @@ message LayerParameter {
   // This should never be used by any code except to upgrade to the new
   // LayerParameter specification.
   optional V0LayerParameter layer = 1;
+}
+
+// Message that stores parameters used by ReshapeLayer
+message ReshapeParameter {
+  // Using 0 copies the shape from the prev layer
+  optional uint32 num = 1 [default = 0];
+  optional uint32 channels = 2 [default = 0];
+  optional uint32 height = 3 [default = 0];
+  optional uint32 width = 4 [default = 0];
 }
 
 // Message that stores parameters used to apply transformation

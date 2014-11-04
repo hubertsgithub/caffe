@@ -245,6 +245,44 @@ class FlattenLayer : public Layer<Dtype> {
 };
 
 /**
+ * @brief Reshapes the input Blob into an arbitrary shape.
+ *
+ * Note: because this layer does not change the input values -- merely the
+ * dimensions -- it can simply copy the input. The copy happens "virtually"
+ * (thus taking effectively 0 real time) by setting, in Forward, the data
+ * pointer of the top Blob to that of the bottom Blob (see Blob::ShareData),
+ * and in Backward, the diff pointer of the bottom Blob to that of the top Blob
+ * (see Blob::ShareDiff).
+ */
+template <typename Dtype>
+class ReshapeLayer : public Layer<Dtype> {
+ public:
+  explicit ReshapeLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_RESHAPE;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+};
+
+/**
  * @brief Also known as a "fully-connected" layer, computes an inner product
  *        with a set of learned weights, and (optionally) adds biases.
  *
