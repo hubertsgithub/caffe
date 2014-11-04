@@ -1,9 +1,25 @@
 name: "IntrinsicCNN"
-input: "data"
-input_dim: 1
-input_dim: 3
-input_dim: 451
-input_dim: 451
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  top: "mask"
+  image_data_param {
+    source: "examples/_temp/file_list.txt"
+    batch_size: 50
+    new_height: 256
+    new_width: 256
+  }
+  transform_param {
+    crop_size: 227
+    mean_file: "data/ilsvrc12/imagenet_mean.binaryproto"
+    mirror: false
+  }
+  label_transform_param {
+    crop_size: 227
+  }
+}
 layers {
   name: "conv1"
   type: CONVOLUTION
@@ -198,18 +214,21 @@ layers {
   }
 }
 layers {
-  name: "fc8-conv"
-  type: CONVOLUTION
+  name: "reshape"
+  type: RESHAPE
   bottom: "fc7-conv"
-  top: "fc8-conv"
-  convolution_param {
-    num_output: 1000
-    kernel_size: 1
+  top: "reshape"
+  reshape_param {
+    channels: 1
+    height: 64
+    width: 64
   }
 }
 layers {
-  name: "prob"
-  type: SOFTMAX
-  bottom: "fc8-conv"
-  top: "prob"
+  name: "loss"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "reshape"
+  bottom: "label"
+  bottom: "mask"
+  top: "loss"
 }
