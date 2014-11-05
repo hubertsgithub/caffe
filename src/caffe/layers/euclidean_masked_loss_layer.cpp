@@ -12,12 +12,14 @@ void EuclideanMaskedLossLayer<Dtype>::Reshape(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
   // 0: result from CNN, 1: label to compare with, 2: mask
+  CHECK_EQ(bottom[0]->height(), bottom[1]->height());
+  CHECK_EQ(bottom[0]->width(), bottom[1]->width());
   CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
-  CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
-  CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
+
   CHECK_EQ(bottom[1]->height(), bottom[2]->height());
   CHECK_EQ(bottom[1]->width(), bottom[2]->width());
-  CHECK_EQ(bottom[1]->height(), bottom[2]->height());
+  CHECK_EQ(bottom[1]->channels(), bottom[2]->channels());
+
   diff_.Reshape(bottom[0]->num(), bottom[0]->channels(),
       bottom[0]->height(), bottom[0]->width());
 }

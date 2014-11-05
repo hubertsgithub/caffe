@@ -5,14 +5,17 @@ layers {
   top: "data"
   top: "label"
   top: "mask"
-  num_label: 2
+  multi_prefetch_data_param {
+	  label_num: 2
+  }
   image_data_param {
-    source: "../../data/mitintrinsic/filtereddata/train.txt"
+    source: "data/mitintrinsic/filtereddata/train.txt"
     batch_size: 1
     new_height: 256
     new_width: 256
     new_label_height: 64
     new_label_width: 64
+    label_is_color: false
   }
   transform_param {
     crop_size: 227

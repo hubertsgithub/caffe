@@ -1,0 +1,35 @@
+name: "IntrinsicCNN"
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  top: "mask"
+  multi_prefetch_data_param {
+	  label_num: 2
+  }
+  image_data_param {
+    source: "data/mitintrinsic/filtereddata/train.txt"
+    batch_size: 1
+    new_height: 64
+    new_width: 64
+    is_color: false
+    new_label_height: 64
+    new_label_width: 64
+    label_is_color: false
+  }
+  transform_param {
+    crop_size: 64
+    mirror: false
+  }
+  label_transform_param {
+  }
+}
+layers {
+  name: "loss"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "data"
+  bottom: "label"
+  bottom: "mask"
+  top: "loss"
+}

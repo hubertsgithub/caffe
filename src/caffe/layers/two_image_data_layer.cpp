@@ -75,7 +75,9 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
 
 template <typename Dtype>
 int MultiImageDataLayer<Dtype>::ExactNumTopBlobs() const {
-	return this->layer_param_.multi_prefetch_data_param().label_num()+1;
+	int num = this->layer_param_.multi_prefetch_data_param().label_num()+1;
+	LOG(INFO) << "Number of top blobs: " << num;
+	return num;
 }
 
 template <typename Dtype>
@@ -83,13 +85,19 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
       const vector<Blob<Dtype>*>& top) {
   const int new_height = this->layer_param_.image_data_param().new_height();
   const int new_width  = this->layer_param_.image_data_param().new_width();
+  const int new_label_height = this->layer_param_.image_data_param().new_label_height();
+  const int new_label_width = this->layer_param_.image_data_param().new_label_width();
   const bool is_color  = this->layer_param_.image_data_param().is_color();
+  const bool label_is_color  = this->layer_param_.image_data_param().label_is_color();
   string root_folder = this->layer_param_.image_data_param().root_folder();
   // The BasePrefetchingMultiDataLayer took care of allocating the right number of label blobs
 
   CHECK((new_height == 0 && new_width == 0) ||
       (new_height > 0 && new_width > 0)) << "Current implementation requires "
       "new_height and new_width to be set at the same time.";
+  CHECK((new_label_height == 0 && new_label_width == 0) ||
+      (new_label_height > 0 && new_label_width > 0)) << "Current implementation requires "
+      "new_label_height and new_label_width to be set at the same time.";
   // Read the file with filenames and labels
   const string& source = this->layer_param_.image_data_param().source();
   LOG(INFO) << "Opening file " << source;
@@ -140,7 +148,7 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   // label images
   for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
 	  imgPath = root_folder + lines_[lines_id_].second[i];
-	  this->LoadImageToSlot(bottom, top, true, 1+i, imgPath, new_height, new_width, is_color);
+	  this->LoadImageToSlot(bottom, top, true, 1+i, imgPath, new_label_height, new_label_width, label_is_color);
   }
 }
 
@@ -172,7 +180,10 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
   const int batch_size = image_data_param.batch_size();
   const int new_height = image_data_param.new_height();
   const int new_width = image_data_param.new_width();
+  const int new_label_height = image_data_param.new_label_height();
+  const int new_label_width = image_data_param.new_label_width();
   const bool is_color = image_data_param.is_color();
+  const bool label_is_color  = image_data_param.label_is_color();
   string root_folder = image_data_param.root_folder();
 
   // datum scales
@@ -192,7 +203,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
     for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
 		string img_path = root_folder + lines_[lines_id_].second[i];
 		cv::Mat cv_img_label = ReadImageToCVMat(img_path,
-                                    new_height, new_width, is_color);
+                                    new_label_height, new_label_width, label_is_color);
 		if (!cv_img_label.data) {
 		  DLOG(ERROR) << "Couldn't load image " << img_path;
 		  continue;
