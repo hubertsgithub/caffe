@@ -145,6 +145,23 @@ inline cv::Mat ReadImageToCVMat(const string& filename) {
   return ReadImageToCVMat(filename, 0, 0, true);
 }
 
+void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const int height, const int width, const bool is_color);
+
+inline void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const int height, const int width) {
+  WriteImageFromCVMat(filename, cv_img, height, width, true);
+}
+
+inline void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const bool is_color) {
+  WriteImageFromCVMat(filename, cv_img, 0, 0, is_color);
+}
+
+inline void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img) {
+  WriteImageFromCVMat(filename, cv_img, 0, 0, true);
+}
+
 cv::Mat DecodeDatumToCVMat(const Datum& datum,
     const int height, const int width, const bool is_color);
 

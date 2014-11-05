@@ -251,6 +251,7 @@ message LayerParameter {
     RESHAPE = 23481;
     HDF5_DATA = 9;
     HDF5_OUTPUT = 10;
+    IMAGE_OUTPUT = 82624012;
     HINGE_LOSS = 28;
     IM2COL = 11;
     IMAGE_DATA = 12;
@@ -314,6 +315,7 @@ message LayerParameter {
   optional ExpParameter exp_param = 41;
   optional HDF5DataParameter hdf5_data_param = 13;
   optional HDF5OutputParameter hdf5_output_param = 14;
+  optional ImageOutputParameter image_output_param = 78239872;
   optional HingeLossParameter hinge_loss_param = 29;
   optional MultiPrefetchDataParameter multi_prefetch_data_param = 98342374;
   optional ImageDataParameter image_data_param = 15;
@@ -518,6 +520,11 @@ message HDF5DataParameter {
 
 // Message that stores parameters used by HDF5OutputLayer
 message HDF5OutputParameter {
+  optional string file_name = 1;
+}
+
+// Message that stores parameters used by ImageOutputLayer
+message ImageOutputParameter {
   optional string file_name = 1;
 }
 
@@ -841,4 +848,5 @@ message V0LayerParameter {
   optional uint32 concat_dim = 65 [default = 1];
 
   optional HDF5OutputParameter hdf5_output_param = 1001;
+  optional ImageOutputParameter image_output_param = 23823845;
 }

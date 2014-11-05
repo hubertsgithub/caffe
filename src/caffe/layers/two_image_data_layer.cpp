@@ -201,11 +201,11 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
     }
     vector<cv::Mat> cv_img_labels;
     for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
-		string img_path = root_folder + lines_[lines_id_].second[i];
-		cv::Mat cv_img_label = ReadImageToCVMat(img_path,
+		string label_img_path = root_folder + lines_[lines_id_].second[i];
+		cv::Mat cv_img_label = ReadImageToCVMat(label_img_path,
                                     new_label_height, new_label_width, label_is_color);
 		if (!cv_img_label.data) {
-		  DLOG(ERROR) << "Couldn't load image " << img_path;
+		  DLOG(ERROR) << "Couldn't load image " << label_img_path;
 		  continue;
 		}
     	cv_img_labels.push_back(cv_img_label);

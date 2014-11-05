@@ -209,6 +209,46 @@ class HDF5DataLayer : public Layer<Dtype> {
 };
 
 /**
+ * @brief Write blobs to disk as images.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class ImageOutputLayer : public Layer<Dtype> {
+ public:
+  explicit ImageOutputLayer(const LayerParameter& param);
+  virtual ~ImageOutputLayer();
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
+  // Data layers have no bottoms, so reshaping is trivial.
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_IMAGE_OUTPUT;
+  }
+  // TODO: no limit on the number of blobs
+  virtual inline int ExactNumBottomBlobs() const { return -1; }
+  virtual inline int ExactNumTopBlobs() const { return 0; }
+
+  inline std::string file_name() const { return file_name_; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  cv::Mat ConvertBlobToCVImg(const Blob<Dtype>& blob, const int currentNum, const bool isCpu);
+
+  std::string file_name_;
+  int counter_;
+};
+
+/**
  * @brief Write blobs to disk as HDF5 files.
  *
  * TODO(dox): thorough documentation for Forward and proto params.

@@ -10,7 +10,7 @@ layers {
   }
   image_data_param {
     source: "data/mitintrinsic/filtereddata/train.txt"
-    batch_size: 1
+    batch_size: 5 
     new_height: 64
     new_width: 64
     is_color: false
@@ -26,10 +26,27 @@ layers {
   }
 }
 layers {
+   name: "imgsave"
+   type: IMAGE_OUTPUT
+   bottom: "data"
+   bottom: "label"
+   bottom: "mask"
+   image_output_param {
+      file_name: "debugimgs/img"
+   }
+}
+#layers {
+#  name: "loss"
+#  type: EUCLIDEAN_MASKED_LOSS
+#  bottom: "data"
+#  bottom: "label"
+#  bottom: "mask"
+#  top: "loss"
+#}
+layers {
   name: "loss"
-  type: EUCLIDEAN_MASKED_LOSS
+  type: EUCLIDEAN_LOSS
   bottom: "data"
   bottom: "label"
-  bottom: "mask"
   top: "loss"
 }
