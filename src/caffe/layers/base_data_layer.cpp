@@ -140,6 +140,7 @@ void BasePrefetchingMultiDataLayer<Dtype>::Forward_cpu(
   		return;
   	}
   	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
+  		DLOG(INFO) << "Copying prefetched label #" << i;
 		caffe_copy(prefetch_labels_[i]->count(), prefetch_labels_[i]->cpu_data(),
                top[1+i]->mutable_cpu_data());
 	}

@@ -48,9 +48,9 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
  	  crop_size = this->layer_param_.label_transform_param().crop_size();
   }
 
-  LOG(INFO) << "blob: " << blob;
-  LOG(INFO) << "prefetch_d: " << prefetch_d;
-  LOG(INFO) << "trafo_d: " << trafo_d;
+  DLOG(INFO) << "blob: " << blob;
+  DLOG(INFO) << "prefetch_d: " << prefetch_d;
+  DLOG(INFO) << "trafo_d: " << trafo_d;
 
   // Read an image, and use it to initialize the top blob.
   cv::Mat cv_img = ReadImageToCVMat(imgPath, new_height, new_width, is_color);
@@ -76,7 +76,7 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
 template <typename Dtype>
 int MultiImageDataLayer<Dtype>::ExactNumTopBlobs() const {
 	int num = this->layer_param_.multi_prefetch_data_param().label_num()+1;
-	LOG(INFO) << "Number of top blobs: " << num;
+	DLOG(INFO) << "Number of top blobs: " << num;
 	return num;
 }
 
@@ -104,12 +104,13 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   std::ifstream infile(source.c_str());
   // The file and the label are both images
   string filename;
-  vector<string> labels;
   string line;
   while (getline(infile, line)) {
   	stringstream ss(line);
   	ss >> filename;
   	LOG(INFO) << "Image data: " << filename;
+
+    vector<string> labels;
   	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
   		string label;
   		ss >> label;
@@ -193,15 +194,18 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
     timer.Start();
     CHECK_GT(lines_size, lines_id_);
 	string img_path = root_folder + lines_[lines_id_].first;
+    DLOG(INFO) << "Loading image " << img_path << " as data";
     cv::Mat cv_img = ReadImageToCVMat(img_path,
                                     new_height, new_width, is_color);
     if (!cv_img.data) {
       DLOG(ERROR) << "Couldn't load image " << img_path;
       continue;
     }
+
     vector<cv::Mat> cv_img_labels;
     for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
 		string label_img_path = root_folder + lines_[lines_id_].second[i];
+		DLOG(INFO) << "Loading image " << label_img_path << " as label #" << i;
 		cv::Mat cv_img_label = ReadImageToCVMat(label_img_path,
                                     new_label_height, new_label_width, label_is_color);
 		if (!cv_img_label.data) {
