@@ -98,6 +98,8 @@ TYPED_TEST(MultiImageDataLayerTest, TestResize) {
   image_data_param->set_source(this->filename_.c_str());
   image_data_param->set_new_height(256);
   image_data_param->set_new_width(256);
+  image_data_param->set_new_label_height(128);
+  image_data_param->set_new_label_width(100);
   image_data_param->set_shuffle(false);
   MultiPrefetchDataParameter* multi_prefetch_data_param = param.mutable_multi_prefetch_data_param();
   multi_prefetch_data_param->set_label_num(2);
@@ -108,12 +110,12 @@ TYPED_TEST(MultiImageDataLayerTest, TestResize) {
   EXPECT_EQ(this->blob_top_data_->height(), 256);
   EXPECT_EQ(this->blob_top_data_->width(), 256);
   EXPECT_EQ(this->blob_top_label_->channels(), 3);
-  EXPECT_EQ(this->blob_top_label_->height(), 256);
-  EXPECT_EQ(this->blob_top_label_->width(), 256);
+  EXPECT_EQ(this->blob_top_label_->height(), 128);
+  EXPECT_EQ(this->blob_top_label_->width(), 100);
   EXPECT_EQ(this->blob_top_label_->num(), 5);
   EXPECT_EQ(this->blob_top_label2_->channels(), 3);
-  EXPECT_EQ(this->blob_top_label2_->height(), 256);
-  EXPECT_EQ(this->blob_top_label2_->width(), 256);
+  EXPECT_EQ(this->blob_top_label2_->height(), 128);
+  EXPECT_EQ(this->blob_top_label2_->width(), 100);
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   // Go through the data twice
   /*for (int iter = 0; iter < 2; ++iter) {
