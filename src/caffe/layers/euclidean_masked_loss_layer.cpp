@@ -35,10 +35,10 @@ void EuclideanMaskedLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bo
       diff_.mutable_cpu_data());
   // The 3rd bottom is the mask
   // If the mask is 0, 1, the 0 elements will be masked out
-  caffe_mul(count,
-  		  diff_.cpu_data(),
-  		  bottom[2]->cpu_data(),
-  		  diff_.mutable_cpu_data());
+//  caffe_mul(count,
+//  		  diff_.cpu_data(),
+//  		  bottom[2]->cpu_data(),
+//  		  diff_.mutable_cpu_data());
 
   Dtype dot = caffe_cpu_dot(count, diff_.cpu_data(), diff_.cpu_data());
   Dtype loss = dot / bottom[0]->num() / Dtype(2);
@@ -62,10 +62,10 @@ void EuclideanMaskedLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& t
           bottom[i]->mutable_cpu_diff());  // b
 	  // The 3rd bottom is the mask
 	  // If the mask is 0, 1, the 0 elements will be masked out
-	  caffe_mul(count,
-			  bottom[i]->cpu_diff(),
-			  bottom[2]->cpu_data(),
-			  bottom[i]->mutable_cpu_diff());
+//	  caffe_mul(count,
+//			  bottom[i]->cpu_diff(),
+//			  bottom[2]->cpu_data(),
+//			  bottom[i]->mutable_cpu_diff());
     }
   }
 }

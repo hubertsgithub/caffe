@@ -34,6 +34,8 @@ cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, con
   const int channels = blob.channels();
   const int height = blob.height();
   const int width = blob.width();
+  const double upscale = this->layer_param_.image_output_param().upscale();
+  const double mean_to_add = this->layer_param_.image_output_param().mean_to_add();
 
   cv::Mat cv_img;
   if (channels == 1) {
@@ -49,7 +51,7 @@ cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, con
     for (int w = 0; w < width; ++w) {
       for (int c = 0; c < channels; ++c) {
 	    top_index = blob.offset(currentNum, c, h, w);
-        ptr[img_index++] = static_cast<uchar>(blob_ptr[top_index]);
+        ptr[img_index++] = static_cast<uchar>(blob_ptr[top_index]*upscale + mean_to_add);
       }
     }
   }
@@ -63,6 +65,8 @@ void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   CHECK_GE(bottom.size(), 1);
 
   for (int i = 0; i < bottom.size(); ++i) {
+	  CHECK_GE(bottom[i]->channels(), 1);
+	  CHECK_LE(bottom[i]->channels(), 3);
   	  for (int n = 0; n < bottom[i]->num(); ++n) {
 		  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, true);
 		  stringstream ss;

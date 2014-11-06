@@ -10,15 +10,15 @@ layers {
   }
   image_data_param {
     source: "data/mitintrinsic/filtereddata/train.txt"
-    batch_size: 1
-    new_height: 256
-    new_width: 256
+    batch_size: 5
+    new_height: 227
+    new_width: 227
     new_label_height: 64
     new_label_width: 64
     label_is_color: false
   }
   transform_param {
-    crop_size: 227
+    #crop_size: 227
     mirror: false
   }
   label_transform_param {
@@ -202,21 +202,21 @@ layers {
     kernel_size: 1
   }
 }
-layers {
-  name: "relu7"
-  type: RELU
-  bottom: "fc7-conv"
-  top: "fc7-conv"
-}
-layers {
-  name: "drop7"
-  type: DROPOUT
-  bottom: "fc7-conv"
-  top: "fc7-conv"
-  dropout_param {
-    dropout_ratio: 0.5
-  }
-}
+#layers {
+#  name: "relu7"
+#  type: RELU
+#  bottom: "fc7-conv"
+#  top: "fc7-conv"
+#}
+#layers {
+#  name: "drop7"
+#  type: DROPOUT
+#  bottom: "fc7-conv"
+#  top: "fc7-conv"
+#  dropout_param {
+#    dropout_ratio: 0.5
+#  }
+#}
 layers {
   name: "reshape"
   type: RESHAPE
@@ -235,4 +235,20 @@ layers {
   bottom: "label"
   bottom: "mask"
   top: "loss"
+}
+layers {
+   name: "imgsave"
+   type: IMAGE_OUTPUT
+   bottom: "reshape"
+   image_output_param {
+      file_name: "debugimgs/result"
+   }
+}
+layers {
+   name: "imgsave2"
+   type: IMAGE_OUTPUT
+   bottom: "data"
+   image_output_param {
+      file_name: "debugimgs/inputdata"
+   }
 }
