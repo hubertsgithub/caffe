@@ -63,16 +63,19 @@ template <typename Dtype>
 void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   CHECK_GE(bottom.size(), 1);
+  int display = this->layer_param_.image_output_param().display();
 
-  for (int i = 0; i < bottom.size(); ++i) {
-	  CHECK_GE(bottom[i]->channels(), 1);
-	  CHECK_LE(bottom[i]->channels(), 3);
-  	  for (int n = 0; n < bottom[i]->num(); ++n) {
-		  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, true);
-		  stringstream ss;
-		  ss << this->file_name_ << "-it" << this->counter_ << "-batchid" << n << "-bottom" << i << ".jpg";
-		  WriteImageFromCVMat(ss.str(), cv_img);
-		  LOG(INFO) << "Successfully saved one batch slice to " << ss.str();
+  if (this->counter_ % display == 0) {
+	  for (int i = 0; i < bottom.size(); ++i) {
+		  CHECK_GE(bottom[i]->channels(), 1);
+		  CHECK_LE(bottom[i]->channels(), 3);
+		  for (int n = 0; n < bottom[i]->num(); ++n) {
+			  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, true);
+			  stringstream ss;
+			  ss << this->file_name_ << "-it" << this->counter_ << "-batchid" << n << "-bottom" << i << ".jpg";
+			  WriteImageFromCVMat(ss.str(), cv_img);
+			  LOG(INFO) << "Successfully saved one batch slice to " << ss.str();
+		  }
 	  }
   }
   this->counter_++;
