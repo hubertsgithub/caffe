@@ -87,26 +87,46 @@ void BasePrefetchingDataLayer<Dtype>::Forward_cpu(
 ////////////////////////////////////////
 
 template <typename Dtype>
+BasePrefetchingMultiDataLayer<Dtype>::BasePrefetchingMultiDataLayer(const LayerParameter& param)
+    : Layer<Dtype>(param) {
+
+	MultiPrefetchDataParameter mpdp = param.multi_prefetch_data_param();
+    int size = mpdp.data_transformations_size();
+    for (int i = 0; i < size; ++i) {
+    	TransformationParameter tp = mpdp.data_transformations(i);
+    	this->transform_params_.push_back(tp);
+    	this->transformers_.push_back(shared_ptr<DataTransformer<Dtype> >(new DataTransformer<Dtype>(tp)));
+	}
+}
+
+template <typename Dtype>
 void BasePrefetchingMultiDataLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-  // Create the desired number of blobs for prefetch labels
-  const int label_num = this->layer_param_.multi_prefetch_data_param().label_num();
-  this->prefetch_labels_.resize(label_num);
-  for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
-	this->prefetch_labels_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+  CHECK_EQ(top.size(), this->transformers_.size()) << "You have to specify a data transformer for each data in top";
+
+  for (int i = 0; i < this->transformers_.size(); ++i) {
+	  this->transformers_[i]->InitRand();
   }
 
-  BaseDataLayer<Dtype>::LayerSetUp(bottom, top);
+  DLOG(INFO) << "Initializing prefetch and transformed data...";
+  // Create the desired number of blobs for prefetch and transformed data
+  this->prefetch_data_.resize(top.size());
+  this->transformed_data_.resize(top.size());
+  for (int i = 0; i < this->prefetch_data_.size(); ++i) {
+	this->prefetch_data_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+	this->transformed_data_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+  }
+
+  // The subclasses should setup the size of bottom and top
+  DataLayerSetUp(bottom, top);
+
   // Now, start the prefetch thread. Before calling prefetch, we make two
   // cpu_data calls so that the prefetch thread does not accidentally make
   // simultaneous cudaMalloc calls when the main thread is running. In some
   // GPUs this seems to cause failures if we do not so.
-  this->prefetch_data_.mutable_cpu_data();
 
-  if (this->output_labels_) {
-  	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
-		this->prefetch_labels_[i]->mutable_cpu_data();
-	}
+  for (int i = 0; i < this->prefetch_data_.size(); ++i) {
+  	this->prefetch_data_[i]->mutable_cpu_data();
   }
   DLOG(INFO) << "Initializing prefetch";
   this->CreatePrefetchThread();
@@ -116,7 +136,9 @@ void BasePrefetchingMultiDataLayer<Dtype>::LayerSetUp(
 template <typename Dtype>
 void BasePrefetchingMultiDataLayer<Dtype>::CreatePrefetchThread() {
   this->phase_ = Caffe::phase();
-  this->data_transformer_.InitRand();
+  for (int i = 0; i < this->transformers_.size(); ++i) {
+	  this->transformers_[i]->InitRand();
+  }
   CHECK(StartInternalThread()) << "Thread execution failed";
 }
 
@@ -131,19 +153,13 @@ void BasePrefetchingMultiDataLayer<Dtype>::Forward_cpu(
   // First, join the thread
   JoinPrefetchThread();
   DLOG(INFO) << "Thread joined";
+
   // Copy the data
-  caffe_copy(prefetch_data_.count(), prefetch_data_.cpu_data(),
-             top[0]->mutable_cpu_data());
-  if (this->output_labels_) {
-  	if (top.size()-1 != this->prefetch_labels_.size()) {
-  		DLOG(ERROR) << "Mismatch in number of top/prefetch_label layers";
-  		return;
-  	}
-  	for (int i = 0; i < this->prefetch_labels_.size(); ++i) {
-  		DLOG(INFO) << "Copying prefetched label #" << i;
-		caffe_copy(prefetch_labels_[i]->count(), prefetch_labels_[i]->cpu_data(),
-               top[1+i]->mutable_cpu_data());
-	}
+  CHECK_EQ(top.size(), this->prefetch_data_.size()) << "Mismatch in number of top/prefetch_label layers";
+  for (int i = 0; i < this->prefetch_data_.size(); ++i) {
+  	DLOG(INFO) << "Copying prefetched data #" << i;
+  	caffe_copy(prefetch_data_[i]->count(), prefetch_data_[i]->cpu_data(),
+  		top[i]->mutable_cpu_data());
   }
   DLOG(INFO) << "Prefetch copied";
 

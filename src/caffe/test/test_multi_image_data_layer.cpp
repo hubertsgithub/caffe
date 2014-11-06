@@ -64,8 +64,13 @@ TYPED_TEST(MultiImageDataLayerTest, TestRead) {
   image_data_param->set_batch_size(5);
   image_data_param->set_source(this->filename_.c_str());
   image_data_param->set_shuffle(false);
+
   MultiPrefetchDataParameter* multi_prefetch_data_param = param.mutable_multi_prefetch_data_param();
-  multi_prefetch_data_param->set_label_num(2);
+  TransformationParameter* tp;
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp = multi_prefetch_data_param->add_data_transformations();
+
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_data_->num(), 5);
@@ -96,13 +101,20 @@ TYPED_TEST(MultiImageDataLayerTest, TestResize) {
   ImageDataParameter* image_data_param = param.mutable_image_data_param();
   image_data_param->set_batch_size(5);
   image_data_param->set_source(this->filename_.c_str());
-  image_data_param->set_new_height(256);
-  image_data_param->set_new_width(256);
-  image_data_param->set_new_label_height(128);
-  image_data_param->set_new_label_width(100);
   image_data_param->set_shuffle(false);
+
   MultiPrefetchDataParameter* multi_prefetch_data_param = param.mutable_multi_prefetch_data_param();
-  multi_prefetch_data_param->set_label_num(2);
+  TransformationParameter* tp;
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp->set_new_height(256);
+  tp->set_new_width(256);
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp->set_new_height(128);
+  tp->set_new_width(100);
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp->set_new_height(128);
+  tp->set_new_width(100);
+
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_data_->num(), 5);
@@ -133,8 +145,13 @@ TYPED_TEST(MultiImageDataLayerTest, TestShuffle) {
   image_data_param->set_batch_size(5);
   image_data_param->set_source(this->filename_.c_str());
   image_data_param->set_shuffle(true);
+
   MultiPrefetchDataParameter* multi_prefetch_data_param = param.mutable_multi_prefetch_data_param();
-  multi_prefetch_data_param->set_label_num(2);
+  TransformationParameter* tp;
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp = multi_prefetch_data_param->add_data_transformations();
+
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_data_->num(), 5);

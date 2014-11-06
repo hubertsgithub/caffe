@@ -6,29 +6,38 @@ layers {
   top: "label"
   top: "mask"
   multi_prefetch_data_param {
-	  label_num: 2
+      # data
+	  data_transformations {
+		new_height: 100
+		new_width: 100
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label
+	  data_transformations {
+		new_height: 100
+		new_width: 100
+		crop_size: 98
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+	  # mask
+	  data_transformations {
+		new_height: 100
+		new_width: 100
+		crop_size: 98
+		scale: 0.00392156862
+		is_color: false
+	  }
   }
   image_data_param {
     source: "data/mitintrinsic/filtereddata/train.txt"
     batch_size: 5 
-    new_height: 100
-    new_width: 100
-    is_color: true 
-    new_label_height: 100
-    new_label_width: 100
-    label_is_color: false
-  }
-  transform_param {
-    #crop_size: 227
-    mirror: false
-	  scale: 0.00392156862
-	  mean_value: 128
-	  mean_value: 128
-	  mean_value: 128
-  }
-  label_transform_param {
-	  scale: 0.00392156862
-	  mean_value: 128
   }
 }
 layers {
@@ -42,7 +51,7 @@ layers {
   weight_decay: 0
   convolution_param {
     num_output: 1
-    kernel_size: 1
+    kernel_size: 3
     stride: 1
     weight_filler {
   	  type: "positive_unitball"
@@ -53,21 +62,29 @@ layers {
     }
   }
 }
+#layers {
+#   name: "imgsave"
+#   type: IMAGE_OUTPUT
+#   bottom: "data"
+#   bottom: "label"
+#   bottom: "mask"
+#   bottom: "conv1"
+#   image_output_param {
+#      file_name: "debugimgs/img"
+#      upscale: 255.0
+#      mean_to_add: 128.0
+#   }
+#}
 layers {
-   name: "imgsave"
-   type: IMAGE_OUTPUT
-   bottom: "data"
-   bottom: "label"
-   bottom: "mask"
-   bottom: "conv1"
-   image_output_param {
-      file_name: "debugimgs/img"
-   }
+	name: "silencemask"
+	type: SILENCE
+	bottom: "mask"
 }
 layers {
   name: "loss"
-  type: EUCLIDEAN_LOSS
+  type: EUCLIDEAN_MASKED_LOSS
   bottom: "conv1"
   bottom: "label"
+  bottom: "mask"
   top: "loss"
 }

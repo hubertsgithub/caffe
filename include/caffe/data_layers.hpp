@@ -52,18 +52,25 @@ class BaseDataLayer : public Layer<Dtype> {
   bool output_labels_;
 };
 
+/**
+ * @brief Provides base for data layers that feed blobs to the Net.
+ * It also support multiple prefetched inputs.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
 template <typename Dtype>
 class BasePrefetchingMultiDataLayer :
-    public BaseDataLayer<Dtype>, public InternalThread {
+    public Layer<Dtype>, public InternalThread {
  public:
-  explicit BasePrefetchingMultiDataLayer(const LayerParameter& param)
-      : BaseDataLayer<Dtype>(param) {}
+  explicit BasePrefetchingMultiDataLayer(const LayerParameter& param);
   virtual ~BasePrefetchingMultiDataLayer() {}
   // LayerSetUp: implements common data layer setup functionality, and calls
   // DataLayerSetUp to do special data layer setup for individual layer types.
   // This method may not be overridden.
   void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
 
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
@@ -75,10 +82,20 @@ class BasePrefetchingMultiDataLayer :
   // The thread's function
   virtual void InternalThreadEntry() {}
 
+  // Data layers have no bottoms, so reshaping is trivial.
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
  protected:
-  Blob<Dtype> prefetch_data_;
-  vector<shared_ptr<Blob<Dtype> > > prefetch_labels_;
-  Blob<Dtype> transformed_data_;
+  vector<TransformationParameter> transform_params_;
+  vector<shared_ptr<DataTransformer<Dtype> > > transformers_;
+  Caffe::Phase phase_;
+  vector<shared_ptr<Blob<Dtype> > > prefetch_data_;
+  vector<shared_ptr<Blob<Dtype> > > transformed_data_;
 };
 
 template <typename Dtype>
@@ -337,7 +354,7 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
     return LayerParameter_LayerType_MULTI_IMAGE_DATA;
   }
   virtual inline int ExactNumBottomBlobs() const { return 0; }
-  virtual inline int ExactNumTopBlobs() const;
+  virtual inline int ExactNumTopBlobs() const { return -1; }
  protected:
   shared_ptr<Caffe::RNG> prefetch_rng_;
   virtual void ShuffleImages();
@@ -345,10 +362,7 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
   virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color);
 
-  TransformationParameter label_transform_param_;
-  DataTransformer<Dtype> label_transformer_;
-  vector<shared_ptr<Blob<Dtype> > > transformed_labels_;
-  vector<std::pair<std::string, vector<std::string> > > lines_;
+  vector<vector<std::string> > lines_;
   int lines_id_;
 };
 
