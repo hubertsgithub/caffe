@@ -1,0 +1,48 @@
+name: "IntrinsicCNN"
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 300
+input_dim: 300
+layers {
+  name: "conv1"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "conv1"
+  convolution_param {
+    num_output: 1
+    kernel_size: 2
+    stride: 1
+  }
+}
+#layers {
+#   name: "imgsave"
+#   type: IMAGE_OUTPUT
+#   bottom: "data"
+#   bottom: "label"
+#   bottom: "conv1"
+#   image_output_param {
+#      file_name: "debugimgs/img"
+#      display: 1000
+#      transformation {
+#		  upscale: 255.0
+#		  mean_to_add: 128.0
+#      }
+#      transformation {
+#		  upscale: 255.0
+#		  mean_to_add: 128.0
+#      }
+#      transformation {
+#		  upscale: 255.0
+#		  mean_to_add: 128.0
+#      }
+#   }
+#}
+layers {
+  name: "loss"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "conv1"
+  bottom: "label"
+  bottom: "mask"
+  top: "loss"
+}

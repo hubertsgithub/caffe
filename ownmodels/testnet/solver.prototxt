@@ -1,7 +1,7 @@
 net: "ownmodels/testnet/train_val.prototxt"
 test_iter: 0
 test_interval: 1000
-base_lr: 1e-5 
+base_lr: 1e-5
 lr_policy: "step"
 gamma: 0.1
 stepsize: 100000

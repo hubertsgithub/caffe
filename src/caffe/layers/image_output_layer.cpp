@@ -50,7 +50,7 @@ cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, con
     for (int w = 0; w < width; ++w) {
       for (int c = 0; c < channels; ++c) {
 	    top_index = blob.offset(currentNum, c, h, w);
-        ptr[img_index++] = static_cast<uchar>(blob_ptr[top_index]*upscale + mean_to_add);
+        ptr[img_index++] = static_cast<uchar>(std::min(255.0, std::max(0.0, blob_ptr[top_index]*upscale + mean_to_add)));
       }
     }
   }
