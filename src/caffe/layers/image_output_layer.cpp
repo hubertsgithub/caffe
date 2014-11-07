@@ -23,7 +23,8 @@ ImageOutputLayer<Dtype>::~ImageOutputLayer<Dtype>() {
 }
 
 template <typename Dtype>
-cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, const int currentNum, const bool isCpu) {
+cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, const int currentNum, const bool isCpu,
+		const double upscale, const double mean_to_add) {
   const Dtype* blob_ptr;
   if (isCpu) {
   	  blob_ptr = blob.cpu_data();
@@ -34,8 +35,6 @@ cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, con
   const int channels = blob.channels();
   const int height = blob.height();
   const int width = blob.width();
-  const double upscale = this->layer_param_.image_output_param().upscale();
-  const double mean_to_add = this->layer_param_.image_output_param().mean_to_add();
 
   cv::Mat cv_img;
   if (channels == 1) {
@@ -64,13 +63,18 @@ void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   CHECK_GE(bottom.size(), 1);
   int display = this->layer_param_.image_output_param().display();
+  int trafo_count = this->layer_param_.image_output_param().transformation_size();
 
   if (this->counter_ % display == 0) {
 	  for (int i = 0; i < bottom.size(); ++i) {
 		  CHECK_GE(bottom[i]->channels(), 1);
 		  CHECK_LE(bottom[i]->channels(), 3);
+
+	  	  int trafo_index = std::min(trafo_count - 1, i);
+		  const double upscale = this->layer_param_.image_output_param().transformation(trafo_index).upscale();
+		  const double mean_to_add = this->layer_param_.image_output_param().transformation(trafo_index).mean_to_add();
 		  for (int n = 0; n < bottom[i]->num(); ++n) {
-			  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, true);
+			  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, true, upscale, mean_to_add);
 			  stringstream ss;
 			  ss << this->file_name_ << "-it" << this->counter_ << "-batchid" << n << "-bottom" << i << ".jpg";
 			  WriteImageFromCVMat(ss.str(), cv_img);

@@ -530,10 +530,14 @@ message HDF5OutputParameter {
 // Message that stores parameters used by ImageOutputLayer
 message ImageOutputParameter {
   optional string file_name = 1;
-  optional float upscale = 2 [default = 255.0];
-  optional float mean_to_add = 3 [default = 128.0];
   // The length of the period when we save images
-  optional uint32 display = 4 [default = 1];
+  optional uint32 display = 2 [default = 1];
+  repeated ImageOutTransformationParameter transformation = 3;
+}
+
+message ImageOutTransformationParameter {
+  optional float upscale = 1 [default = 255.0];
+  optional float mean_to_add = 2 [default = 128.0];
 }
 
 message HingeLossParameter {

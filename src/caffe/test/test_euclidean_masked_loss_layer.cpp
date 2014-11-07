@@ -37,7 +37,7 @@ class EuclideanMaskedLossLayerTest : public MultiDeviceTest<TypeParam> {
     FillerParameter filler_param_const;
     filler_param_const.set_value(1.0);
     ConstantFiller<Dtype> filler_const(filler_param_const);
-    filler_const.Fill(this->blob_bottom_mask_);
+    filler.Fill(this->blob_bottom_mask_);
     blob_bottom_vec_.push_back(blob_bottom_mask_);
 
     blob_top_vec_.push_back(blob_top_loss_);

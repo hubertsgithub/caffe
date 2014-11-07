@@ -259,7 +259,7 @@ class ImageOutputLayer : public Layer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-  cv::Mat ConvertBlobToCVImg(const Blob<Dtype>& blob, const int currentNum, const bool isCpu);
+  cv::Mat ConvertBlobToCVImg(const Blob<Dtype>& blob, const int currentNum, const bool isCpu, const double upscale, const double mean_to_add);
 
   std::string file_name_;
   int counter_;
