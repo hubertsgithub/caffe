@@ -21,7 +21,7 @@ layers {
 	  data_transformations {
 		new_height: 300
 		new_width: 300
-		crop_size: 299
+		crop_size: 298
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128
@@ -30,7 +30,7 @@ layers {
 	  data_transformations {
 		new_height: 300
 		new_width: 300
-		crop_size: 299
+		crop_size: 298
 		scale: 0.00392156862
 		is_color: false
 	  }
@@ -52,7 +52,7 @@ layers {
   weight_decay: 0
   convolution_param {
     num_output: 1
-    kernel_size: 2
+    kernel_size: 3
     stride: 1
     weight_filler {
   	  type: "constant"

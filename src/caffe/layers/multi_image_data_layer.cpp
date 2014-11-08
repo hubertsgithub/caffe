@@ -87,7 +87,7 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   		string img_name;
   		ss >> img_name;
   		data_img_names.push_back(img_name);
-  		LOG(INFO) << "Image data #" << i << ": " << img_name;
+  		DLOG(INFO) << "Image data #" << i << ": " << img_name;
   	}
     lines_.push_back(data_img_names);
   }
@@ -169,11 +169,11 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
 		const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
 
 		string img_path = root_folder + lines_[lines_id_][i];
-		DLOG(INFO) << "Loading image " << img_path << " as label #" << i;
+		DLOG(INFO) << "Loading image " << img_path << " as data #" << i;
 		cv::Mat cv_img = ReadImageToCVMat(img_path,
 									new_height, new_width, is_color);
 		if (!cv_img.data) {
-		  DLOG(ERROR) << "Couldn't load image " << img_path;
+		  LOG(ERROR) << "Couldn't load image " << img_path;
 		  continue;
 		}
 		cv_imgs.push_back(cv_img);
