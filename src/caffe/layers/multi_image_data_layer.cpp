@@ -134,6 +134,8 @@ void MultiImageDataLayer<Dtype>::ShuffleImages() {
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
 void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
+  DLOG(INFO) << "Prefetch thread started";
+
   CPUTimer batch_timer;
   batch_timer.Start();
   double read_time = 0;
@@ -169,7 +171,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
 		const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
 
 		string img_path = root_folder + lines_[lines_id_][i];
-		DLOG(INFO) << "Loading image " << img_path << " as data #" << i;
+		DLOG(INFO) << "Loading image " << img_path << " as data #" << i << " batchID: " << item_id;
 		cv::Mat cv_img = ReadImageToCVMat(img_path,
 									new_height, new_width, is_color);
 		if (!cv_img.data) {

@@ -7,9 +7,10 @@ layers {
   multi_prefetch_data_param {
       # data
 	  data_transformations {
-		new_height: 682
-		new_width: 290
+		new_height: 227
+		new_width: 533
 		crop_size: 227
+		random_crop: false
 		mirror: false
 		scale: 0.00392156862
 		is_color: true
@@ -19,9 +20,10 @@ layers {
 	  }
       # label
 	  data_transformations {
-		new_height: 192
-		new_width: 82
+		new_height: 64
+		new_width: 150
 		crop_size: 64
+		random_crop: false
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128
@@ -29,7 +31,7 @@ layers {
   }
   image_data_param {
     source: "data/mpisintel/train.txt"
-    batch_size: 5
+    batch_size: 5 
   }
 }
 layers {
@@ -326,25 +328,25 @@ layers {
   top: "loss"
 }
 layers {
-   name: "imgsave"
-   type: IMAGE_OUTPUT
-   bottom: "data"
-   bottom: "label"
-   bottom: "reshape"
-   image_output_param {
-      file_name: "debugimgs/img"
-      display: 10
-      transformation {
-		  upscale: 255.0
-		  mean_to_add: 128.0
-      }
-      transformation {
-		  upscale: 255.0
-		  mean_to_add: 128.0
-      }
-      transformation {
-		  upscale: 255.0
-		  mean_to_add: 128.0
-      }
-   }
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "label"
+	bottom: "reshape"
+	image_output_param {
+		file_name: "debugimgs/img"
+		display: 10
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+	}
 }

@@ -22,6 +22,7 @@ layers {
 		new_height: 300
 		new_width: 300
 		crop_size: 298
+		random_crop: false
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128
@@ -31,6 +32,7 @@ layers {
 		new_height: 300
 		new_width: 300
 		crop_size: 298
+		random_crop: false
 		scale: 0.00392156862
 		is_color: false
 	  }
@@ -65,6 +67,14 @@ layers {
   }
 }
 layers {
+  name: "loss"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "conv1"
+  bottom: "label"
+  bottom: "mask"
+  top: "loss"
+}
+layers {
    name: "imgsave"
    type: IMAGE_OUTPUT
    bottom: "data"
@@ -91,12 +101,4 @@ layers {
 	name: "silencemask"
 	type: SILENCE
 	bottom: "mask"
-}
-layers {
-  name: "loss"
-  type: EUCLIDEAN_MASKED_LOSS
-  bottom: "conv1"
-  bottom: "label"
-  bottom: "mask"
-  top: "loss"
 }

@@ -32,7 +32,7 @@ void BasePrefetchingMultiDataLayer<Dtype>::Forward_gpu(
   CHECK_EQ(top.size(), this->prefetch_data_.size()) << "Mismatch in number of top/prefetch_label layers";
   for (int i = 0; i < this->prefetch_data_.size(); ++i) {
   	DLOG(INFO) << "Copying prefetched data #" << i;
-  	caffe_copy(prefetch_data_.count(), prefetch_data_.cpu_data(),
+  	caffe_copy(prefetch_data_[i]->count(), prefetch_data_[i]->cpu_data(),
   		top[i]->mutable_gpu_data());
   }
   DLOG(INFO) << "Prefetch copied";
