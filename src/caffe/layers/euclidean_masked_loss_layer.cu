@@ -8,7 +8,7 @@
 namespace caffe {
 
 template <typename Dtype>
-void EuclideanLossLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+void EuclideanMaskedLossLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   int count = bottom[0]->count();
   caffe_gpu_sub(
@@ -29,7 +29,7 @@ void EuclideanLossLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
-void EuclideanLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
+void EuclideanMaskedLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
   int count = bottom[0]->count();
   // Do not compute back propagation for the mask layer!
