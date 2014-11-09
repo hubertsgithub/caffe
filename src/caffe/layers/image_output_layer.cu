@@ -14,16 +14,7 @@ namespace caffe {
 template <typename Dtype>
 void ImageOutputLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  for (int i = 0; i < bottom.size(); ++i) {
-	  const int data_dim = bottom[i]->count() / bottom[i]->num();
-  	  for (int n = 0; n < bottom[i].num(); ++n) {
-		  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, false);
-		  stringstream ss;
-		  ss << "imgsave-bottom" << i << "-batchid" << n << ".jpg";
-		  WriteImageFromCVMat(ss.str());
-		  LOG(INFO) << "Successfully saved " << data_blob_.num() << " rows";
-	  }
-  }
+    this->Forward_helper(bottom, top, false);
 }
 
 template <typename Dtype>

@@ -251,6 +251,8 @@ class ImageOutputLayer : public Layer<Dtype> {
   inline std::string file_name() const { return file_name_; }
 
  protected:
+  void Forward_helper(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top, bool isCpu);
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,

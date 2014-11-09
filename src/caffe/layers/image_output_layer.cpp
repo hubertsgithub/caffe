@@ -57,10 +57,9 @@ cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, con
 
   return cv_img;
 }
-
 template <typename Dtype>
-void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top) {
+void ImageOutputLayer<Dtype>::Forward_helper(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top, bool isCpu) {
   CHECK_GE(bottom.size(), 1);
   int display = this->layer_param_.image_output_param().display();
   int trafo_count = this->layer_param_.image_output_param().transformation_size();
@@ -74,7 +73,7 @@ void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 		  const double upscale = this->layer_param_.image_output_param().transformation(trafo_index).upscale();
 		  const double mean_to_add = this->layer_param_.image_output_param().transformation(trafo_index).mean_to_add();
 		  for (int n = 0; n < bottom[i]->num(); ++n) {
-			  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, true, upscale, mean_to_add);
+			  cv::Mat cv_img = this->ConvertBlobToCVImg(*bottom[i], n, isCpu, upscale, mean_to_add);
 			  stringstream ss;
 			  ss << this->file_name_ << "-it" << this->counter_ << "-batchid" << n << "-bottom" << i << ".jpg";
 			  WriteImageFromCVMat(ss.str(), cv_img);
@@ -83,6 +82,12 @@ void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 	  }
   }
   this->counter_++;
+}
+
+template <typename Dtype>
+void ImageOutputLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {
+    this->Forward_helper(bottom, top, true);
 }
 
 template <typename Dtype>
