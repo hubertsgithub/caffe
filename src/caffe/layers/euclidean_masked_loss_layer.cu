@@ -46,9 +46,9 @@ void EuclideanMaskedLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& t
 	  // The 3rd bottom is the mask
 	  // If the mask is 0, 1, the 0 elements will be masked out
 	  caffe_gpu_mul(count,
-			  bottom[i]->gpu_data(),
+			  bottom[i]->gpu_diff(),
 			  bottom[2]->gpu_data(),
-			  bottom[i]->mutable_gpu_data());
+			  bottom[i]->mutable_gpu_diff());
     }
   }
 }
