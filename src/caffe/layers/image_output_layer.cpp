@@ -26,11 +26,8 @@ template <typename Dtype>
 cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, const int currentNum, const bool isCpu,
 		const double upscale, const double mean_to_add) {
   const Dtype* blob_ptr;
-  if (isCpu) {
-  	  blob_ptr = blob.cpu_data();
-  } else {
-  	  blob_ptr = blob.gpu_data();
-  }
+  // Atm isCpu is not used, we copy data back from the GPU to the CPU
+  blob_ptr = blob.cpu_data();
 
   const int channels = blob.channels();
   const int height = blob.height();
