@@ -36,7 +36,7 @@ cv::Mat ImageOutputLayer<Dtype>::ConvertBlobToCVImg(const Blob<Dtype>& blob, con
   cv::Mat cv_img;
   if (channels == 1) {
   	  cv_img = cv::Mat(height, width, CV_8UC1);
-  } if (channels == 3) {
+  } else if (channels == 3) {
   	  cv_img = cv::Mat(height, width, CV_8UC3);
   } else {
   	  LOG(ERROR) << "The image has " << channels << " channels instead of 1 or 3, skipping";
