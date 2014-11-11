@@ -33,6 +33,43 @@ layers {
     source: "data/mpisintel/train.txt"
     batch_size: 5 
   }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  multi_prefetch_data_param {
+      # data
+	  data_transformations {
+		new_height: 227
+		new_width: 533
+		crop_size: 227
+		random_crop: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label
+	  data_transformations {
+		new_height: 64
+		new_width: 150
+		crop_size: 64
+		random_crop: false
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/mpisintel/val.txt"
+    batch_size: 5 
+  }
+  include: { phase: TEST }
 }
 layers {
   name: "conv1"

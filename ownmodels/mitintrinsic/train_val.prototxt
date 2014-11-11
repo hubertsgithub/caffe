@@ -38,6 +38,48 @@ layers {
     source: "data/mitintrinsic/filtereddata/train.txt"
     batch_size: 5
   }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  top: "mask"
+  multi_prefetch_data_param {
+      # data
+	  data_transformations {
+		new_height: 227
+		new_width: 227
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label
+	  data_transformations {
+		new_height: 64
+		new_width: 64
+		#crop_size: 299
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+	  # mask
+	  data_transformations {
+		new_height: 64
+		new_width: 64
+		scale: 0.00392156862
+		is_color: false
+	  }
+  }
+  image_data_param {
+    source: "data/mitintrinsic/filtereddata/val.txt"
+    batch_size: 5
+  }
+  include: { phase: TEST }
 }
 layers {
   name: "conv1"
@@ -355,4 +397,29 @@ layers {
 		  mean_to_add: 128.0
       }
    }
+   include: { phase: TRAIN }
+}
+layers {
+   name: "imgsave"
+   type: IMAGE_OUTPUT
+   bottom: "data"
+   bottom: "label"
+   bottom: "reshape"
+   image_output_param {
+      file_name: "debugimgs/img"
+      display: 1
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+   }
+   include: { phase: TEST }
 }
