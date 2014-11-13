@@ -386,6 +386,7 @@ layers {
 			mean_to_add: 128.0
 		}
 	}
+    include: { phase: TRAIN }
 }
 layers {
 	name: "imgsave"
@@ -409,4 +410,5 @@ layers {
 			mean_to_add: 128.0
 		}
 	}
+    include: { phase: TEST }
 }
