@@ -409,3 +409,4 @@ layers {
 			mean_to_add: 128.0
 		}
 	}
+}
