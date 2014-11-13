@@ -383,7 +383,7 @@ layers {
    bottom: "reshape"
    image_output_param {
       file_name: "debugimgs/img"
-      display: 100
+      display: 5000
       transformation {
 		  upscale: 255.0
 		  mean_to_add: 128.0
@@ -406,7 +406,7 @@ layers {
    bottom: "label"
    bottom: "reshape"
    image_output_param {
-      file_name: "debugimgs/img"
+      file_name: "debugimgs/testimg"
       display: 1
       transformation {
 		  upscale: 255.0
