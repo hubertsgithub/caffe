@@ -395,7 +395,7 @@ layers {
 	bottom: "reshape"
 	image_output_param {
 		file_name: "debugimgs/testimg"
-		display: 1
+		display: 20
 		transformation {
 			upscale: 255.0
 			mean_to_add: 128.0
@@ -409,4 +409,3 @@ layers {
 			mean_to_add: 128.0
 		}
 	}
-}
