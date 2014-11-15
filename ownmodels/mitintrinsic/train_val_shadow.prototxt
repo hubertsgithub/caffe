@@ -4,17 +4,13 @@ layers {
 	type: MULTI_IMAGE_DATA
   top: "data"
   top: "label"
+  top: "mask"
   multi_prefetch_data_param {
-  	  share_random_trafos: true
       # data
 	  data_transformations {
 		new_height: 227
 		new_width: 227
-		random_crop: true
-		crop_size: 227
-		crop_first: true
 		mirror: false
-		persistent: true
 		scale: 0.00392156862
 		is_color: true
 		mean_value: 128
@@ -25,38 +21,37 @@ layers {
 	  data_transformations {
 		new_height: 64
 		new_width: 64
-		random_crop: true
-		crop_size: 227
-		crop_first: true
-		mirror: false
-		persistent: true
+		#crop_size: 299
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128
 	  }
+	  # mask
+	  data_transformations {
+		new_height: 64
+		new_width: 64
+		scale: 0.00392156862
+		is_color: false
+	  }
   }
   image_data_param {
-    source: "data/mpisintel/train.txt"
-    batch_size: 5 
+    source: "data/mitintrinsic/filtereddata/train.txt"
+    batch_size: 5
   }
   include: { phase: TRAIN }
 }
 layers {
   name: "data"
-  type: MULTI_IMAGE_DATA
+	type: MULTI_IMAGE_DATA
   top: "data"
   top: "label"
+  top: "mask"
   multi_prefetch_data_param {
-  	  share_random_trafos: true
       # data
 	  data_transformations {
 		new_height: 227
 		new_width: 227
-		random_crop: true
-		crop_size: 227
-		crop_first: true
 		mirror: false
-		persistent: true
 		scale: 0.00392156862
 		is_color: true
 		mean_value: 128
@@ -67,19 +62,22 @@ layers {
 	  data_transformations {
 		new_height: 64
 		new_width: 64
-		random_crop: true
-		crop_size: 227
-		crop_first: true
-		mirror: false
-		persistent: true
+		#crop_size: 299
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128
 	  }
+	  # mask
+	  data_transformations {
+		new_height: 64
+		new_width: 64
+		scale: 0.00392156862
+		is_color: false
+	  }
   }
   image_data_param {
-    source: "data/mpisintel/val.txt"
-    batch_size: 5 
+    source: "data/mitintrinsic/filtereddata/val.txt"
+    batch_size: 5
   }
   include: { phase: TEST }
 }
@@ -93,9 +91,9 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 96
-    kernel_size: 11
-    stride: 4
+    num_output: 16
+    kernel_size: 9
+    stride: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -131,7 +129,7 @@ layers {
   pooling_param {
     pool: MAX
     kernel_size: 3
-    stride: 2
+    stride: 3
   }
 }
 layers {
@@ -144,10 +142,8 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 256
-    pad: 2
+    num_output: 32
     kernel_size: 5
-    group: 2
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -187,109 +183,9 @@ layers {
   }
 }
 layers {
-  name: "conv3"
-  type: CONVOLUTION
-  bottom: "pool2"
-  top: "conv3"
-  blobs_lr: 1
-  blobs_lr: 2
-  weight_decay: 1
-  weight_decay: 0
-  convolution_param {
-    num_output: 384
-    pad: 1
-    kernel_size: 3
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layers {
-  name: "relu3"
-  type: RELU
-  bottom: "conv3"
-  top: "conv3"
-}
-layers {
-  name: "conv4"
-  type: CONVOLUTION
-  bottom: "conv3"
-  top: "conv4"
-  blobs_lr: 1
-  blobs_lr: 2
-  weight_decay: 1
-  weight_decay: 0
-  convolution_param {
-    num_output: 384
-    pad: 1
-    kernel_size: 3
-    group: 2
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0.1
-    }
-  }
-}
-layers {
-  name: "relu4"
-  type: RELU
-  bottom: "conv4"
-  top: "conv4"
-}
-layers {
-  name: "conv5"
-  type: CONVOLUTION
-  bottom: "conv4"
-  top: "conv5"
-  blobs_lr: 1
-  blobs_lr: 2
-  weight_decay: 1
-  weight_decay: 0
-  convolution_param {
-    num_output: 256
-    pad: 1
-    kernel_size: 3
-    group: 2
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0.1
-    }
-  }
-}
-layers {
-  name: "relu5"
-  type: RELU
-  bottom: "conv5"
-  top: "conv5"
-}
-layers {
-  name: "pool5"
-  type: POOLING
-  bottom: "conv5"
-  top: "pool5"
-  pooling_param {
-    pool: MAX
-    kernel_size: 3
-    stride: 2
-  }
-}
-layers {
   name: "fc6"
   type: INNER_PRODUCT
-  bottom: "pool5"
+  bottom: "pool2"
   top: "fc6"
   blobs_lr: 1
   blobs_lr: 2
@@ -371,56 +267,57 @@ layers {
 }
 layers {
   name: "loss"
-  type: EUCLIDEAN_LOSS
+  type: EUCLIDEAN_MASKED_LOSS
   bottom: "reshape"
   bottom: "label"
+  bottom: "mask"
   top: "loss"
 }
 layers {
-	name: "imgsave"
-	type: IMAGE_OUTPUT
-	bottom: "data"
-	bottom: "label"
-	bottom: "reshape"
-	image_output_param {
-		file_name: "debugimgs/img"
-		display: 5000
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-	}
-    include: { phase: TRAIN }
+   name: "imgsave"
+   type: IMAGE_OUTPUT
+   bottom: "data"
+   bottom: "label"
+   bottom: "reshape"
+   image_output_param {
+      file_name: "debugimgs/img"
+      display: 5000
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+   }
+   include: { phase: TRAIN }
 }
 layers {
-	name: "imgsave"
-	type: IMAGE_OUTPUT
-	bottom: "data"
-	bottom: "label"
-	bottom: "reshape"
-	image_output_param {
-		file_name: "debugimgs/testimg"
-		display: 1
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-	}
-    include: { phase: TEST }
+   name: "imgsave"
+   type: IMAGE_OUTPUT
+   bottom: "data"
+   bottom: "label"
+   bottom: "reshape"
+   image_output_param {
+      file_name: "debugimgs/testimg"
+      display: 1
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+      transformation {
+		  upscale: 255.0
+		  mean_to_add: 128.0
+      }
+   }
+   include: { phase: TEST }
 }

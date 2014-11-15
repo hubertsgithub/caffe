@@ -1,4 +1,4 @@
-net: "ownmodels/mpisintel/train_val_shadow.prototxt"
+net: "ownmodels/mitintrinsic/train_val_shadow.prototxt"
 test_iter: 1
 test_interval: 500
 base_lr: 1e-5
@@ -10,5 +10,5 @@ max_iter: 450000
 momentum: 0.9
 weight_decay: 0.0005
 snapshot: 10000
-snapshot_prefix: "ownmodels/mpisintel/snapshots/caffenet_shadow_train"
+snapshot_prefix: "ownmodels/mitintrinsic/snapshots/caffenet_shadow_train"
 solver_mode: GPU
