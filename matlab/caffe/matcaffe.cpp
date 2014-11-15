@@ -96,6 +96,58 @@ static mxArray* do_forward(const mxArray* const bottom) {
   return mx_out;
 }
 
+static mxArray* do_forward_get_blob_result(const mxArray* const bottom, char* blob_name_) {
+  string blob_name(blob_name_);
+  vector<Blob<float>*>& input_blobs = net_->input_blobs();
+  CHECK_EQ(static_cast<unsigned int>(mxGetDimensions(bottom)[0]),
+      input_blobs.size());
+  for (unsigned int i = 0; i < input_blobs.size(); ++i) {
+    const mxArray* const elem = mxGetCell(bottom, i);
+    CHECK(mxIsSingle(elem))
+        << "MatCaffe require single-precision float point data";
+    CHECK_EQ(mxGetNumberOfElements(elem), input_blobs[i]->count())
+        << "MatCaffe input size does not match the input size of the network";
+    const float* const data_ptr =
+        reinterpret_cast<const float* const>(mxGetPr(elem));
+    switch (Caffe::mode()) {
+    case Caffe::CPU:
+      caffe_copy(input_blobs[i]->count(), data_ptr,
+          input_blobs[i]->mutable_cpu_data());
+      break;
+    case Caffe::GPU:
+      caffe_copy(input_blobs[i]->count(), data_ptr,
+          input_blobs[i]->mutable_gpu_data());
+      break;
+    default:
+      LOG(FATAL) << "Unknown Caffe mode.";
+    }  // switch (Caffe::mode())
+  }
+
+  net_->ForwardPrefilled();
+  Blob<float>* output_blob = net_->blob_by_name(blob_name).get();
+
+  // internally data is stored as (width, height, channels, num)
+  // where width is the fastest dimension
+  mwSize dims[4] = {output_blob->width(), output_blob->height(),
+    output_blob->channels(), output_blob->num()};
+  mxArray* mx_blob =  mxCreateNumericArray(4, dims, mxSINGLE_CLASS, mxREAL);
+  float* data_ptr = reinterpret_cast<float*>(mxGetPr(mx_blob));
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_copy(output_blob->count(), output_blob->cpu_data(),
+        data_ptr);
+    break;
+  case Caffe::GPU:
+    caffe_copy(output_blob->count(), output_blob->gpu_data(),
+        data_ptr);
+    break;
+  default:
+    LOG(FATAL) << "Unknown Caffe mode.";
+  }  // switch (Caffe::mode())
+
+  return mx_blob;
+}
+
 static mxArray* do_backward(const mxArray* const top_diff) {
   vector<Blob<float>*>& output_blobs = net_->output_blobs();
   vector<Blob<float>*>& input_blobs = net_->input_blobs();
@@ -298,6 +350,16 @@ static void forward(MEX_ARGS) {
   plhs[0] = do_forward(prhs[0]);
 }
 
+static void forward_get_blob_result(MEX_ARGS) {
+  if (nrhs != 2) {
+    LOG(ERROR) << "Only given " << nrhs << " arguments";
+    mexErrMsgTxt("Wrong number of arguments");
+  }
+
+  char* blob_name = mxArrayToString(prhs[1]);
+  plhs[0] = do_forward_get_blob_result(prhs[0], blob_name);
+}
+
 static void backward(MEX_ARGS) {
   if (nrhs != 1) {
     LOG(ERROR) << "Only given " << nrhs << " arguments";
@@ -351,6 +413,7 @@ struct handler_registry {
 static handler_registry handlers[] = {
   // Public API functions
   { "forward",            forward         },
+  { "forward_get_blob_result",    forward_get_blob_result         },
   { "backward",           backward        },
   { "init",               init            },
   { "is_initialized",     is_initialized  },
@@ -392,7 +455,7 @@ void mexFunction(MEX_ARGS) {
     }
     if (!dispatched) {
       LOG(ERROR) << "Unknown command `" << cmd << "'";
-      mexErrMsgTxt("API command not recognized");
+      mexErrMsgTxt((string("API command not recognized: ") + string(cmd)).c_str());
     }
     mxFree(cmd);
   }

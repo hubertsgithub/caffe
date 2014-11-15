@@ -70,13 +70,6 @@ tic;
 scores = caffe('forward', input_data);
 toc;
 
-scores = scores{1};
-size(scores)
-scores = squeeze(scores);
-scores = mean(scores,2);
-
-[~,maxlabel] = max(scores);
-
 % ------------------------------------------------------------------------
 function images = prepare_image(im)
 % ------------------------------------------------------------------------
