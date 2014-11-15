@@ -138,6 +138,59 @@ TYPED_TEST(MultiImageDataLayerTest, TestResize) {
   }*/
 }
 
+TYPED_TEST(MultiImageDataLayerTest, TestCropFirst) {
+  typedef typename TypeParam::Dtype Dtype;
+  LayerParameter param;
+  ImageDataParameter* image_data_param = param.mutable_image_data_param();
+  image_data_param->set_batch_size(5);
+  image_data_param->set_source(this->filename_.c_str());
+  image_data_param->set_shuffle(false);
+
+  MultiPrefetchDataParameter* multi_prefetch_data_param = param.mutable_multi_prefetch_data_param();
+  TransformationParameter* tp;
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp->set_new_height(256);
+  tp->set_new_width(256);
+  tp->set_crop_first(true);
+  // 0 crop_size
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp->set_new_height(30);
+  tp->set_new_width(60);
+  tp->set_crop_first(true);
+  tp->set_crop_size(50);
+  tp = multi_prefetch_data_param->add_data_transformations();
+  tp->set_new_height(128);
+  tp->set_new_width(100);
+  tp->set_crop_first(false);
+  tp->set_crop_size(50);
+
+  MultiImageDataLayer<Dtype> layer(param);
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+
+  EXPECT_EQ(this->blob_top_data_->num(), 5);
+  EXPECT_EQ(this->blob_top_data_->channels(), 3);
+  EXPECT_EQ(this->blob_top_data_->height(), 256);
+  EXPECT_EQ(this->blob_top_data_->width(), 256);
+
+  EXPECT_EQ(this->blob_top_label_->channels(), 3);
+  EXPECT_EQ(this->blob_top_label_->height(), 30);
+  EXPECT_EQ(this->blob_top_label_->width(), 60);
+  EXPECT_EQ(this->blob_top_label_->num(), 5);
+
+  EXPECT_EQ(this->blob_top_label2_->channels(), 3);
+  EXPECT_EQ(this->blob_top_label2_->height(), 50);
+  EXPECT_EQ(this->blob_top_label2_->width(), 50);
+
+  layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
+  // Go through the data twice
+  /*for (int iter = 0; iter < 2; ++iter) {
+    layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
+    for (int i = 0; i < 5; ++i) {
+      EXPECT_EQ(i, this->blob_top_label_->cpu_data()[i]);
+    }
+  }*/
+}
+
 TYPED_TEST(MultiImageDataLayerTest, TestShuffle) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter param;

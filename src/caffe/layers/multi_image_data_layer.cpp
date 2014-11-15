@@ -25,7 +25,8 @@ MultiImageDataLayer<Dtype>::~MultiImageDataLayer<Dtype>() {
 
 template <typename Dtype>
 void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color) {
+      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
+      const bool crop_first) {
   Blob<Dtype>* blob;
   if (isTop) {
   	  blob = top[index];
@@ -45,21 +46,73 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
   DLOG(INFO) << "trafo_d: " << trafo_d;
 
   // Read an image, and use it to initialize the top blob.
-  cv::Mat cv_img = ReadImageToCVMat(imgPath, new_height, new_width, is_color);
-  const int channels = cv_img.channels();
-  const int height = cv_img.rows;
-  const int width = cv_img.cols;
+  cv::Mat cv_img = ReadImageToCVMat(imgPath, 0, 0, is_color);
+  const int img_height = cv_img.rows;
+  const int img_width = cv_img.cols;
+
+  int channels;
+  if (is_color) {
+  	  channels = 3;
+  } else {
+  	  channels = 1;
+  }
+
+  int height;
+  if (crop_first) {
+  	  if (new_height > 0) {
+  	  	  // If crop first then resize later, the resized size will be final
+		  height = new_height;
+	  } else if (crop_size > 0) {
+	  	  // If we crop first but don't resize, the crop size will be final
+	  	  height = crop_size;
+	  } else {
+	  	  // If we don't crop or resize, the original resolution stays
+	  	  height = img_height;
+	  }
+  } else {
+	  if (crop_size > 0) {
+	  	  // If we resize first then crop later, the crop size will be final
+	  	  height = crop_size;
+	  } else if (new_height > 0) {
+	  	  // If we resize first don't crop, the resize size will be final
+	  	  height = new_height;
+	  } else {
+	  	  // If we don't crop or resize, the original resolution stays
+	  	  height = img_height;
+	  }
+  }
+
+  int width;
+  if (crop_first) {
+  	  if (new_width > 0) {
+  	  	  // If crop first then resize later, the resized size will be final
+		  width = new_width;
+	  } else if (crop_size > 0) {
+	  	  // If we crop first but don't resize, the crop size will be final
+	  	  width = crop_size;
+	  } else {
+	  	  // If we don't crop or resize, the original resolution stays
+	  	  width = img_width;
+	  }
+  } else {
+	  if (crop_size > 0) {
+	  	  // If we resize first then crop later, the crop size will be final
+	  	  width = crop_size;
+	  } else if (new_width > 0) {
+	  	  // If we resize first don't crop, the resize size will be final
+	  	  width = new_width;
+	  } else {
+	  	  // If we don't crop or resize, the original resolution stays
+	  	  width = img_width;
+	  }
+  }
+
   // image
   const int batch_size = this->layer_param_.image_data_param().batch_size();
-  if (crop_size > 0) {
-    blob->Reshape(batch_size, channels, crop_size, crop_size);
-    prefetch_d->Reshape(batch_size, channels, crop_size, crop_size);
-    trafo_d->Reshape(1, channels, crop_size, crop_size);
-  } else {
-    blob->Reshape(batch_size, channels, height, width);
-    prefetch_d->Reshape(batch_size, channels, height, width);
-    trafo_d->Reshape(1, channels, height, width);
-  }
+  blob->Reshape(batch_size, channels, height, width);
+  prefetch_d->Reshape(batch_size, channels, height, width);
+  trafo_d->Reshape(1, channels, height, width);
+
   LOG(INFO) << "output data size: " << blob->num() << ","
       << blob->channels() << "," << blob->height() << ","
       << blob->width();
@@ -115,12 +168,13 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
 	  const int new_height = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_height();
 	  const int new_width  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_width();
 	  const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
+	  const bool crop_first  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_first();
 	  CHECK((new_height == 0 && new_width == 0) ||
 		  (new_height > 0 && new_width > 0)) << "Current implementation requires "
 		  "new_height and new_width to be set at the same time.";
 
 	  string imgPath = root_folder + lines_[lines_id_][i];
-	  this->LoadImageToSlot(bottom, top, true, i, imgPath, new_height, new_width, is_color);
+	  this->LoadImageToSlot(bottom, top, true, i, imgPath, new_height, new_width, is_color, crop_first);
   }
 }
 
@@ -156,6 +210,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
   ImageDataParameter image_data_param = this->layer_param_.image_data_param();
   const int batch_size = image_data_param.batch_size();
   string root_folder = image_data_param.root_folder();
+  const bool share_random_trafos = this->layer_param_.multi_prefetch_data_param().share_random_trafos();
 
   // datum scales
   const int lines_size = lines_.size();
@@ -169,11 +224,18 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
 		const int new_height = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_height();
 		const int new_width  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_width();
 		const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
+	    const bool crop_first  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_first();
 
 		string img_path = root_folder + lines_[lines_id_][i];
 		DLOG(INFO) << "Loading image " << img_path << " as data #" << i << " batchID: " << item_id;
-		cv::Mat cv_img = ReadImageToCVMat(img_path,
-									new_height, new_width, is_color);
+		cv::Mat cv_img;
+		// If we crop first then we should load the full resolution image
+		if (crop_first) {
+			cv_img = ReadImageToCVMat(img_path, 0, 0, is_color);
+		} else {
+			cv_img = ReadImageToCVMat(img_path, new_height, new_width, is_color);
+		}
+
 		if (!cv_img.data) {
 		  LOG(ERROR) << "Couldn't load image " << img_path;
 		  continue;
@@ -187,7 +249,16 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
     for (int i = 0; i < this->prefetch_data_.size(); ++i) {
 		int offset = this->prefetch_data_[i]->offset(item_id);
 		this->transformed_data_[i]->set_cpu_data(top_data[i] + offset);
+		if (share_random_trafos && i != 0) {
+			// If we share the random transformations, set the state of the current transformation to the state of the first transformation
+			this->transformers_[i]->ResetState(*this->transformers_[0]);
+		}
+		DLOG(INFO) << "Transforming bottom " << i << "...";
 		this->transformers_[i]->Transform(cv_imgs[i], &(*this->transformed_data_[i]));
+	}
+
+	if (share_random_trafos) {
+		this->transformers_[0]->ResetState();
 	}
     trans_time += timer.MicroSeconds();
 

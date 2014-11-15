@@ -362,7 +362,8 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
   virtual void ShuffleImages();
   virtual void InternalThreadEntry();
   virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color);
+      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
+      const bool crop_first);
 
   vector<vector<std::string> > lines_;
   int lines_id_;

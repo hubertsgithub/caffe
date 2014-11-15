@@ -5,13 +5,16 @@ layers {
   top: "data"
   top: "label"
   multi_prefetch_data_param {
+  	  share_random_trafos: true
       # data
 	  data_transformations {
 		new_height: 227
-		new_width: 533
+		new_width: 227
+		random_crop: true
 		crop_size: 227
-		random_crop: false
+		crop_first: true
 		mirror: false
+		persistent: true
 		scale: 0.00392156862
 		is_color: true
 		mean_value: 128
@@ -21,9 +24,12 @@ layers {
       # label
 	  data_transformations {
 		new_height: 64
-		new_width: 150
-		crop_size: 64
-		random_crop: false
+		new_width: 64
+		random_crop: true
+		crop_size: 227
+		crop_first: true
+		mirror: false
+		persistent: true
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128
@@ -37,17 +43,20 @@ layers {
 }
 layers {
   name: "data"
-	type: MULTI_IMAGE_DATA
+  type: MULTI_IMAGE_DATA
   top: "data"
   top: "label"
   multi_prefetch_data_param {
+  	  share_random_trafos: true
       # data
 	  data_transformations {
 		new_height: 227
-		new_width: 533
+		new_width: 227
+		random_crop: true
 		crop_size: 227
-		random_crop: false
+		crop_first: true
 		mirror: false
+		persistent: true
 		scale: 0.00392156862
 		is_color: true
 		mean_value: 128
@@ -57,9 +66,12 @@ layers {
       # label
 	  data_transformations {
 		new_height: 64
-		new_width: 150
-		crop_size: 64
-		random_crop: false
+		new_width: 64
+		random_crop: true
+		crop_size: 227
+		crop_first: true
+		mirror: false
+		persistent: true
 		scale: 0.00392156862
 		is_color: false
 		mean_value: 128

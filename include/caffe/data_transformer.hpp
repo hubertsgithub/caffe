@@ -29,11 +29,26 @@ class DataTransformer {
    */
   void InitRand();
 
+  struct TransformState {
+    bool persistent;
+    bool reset;
+    bool do_mirror;
+    int h_off;
+    int w_off;
+    int height;
+    int width;
+  };
+
   /**
    * @brief Reset Transformation state. This would cause to generate random params
    *    the next Transform is called
    */
   void ResetState();
+
+  /**
+   * @brief Reset Transformation state, this will overwrite the current state with the @ref dt parameter's state
+   */
+  void ResetState(const DataTransformer<Dtype>& dt);
 
   /**
    * @brief Tells if the Transformation is persistent or not
@@ -95,7 +110,7 @@ class DataTransformer {
  protected:
    /**
    * @brief Generates a random integer from Uniform({0, 1, ..., n-1}).
-   * 
+   *
    * @param n
    *    The upperbound (exclusive) value of the random number.
    * @return
@@ -103,15 +118,6 @@ class DataTransformer {
    */
   virtual int Rand(int n);
 
-  struct TransformState {
-    bool persistent;
-    bool reset;
-    bool do_mirror;
-    int h_off;
-    int w_off;
-    int height;
-    int width;
-  };
 
   void Transform(const Datum& datum, Dtype* transformed_data);
 

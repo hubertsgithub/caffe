@@ -1,5 +1,6 @@
 #ifndef OSX
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #endif
 
 #include <string>
@@ -50,10 +51,12 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   const bool has_mean_file = param_.has_mean_file();
   const bool has_uint8 = data.size() > 0;
   const bool has_mean_values = mean_values_.size() > 0;
+  const bool crop_first = param_.crop_first();
 
   CHECK_GT(datum_channels, 0);
   CHECK_GE(datum_height, crop_size);
   CHECK_GE(datum_width, crop_size);
+  CHECK(!crop_first) << "Datum transformation does not support crop first";
 
   Dtype* mean = NULL;
   if (has_mean_file) {
@@ -130,11 +133,13 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   const int height = transformed_blob->height();
   const int width = transformed_blob->width();
   const int num = transformed_blob->num();
+  const bool crop_first = param_.crop_first();
 
   CHECK_EQ(channels, datum_channels);
   CHECK_LE(height, datum_height);
   CHECK_LE(width, datum_width);
   CHECK_GE(num, 1);
+  CHECK(!crop_first) << "Datum transformation does not support crop first";
 
   const int crop_size = param_.crop_size();
 
@@ -158,10 +163,13 @@ void DataTransformer<Dtype>::Transform(const vector<Datum> & datum_vector,
   const int channels = transformed_blob->channels();
   const int height = transformed_blob->height();
   const int width = transformed_blob->width();
+  const bool crop_first = param_.crop_first();
 
   CHECK_GT(datum_num, 0) << "There is no datum to add";
   CHECK_LE(datum_num, num) <<
     "The size of datum_vector must be smaller than transformed_blob->num()";
+  CHECK(!crop_first) << "Datum transformation does not support crop first";
+
   Blob<Dtype> uni_blob(1, channels, height, width);
   for (int item_id = 0; item_id < datum_num; ++item_id) {
     int offset = transformed_blob->offset(item_id);
@@ -182,6 +190,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   const int height = transformed_blob->height();
   const int width = transformed_blob->width();
   const int num = transformed_blob->num();
+  const bool crop_first = param_.crop_first();
 
   CHECK_EQ(channels, img_channels);
   CHECK_LE(height, img_height);
@@ -222,16 +231,43 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   const int w_off = state_.w_off;
   const bool do_mirror = state_.do_mirror;
 
-  // Crop the image if needed
-  cv::Mat cv_cropped_img = cv_img;
+  // Crop and resize the image if needed
+  cv::Mat cv_cropped_img;
   if (crop_size) {
-    CHECK_EQ(crop_size, height);
-    CHECK_EQ(crop_size, width);
-    cv::Rect roi(w_off, h_off, crop_size, crop_size);
-    cv_cropped_img = cv_img(roi);
+  	if (crop_first) {
+  		// Crop first
+  		DLOG(INFO) << "Cropping image (w_off: " << w_off << " , h_off: " << h_off << ", crop_size: " << crop_size << ")";
+		cv::Rect roi(w_off, h_off, crop_size, crop_size);
+		cv::Mat cv_tmp_img = cv_img(roi);
+
+		// Then resize
+		CHECK_EQ(param_.new_height(), height);
+		CHECK_EQ(param_.new_width(), width);
+		cv_cropped_img.create(param_.new_height(), param_.new_width(), cv_img.type());
+
+  		DLOG(INFO) << "Resizing image (height: " << height << " , width: " << width << ")";
+		cv::resize(cv_tmp_img, cv_cropped_img, cv_cropped_img.size());
+	} else {
+		CHECK_EQ(crop_size, height);
+		CHECK_EQ(crop_size, width);
+  		DLOG(INFO) << "Cropping image (w_off: " << w_off << " , h_off: " << h_off << ", crop_size: " << crop_size << ")";
+		cv::Rect roi(w_off, h_off, crop_size, crop_size);
+		cv_cropped_img = cv_img(roi);
+	}
   } else {
-    CHECK_EQ(img_height, height);
-    CHECK_EQ(img_width, width);
+  	if (crop_first) {
+		// Then resize
+		CHECK_EQ(param_.new_height(), height);
+		CHECK_EQ(param_.new_width(), width);
+		cv_cropped_img.create(param_.new_height(), param_.new_width(), cv_img.type());
+
+  		DLOG(INFO) << "Resizing image (height: " << height << " , width: " << width << ")";
+		cv::resize(cv_img, cv_cropped_img, cv_cropped_img.size());
+	} else {
+		CHECK_EQ(img_height, height);
+		CHECK_EQ(img_width, width);
+		cv_cropped_img = cv_img;
+	}
   }
 
   CHECK(cv_cropped_img.data);
@@ -382,6 +418,11 @@ int DataTransformer<Dtype>::Rand(int n) {
   caffe::rng_t* rng =
       static_cast<caffe::rng_t*>(rng_->generator());
   return ((*rng)() % n);
+}
+
+template <typename Dtype>
+void DataTransformer<Dtype>::ResetState(const DataTransformer<Dtype>& dt) {
+	this->state_ = dt.state_;
 }
 
 template <typename Dtype>
