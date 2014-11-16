@@ -196,7 +196,7 @@ layers {
 	bottom: "label"
 	bottom: "conv3"
 	image_output_param {
-		file_name: "debugimgs/img"
+		file_name: "debugimgs2/img"
 		display: 5000
 		transformation {
 			upscale: 255.0
@@ -220,7 +220,7 @@ layers {
 	bottom: "label"
 	bottom: "conv3"
 	image_output_param {
-		file_name: "debugimgs/testimg"
+		file_name: "debugimgs2/testimg"
 		display: 1
 		transformation {
 			upscale: 255.0
