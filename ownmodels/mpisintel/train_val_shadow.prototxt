@@ -23,8 +23,8 @@ layers {
 	  }
       # label
 	  data_transformations {
-		new_height: 64
-		new_width: 64
+		new_height: 213
+		new_width: 213
 		random_crop: true
 		crop_size: 227
 		crop_first: true
@@ -65,8 +65,8 @@ layers {
 	  }
       # label
 	  data_transformations {
-		new_height: 64
-		new_width: 64
+		new_height: 213
+		new_width: 213
 		random_crop: true
 		crop_size: 227
 		crop_first: true
@@ -123,21 +123,21 @@ layers {
     beta: 0.75
   }
 }
-layers {
-  name: "pool1"
-  type: POOLING
-  bottom: "norm1"
-  top: "pool1"
-  pooling_param {
-    pool: MAX
-    kernel_size: 3
-    stride: 3
-  }
-}
+#layers {
+#  name: "pool1"
+#  type: POOLING
+#  bottom: "norm1"
+#  top: "pool1"
+#  pooling_param {
+#    pool: MAX
+#    kernel_size: 3
+#    stride: 3
+#  }
+#}
 layers {
   name: "conv2"
   type: CONVOLUTION
-  bottom: "pool1"
+  bottom: "norm1"
   top: "conv2"
   blobs_lr: 1
   blobs_lr: 2
@@ -174,30 +174,20 @@ layers {
   }
 }
 layers {
-  name: "pool2"
-  type: POOLING
+  name: "conv3"
+  type: CONVOLUTION
   bottom: "norm2"
-  top: "pool2"
-  pooling_param {
-    pool: MAX
-    kernel_size: 3
-    stride: 2
-  }
-}
-layers {
-  name: "fc6"
-  type: INNER_PRODUCT
-  bottom: "pool2"
-  top: "fc6"
+  top: "conv3"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
-  inner_product_param {
-    num_output: 4096
+  convolution_param {
+    num_output: 1 
+    kernel_size: 3
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
@@ -205,42 +195,74 @@ layers {
     }
   }
 }
-layers {
-  name: "relu6"
-  type: RELU
-  bottom: "fc6"
-  top: "fc6"
-}
-layers {
-  name: "drop6"
-  type: DROPOUT
-  bottom: "fc6"
-  top: "fc6"
-  dropout_param {
-    dropout_ratio: 0.5
-  }
-}
-layers {
-  name: "fc7"
-  type: INNER_PRODUCT
-  bottom: "fc6"
-  top: "fc7"
-  blobs_lr: 1
-  blobs_lr: 2
-  weight_decay: 0
-  weight_decay: 0
-  inner_product_param {
-    num_output: 4096
-    weight_filler {
-      type: "gaussian"
-      std: 0.005
-    }
-    bias_filler {
-      type: "constant"
-      value: 0.1
-    }
-  }
-}
+#layers {
+#  name: "pool2"
+#  type: POOLING
+#  bottom: "norm2"
+#  top: "pool2"
+#  pooling_param {
+#    pool: MAX
+#    kernel_size: 3
+#    stride: 2
+#  }
+#}
+#layers {
+#  name: "fc6"
+#  type: INNER_PRODUCT
+#  bottom: "norm2"
+#  top: "fc6"
+#  blobs_lr: 1
+#  blobs_lr: 2
+#  weight_decay: 1
+#  weight_decay: 0
+#  inner_product_param {
+#    num_output: 4096
+#    weight_filler {
+#      type: "gaussian"
+#      std: 0.005
+#    }
+#    bias_filler {
+#      type: "constant"
+#      value: 0.1
+#    }
+#  }
+#}
+#layers {
+#  name: "relu6"
+#  type: RELU
+#  bottom: "fc6"
+#  top: "fc6"
+#}
+#layers {
+#  name: "drop6"
+#  type: DROPOUT
+#  bottom: "fc6"
+#  top: "fc6"
+#  dropout_param {
+#    dropout_ratio: 0.5
+#  }
+#}
+#layers {
+#  name: "fc7"
+#  type: INNER_PRODUCT
+#  bottom: "fc6"
+#  top: "fc7"
+#  blobs_lr: 1
+#  blobs_lr: 2
+#  weight_decay: 0
+#  weight_decay: 0
+#  inner_product_param {
+#    num_output: 4096
+#    weight_filler {
+#      type: "gaussian"
+#      std: 0.005
+#    }
+#    bias_filler {
+#      type: "constant"
+#      value: 0.1
+#    }
+#  }
+#}
 #layers {
 #  name: "relu7"
 #  type: RELU
@@ -256,21 +278,21 @@ layers {
 #    dropout_ratio: 0.5
 #  }
 #}
-layers {
-  name: "reshape"
-  type: RESHAPE
-  bottom: "fc7"
-  top: "reshape"
-  reshape_param {
-    channels: 1
-    height: 64
-    width: 64
-  }
-}
+#layers {
+#  name: "reshape"
+#  type: RESHAPE
+#  bottom: "fc7"
+#  top: "reshape"
+#  reshape_param {
+#    channels: 1
+#    height: 64
+#    width: 64
+#  }
+#}
 layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
-  bottom: "reshape"
+  bottom: "conv3"
   bottom: "label"
   top: "loss"
 }
@@ -279,7 +301,7 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "label"
-	bottom: "reshape"
+	bottom: "conv3"
 	image_output_param {
 		file_name: "debugimgs/img"
 		display: 5000
@@ -303,7 +325,7 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "label"
-	bottom: "reshape"
+	bottom: "conv3"
 	image_output_param {
 		file_name: "debugimgs/testimg"
 		display: 1
