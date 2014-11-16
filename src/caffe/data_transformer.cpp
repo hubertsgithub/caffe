@@ -94,7 +94,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   for (int c = 0; c < datum_channels; ++c) {
     for (int h = 0; h < height; ++h) {
       for (int w = 0; w < width; ++w) {
-        data_index = (c * datum_height + h_off + h) * datum_width + w_off + w;
+        data_index = (c * datum_height + h_off - crop_size / 2 + h) * datum_width + w_off - crop_size / 2 + w;
         if (do_mirror) {
           top_index = (c * height + h) * width + (width - 1 - w);
         } else {
@@ -237,7 +237,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   	if (crop_first) {
   		// Crop first
   		DLOG(INFO) << "Cropping image (w_off: " << w_off << " , h_off: " << h_off << ", crop_size: " << crop_size << ")";
-		cv::Rect roi(w_off, h_off, crop_size, crop_size);
+		cv::Rect roi(w_off - crop_size / 2, h_off - crop_size / 2, crop_size, crop_size);
 		cv::Mat cv_tmp_img = cv_img(roi);
 
 		// Then resize
@@ -251,7 +251,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
 		CHECK_EQ(crop_size, height);
 		CHECK_EQ(crop_size, width);
   		DLOG(INFO) << "Cropping image (w_off: " << w_off << " , h_off: " << h_off << ", crop_size: " << crop_size << ")";
-		cv::Rect roi(w_off, h_off, crop_size, crop_size);
+		cv::Rect roi(w_off - crop_size / 2, h_off - crop_size / 2, crop_size, crop_size);
 		cv_cropped_img = cv_img(roi);
 	}
   } else {
@@ -287,7 +287,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
         // int top_index = (c * height + h) * width + w;
         Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
         if (has_mean_file) {
-          int mean_index = (c * img_height + h_off + h) * img_width + w_off + w;
+          int mean_index = (c * img_height + h_off - crop_size / 2 + h) * img_width + w_off - crop_size / 2 + w;
           transformed_data[top_index] =
             (pixel - mean[mean_index]) * scale;
         } else {
@@ -376,10 +376,10 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
     int data_index_n = n * channels;
     for (int c = 0; c < channels; ++c) {
       int top_index_c = (top_index_n + c) * height;
-      int data_index_c = (data_index_n + c) * input_height + h_off;
+      int data_index_c = (data_index_n + c) * input_height + h_off - crop_size / 2;
       for (int h = 0; h < height; ++h) {
         int top_index_h = (top_index_c + h) * width;
-        int data_index_h = (data_index_c + h) * input_width + w_off;
+        int data_index_h = (data_index_c + h) * input_width + w_off - crop_size / 2;
         if (do_mirror) {
           int top_index_w = top_index_h + width - 1;
           for (int w = 0; w < width; ++w) {
@@ -455,11 +455,11 @@ void DataTransformer<Dtype>::UpdateState(const int height,
     state_.do_mirror = param_.mirror() && Rand(2);
     if (crop_size) {
       if (phase_ == Caffe::TRAIN && do_random_crop) {
-        state_.h_off = Rand(height - crop_size + 1);
-        state_.w_off = Rand(width - crop_size + 1);
+        state_.h_off = Rand(height - crop_size + 1) + crop_size / 2;
+        state_.w_off = Rand(width - crop_size + 1) + crop_size / 2;
       } else {
-        state_.h_off = (height - crop_size) / 2;
-        state_.w_off = (width - crop_size) / 2;
+        state_.h_off = (height - crop_size) / 2 + crop_size / 2;
+        state_.w_off = (width - crop_size) / 2 + crop_size / 2;
       }
     }
   }
