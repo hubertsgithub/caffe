@@ -23,11 +23,11 @@ layers {
 	  }
       # label
 	  data_transformations {
-		new_height: 213
-		new_width: 213
+		new_height: 216
+		new_width: 216
 		random_crop: true
 		# crop a smaller region to align everything after the convolutions
-		crop_size: 213
+		crop_size: 216
 		crop_first: true
 		mirror: false
 		persistent: true
@@ -66,10 +66,10 @@ layers {
 	  }
       # label
 	  data_transformations {
-		new_height: 213
-		new_width: 213
+		new_height: 216
+		new_width: 216
 		random_crop: true
-		crop_size: 213
+		crop_size: 216
 		crop_first: true
 		mirror: false
 		persistent: true
@@ -94,8 +94,8 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 16
-    kernel_size: 9
+    num_output: 32
+    kernel_size: 5
     stride: 1
     weight_filler {
       type: "xavier"
@@ -124,9 +124,20 @@ layers {
   }
 }
 layers {
+  name: "pool1"
+  type: POOLING
+  bottom: "norm1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 1
+  }
+}
+layers {
   name: "conv2"
   type: CONVOLUTION
-  bottom: "norm1"
+  bottom: "pool1"
   top: "conv2"
   blobs_lr: 1
   blobs_lr: 2
