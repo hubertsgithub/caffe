@@ -113,20 +113,9 @@ layers {
   top: "conv1"
 }
 layers {
-  name: "norm1"
-  type: LRN
-  bottom: "conv1"
-  top: "norm1"
-  lrn_param {
-    local_size: 5
-    alpha: 0.0001
-    beta: 0.75
-  }
-}
-layers {
   name: "conv2"
   type: CONVOLUTION
-  bottom: "norm1"
+  bottom: "conv1"
   top: "conv2"
   blobs_lr: 1
   blobs_lr: 2
@@ -151,20 +140,9 @@ layers {
   top: "conv2"
 }
 layers {
-  name: "norm2"
-  type: LRN
-  bottom: "conv2"
-  top: "norm2"
-  lrn_param {
-    local_size: 5
-    alpha: 0.0001
-    beta: 0.75
-  }
-}
-layers {
   name: "conv3"
   type: CONVOLUTION
-  bottom: "norm2"
+  bottom: "conv2"
   top: "conv3"
   blobs_lr: 1
   blobs_lr: 2
@@ -188,6 +166,9 @@ layers {
   bottom: "conv3"
   bottom: "label"
   top: "loss"
+  euclidean_param {
+  	norm_with_count: true
+  }
 }
 layers {
 	name: "imgsave"
@@ -196,7 +177,7 @@ layers {
 	bottom: "label"
 	bottom: "conv3"
 	image_output_param {
-		file_name: "debugimgs2/img"
+		file_name: "debugimgs_simple_nonorm/img"
 		display: 5000
 		transformation {
 			upscale: 255.0
@@ -220,7 +201,7 @@ layers {
 	bottom: "label"
 	bottom: "conv3"
 	image_output_param {
-		file_name: "debugimgs2/testimg"
+		file_name: "debugimgs_simple_nonorm/testimg"
 		display: 1
 		transformation {
 			upscale: 255.0
