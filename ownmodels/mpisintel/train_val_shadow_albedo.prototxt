@@ -34,9 +34,7 @@ layers {
 		persistent: true
 		scale: 0.00392156862
 		is_color: true
-		mean_value: 128
-		mean_value: 128
-		mean_value: 128
+		# don't subtract mean, just scale down, because we compute loss that way
 	  }
       # label - shading
 	  data_transformations {
@@ -110,9 +108,7 @@ layers {
 		persistent: true
 		scale: 0.00392156862
 		is_color: true
-		mean_value: 128
-		mean_value: 128
-		mean_value: 128
+		# don't subtract mean, just scale down, because we compute loss that way
 	  }
       # label - shading
 	  data_transformations {
@@ -152,10 +148,10 @@ layers {
   include: { phase: TEST }
 }
 layers {
-  name: "conv1"
+  name: "conv1-shading"
   type: CONVOLUTION
   bottom: "data"
-  top: "conv1"
+  top: "conv1-shading"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
@@ -174,16 +170,16 @@ layers {
   }
 }
 layers {
-  name: "relu1"
+  name: "relu1-shading"
   type: RELU
-  bottom: "conv1"
-  top: "conv1"
+  bottom: "conv1-shading"
+  top: "conv1-shading"
 }
 layers {
-  name: "conv2"
+  name: "conv2-shading"
   type: CONVOLUTION
-  bottom: "conv1"
-  top: "conv2"
+  bottom: "conv1-shading"
+  top: "conv2-shading"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
@@ -201,16 +197,16 @@ layers {
   }
 }
 layers {
-  name: "relu2"
+  name: "relu2-shading"
   type: RELU
-  bottom: "conv2"
-  top: "conv2"
+  bottom: "conv2-shading"
+  top: "conv2-shading"
 }
 layers {
-  name: "conv3"
+  name: "conv3-shading"
   type: CONVOLUTION
-  bottom: "conv2"
-  top: "conv3"
+  bottom: "conv2-shading"
+  top: "conv3-shading"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 0
@@ -230,7 +226,7 @@ layers {
 layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
-  bottom: "conv3"
+  bottom: "conv3-shading"
   bottom: "shading"
   top: "loss"
   euclidean_param {
@@ -323,10 +319,31 @@ layers {
   	norm_with_count: true
   }
 }
+# shift the values so they are between 0 and 1
+layers {
+  name: "shift-albedo"
+  type: POWER
+  bottom: "conv3-albedo"
+  top: "shift-albedo"
+  power_param {
+  	shift: 0.5
+  }
+}
+layers {
+  name: "shift-shading"
+  type: POWER
+  bottom: "conv3-shading"
+  top: "shift-shading"
+  power_param {
+  	shift: 0.5
+  }
+}
+# slice the 3D predicted albedo into three parts and compute the product with the predicted shading to get back the original image
+# We compute loss on that
 layers {
   name: "slice1"
   type: SLICE
-  bottom: "conv3-albedo"
+  bottom: "shift-albedo"
   top: "slice1-0"
   top: "slice1-1"
   top: "slice1-2"
@@ -338,7 +355,7 @@ layers {
 layers {
   name: "eltprod1"
   type: ELTWISE
-  bottom: "conv3"
+  bottom: "shift-shading"
   bottom: "slice1-0"
   top: "eltprod1"
   eltwise_param {
@@ -348,7 +365,7 @@ layers {
 layers {
   name: "eltprod2"
   type: ELTWISE
-  bottom: "conv3"
+  bottom: "shift-shading"
   bottom: "slice1-1"
   top: "eltprod2"
   eltwise_param {
@@ -358,7 +375,7 @@ layers {
 layers {
   name: "eltprod3"
   type: ELTWISE
-  bottom: "conv3"
+  bottom: "shift-shading"
   bottom: "slice1-2"
   top: "eltprod3"
   eltwise_param {
@@ -373,6 +390,7 @@ layers {
   top: "concat"
   type: CONCAT
   concat_param {
+  	# concatenate along channels
     concat_dim: 1
   }
 }
@@ -391,7 +409,7 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "shading"
-	bottom: "conv3"
+	bottom: "conv3-shading"
 	bottom: "albedo"
 	bottom: "conv3-albedo"
 	image_output_param {
@@ -425,7 +443,7 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "shading"
-	bottom: "conv3"
+	bottom: "conv3-shading"
 	bottom: "albedo"
 	bottom: "conv3-albedo"
 	image_output_param {
