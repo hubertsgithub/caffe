@@ -2,7 +2,7 @@ from os import listdir
 from os.path import exists
 
 origpath = 'data/mpisintel/data/clean_noshadingtextures'
-shadingpath = 'data/mpisintel/data/shading'
+shadingpath = 'data/mpisintel/data/gen_shading'
 albedopath = 'data/mpisintel/data/albedo_noshadingtextures'
 
 origdirnames = listdir(origpath)
