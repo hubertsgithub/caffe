@@ -224,11 +224,11 @@ layers {
   }
 }
 layers {
-  name: "loss"
+  name: "loss-shading"
   type: EUCLIDEAN_LOSS
   bottom: "conv3-shading"
   bottom: "shading"
-  top: "loss"
+  top: "loss-shading"
   euclidean_param {
   	norm_with_count: true
   }
