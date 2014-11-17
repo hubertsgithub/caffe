@@ -1,0 +1,269 @@
+name: "IntrinsicCNN"
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+      # data
+	  data_transformations {
+		new_height: 227
+		new_width: 227
+		random_crop: true
+		crop_size: 227
+		crop_first: true
+		mirror: false
+		persistent: true
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label
+	  data_transformations {
+		new_height: 217
+		new_width: 217
+		random_crop: true
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 217
+		crop_first: true
+		mirror: false
+		persistent: true
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/mpisintel/train.txt"
+    batch_size: 5 
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+      # data
+	  data_transformations {
+		new_height: 227
+		new_width: 227
+		random_crop: true
+		crop_size: 227
+		crop_first: true
+		mirror: false
+		persistent: true
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label
+	  data_transformations {
+		new_height: 217
+		new_width: 217
+		random_crop: true
+		crop_size: 217
+		crop_first: true
+		mirror: false
+		persistent: true
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/mpisintel/val.txt"
+    batch_size: 5 
+  }
+  include: { phase: TEST }
+}
+layers {
+  name: "conv1"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "conv1"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1"
+  type: RELU
+  bottom: "conv1"
+  top: "conv1"
+}
+layers {
+  name: "slice1"
+  type: SLICE
+  bottom: "conv1"
+  top: "slice1-0"
+  top: "slice1-1"
+  top: "slice1-2"
+  top: "slice1-3"
+  slice_param {
+  	slice_point: 16
+  	slice_point: 32
+  	slice_point: 48
+  }
+}
+layers {
+  name: "eltmax1"
+  type: ELTWISE
+  bottom: "slice1-0"
+  bottom: "slice1-1"
+  bottom: "slice1-2"
+  bottom: "slice1-3"
+  top: "eltmax1"
+  eltwise_param {
+  	operation: MAX
+  }
+}
+layers {
+  name: "conv2"
+  type: CONVOLUTION
+  bottom: "eltmax1"
+  top: "conv2"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2"
+  type: RELU
+  bottom: "conv2"
+  top: "conv2"
+}
+layers {
+  name: "slice2"
+  type: SLICE
+  bottom: "conv2"
+  top: "slice2-0"
+  top: "slice2-1"
+  top: "slice2-2"
+  top: "slice2-3"
+  slice_param {
+  	slice_point: 16
+  	slice_point: 32
+  	slice_point: 48
+  }
+}
+layers {
+  name: "eltmax2"
+  type: ELTWISE
+  bottom: "slice2-0"
+  bottom: "slice2-1"
+  bottom: "slice2-2"
+  bottom: "slice2-3"
+  top: "eltmax2"
+  eltwise_param {
+  	operation: MAX
+  }
+}
+layers {
+  name: "conv3"
+  type: CONVOLUTION
+  bottom: "eltmax2"
+  top: "conv3"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 1 
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "loss"
+  type: EUCLIDEAN_LOSS
+  bottom: "conv3"
+  bottom: "label"
+  top: "loss"
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "label"
+	bottom: "conv3"
+	image_output_param {
+		file_name: "debugimgs/img"
+		display: 5000
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+	}
+    include: { phase: TRAIN }
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "label"
+	bottom: "conv3"
+	image_output_param {
+		file_name: "debugimgs/testimg"
+		display: 1
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+	}
+    include: { phase: TEST }
+}
