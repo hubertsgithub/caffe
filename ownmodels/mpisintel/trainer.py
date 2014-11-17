@@ -4,12 +4,20 @@ import sys
 import os
 import subprocess
 
-if len(sys.argv) != 2:
-    print 'Correct usage: /trainer.py <modelname>'
+if len(sys.argv) != 2 and len(sys.argv) != 3:
+    print 'Correct usage: /trainer.py <modelname> <platform=(CPU,GPU)?>'
     sys.exit()
 
 root = 'ownmodels/mpisintel/'
 modelname = sys.argv[1]
+platform = 'GPU'
+if len(sys.argv) == 3:
+    if sys.argv[2] == 'CPU' or sys.argv[2] == 'GPU':
+        platform = sys.argv[2]
+    else:
+        print 'Correct usage: /trainer.py <modelname> <platform=(CPU,GPU)?>'
+        sys.exit()
+
 print 'Running training for model {0}...'.format(modelname)
 
 samplesolverfilename = 'solver.prototxt'
@@ -29,6 +37,7 @@ fout = open(root + solverfilename, 'w')
 for l in lines:
     newl = l.replace('train_val.prototxt', trainfilename)
     newl = newl.replace('caffenet_train', 'caffenet_train_{0}'.format(modelname))
+    newl = newl.replace('solver_mode: GPU', 'solver_mode: {0}'.format(platform))
     fout.write(newl)
 
 fout.close()
