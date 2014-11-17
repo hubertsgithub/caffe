@@ -334,6 +334,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 25;
   optional WindowDataParameter window_data_param = 20;
   optional ReshapeParameter reshape_param = 2091;
+  optional EuclideanParameter euclidean_param = 2092;
 
   // Parameters for data pre-processing.
   optional TransformationParameter transform_param = 36;
@@ -356,6 +357,11 @@ message ReshapeParameter {
   optional uint32 channels = 2 [default = 0];
   optional uint32 height = 3 [default = 0];
   optional uint32 width = 4 [default = 0];
+}
+
+// Message that stores parameters used by EuclideanLossLayer and EuclideanMaskedLossLayer
+message EuclideanParameter {
+  optional bool norm_with_count = 1 [default = false];
 }
 
 // Message that stores parameters used to apply transformation
