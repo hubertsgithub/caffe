@@ -218,6 +218,9 @@ layers {
   bottom: "conv3"
   bottom: "label"
   top: "loss"
+  euclidean_param {
+  	norm_with_count: true
+  }
 }
 layers {
 	name: "imgsave"

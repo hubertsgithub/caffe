@@ -139,6 +139,7 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   	for (int i = 0; i < this->prefetch_data_.size(); ++i) {
   		string img_name;
   		ss >> img_name;
+		CHECK(img_name.size() > 0) << "The number of elements in a row of the data file should be equal to the number of top!";
   		data_img_names.push_back(img_name);
   		DLOG(INFO) << "Image data #" << i << ": " << img_name;
   	}
