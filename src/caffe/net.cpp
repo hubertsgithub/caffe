@@ -802,6 +802,18 @@ const shared_ptr<Blob<Dtype> > Net<Dtype>::blob_by_name(
 }
 
 template <typename Dtype>
+int Net<Dtype>::blobid_by_name(const string& blob_name) {
+  int blob_id;
+  if (has_blob(blob_name)) {
+    blob_id = blob_names_index_[blob_name];
+  } else {
+    blob_id = -1;
+    LOG(WARNING) << "Unknown blob name " << blob_name;
+  }
+  return blob_id;
+}
+
+template <typename Dtype>
 bool Net<Dtype>::has_layer(const string& layer_name) {
   return layer_names_index_.find(layer_name) != layer_names_index_.end();
 }
@@ -817,6 +829,18 @@ const shared_ptr<Layer<Dtype> > Net<Dtype>::layer_by_name(
     LOG(WARNING) << "Unknown layer name " << layer_name;
   }
   return layer_ptr;
+}
+
+template <typename Dtype>
+int Net<Dtype>::layerid_by_name(const string& layer_name) {
+  int layer_id;
+  if (has_layer(layer_name)) {
+    layer_id = layer_names_index_[layer_name];
+  } else {
+    layer_id = -1;
+    LOG(WARNING) << "Unknown layer name " << layer_name;
+  }
+  return layer_id;
 }
 
 INSTANTIATE_CLASS(Net);

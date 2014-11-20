@@ -83,6 +83,26 @@ cv::Mat ReadImageToCVMat(const string& filename,
   return cv_img;
 }
 
+void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const int height, const int width, const bool is_color) {
+  cv::Mat cv_img_converted;
+  if (!is_color) {
+  	  cv::cvtColor(cv_img, cv_img_converted, CV_RGB2GRAY);
+  } else {
+  	  cv_img_converted = cv_img;
+  }
+
+  cv::Mat cv_img_resized;
+  if (height > 0 && width > 0) {
+    cv::resize(cv_img_converted, cv_img_resized, cv::Size(width, height));
+  } else {
+    cv_img_resized = cv_img_converted;
+  }
+  if (!imwrite(filename, cv_img_resized)) {
+    LOG(ERROR) << "Could not save file " << filename;
+  }
+}
+
 bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const bool is_color, Datum* datum) {
   cv::Mat cv_img = ReadImageToCVMat(filename, height, width, is_color);

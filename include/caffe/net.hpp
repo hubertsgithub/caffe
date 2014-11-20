@@ -142,8 +142,10 @@ class Net {
   inline vector<int>& output_blob_indices() { return net_output_blob_indices_; }
   bool has_blob(const string& blob_name);
   const shared_ptr<Blob<Dtype> > blob_by_name(const string& blob_name);
+  int blobid_by_name(const string& blob_name);
   bool has_layer(const string& layer_name);
   const shared_ptr<Layer<Dtype> > layer_by_name(const string& layer_name);
+  int layerid_by_name(const string& layer_name);
 
   void set_debug_info(const bool value) { debug_info_ = value; }
 

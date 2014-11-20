@@ -145,6 +145,60 @@ inline cv::Mat ReadImageToCVMat(const string& filename) {
   return ReadImageToCVMat(filename, 0, 0, true);
 }
 
+void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const int height, const int width, const bool is_color);
+
+inline void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const int height, const int width) {
+  WriteImageFromCVMat(filename, cv_img, height, width, true);
+}
+
+inline void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img,
+    const bool is_color) {
+  WriteImageFromCVMat(filename, cv_img, 0, 0, is_color);
+}
+
+inline void WriteImageFromCVMat(const string& filename, const cv::Mat& cv_img) {
+  WriteImageFromCVMat(filename, cv_img, 0, 0, true);
+}
+
+template <typename Dtype>
+cv::Mat ConvertBlobToCVMat(const Blob<Dtype>& blob, const bool useData, const int currentNum, const double upscale, const double mean_to_add) {
+  const Dtype* blob_ptr;
+  if (useData) {
+  	  blob_ptr = blob.cpu_data();
+  } else {
+  	  blob_ptr = blob.cpu_diff();
+  }
+
+  const int channels = blob.channels();
+  const int height = blob.height();
+  const int width = blob.width();
+
+  CHECK(channels == 1 || channels == 3) << "Invalid number of channels, it should be 1 or 3";
+
+  cv::Mat cv_img;
+  if (channels == 1) {
+  	  cv_img = cv::Mat(height, width, CV_8UC1);
+  } else {
+  	  cv_img = cv::Mat(height, width, CV_8UC3);
+  }
+
+  int top_index;
+  for (int h = 0; h < height; ++h) {
+    uchar* ptr = cv_img.ptr<uchar>(h);
+    int img_index = 0;
+    for (int w = 0; w < width; ++w) {
+      for (int c = 0; c < channels; ++c) {
+	    top_index = blob.offset(currentNum, c, h, w);
+		ptr[img_index++] = static_cast<uchar>(std::min(255.0, std::max(0.0, blob_ptr[top_index]*upscale + mean_to_add)));
+      }
+    }
+  }
+
+  return cv_img;
+}
+
 cv::Mat DecodeDatumToCVMat(const Datum& datum,
     const int height, const int width, const bool is_color);
 
