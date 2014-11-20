@@ -13,6 +13,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		crop_size: 190
 		crop_first: false
 		mirror: false
@@ -26,6 +27,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		crop_size: 180
 		crop_first: false
 		mirror: false
@@ -37,6 +39,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		# crop a smaller region to align everything after the convolutions
 		crop_size: 180
 		crop_first: false
@@ -49,6 +52,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		# crop a smaller region to align everything after the convolutions
 		crop_size: 180
 		crop_first: false
@@ -63,6 +67,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		# crop a smaller region to align everything after the convolutions
 		crop_size: 180
 		crop_first: false
@@ -91,6 +96,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		crop_size: 190
 		crop_first: false
 		mirror: false
@@ -104,6 +110,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		crop_size: 180
 		crop_first: false
 		mirror: false
@@ -115,6 +122,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		# crop a smaller region to align everything after the convolutions
 		crop_size: 180
 		crop_first: false
@@ -127,6 +135,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		# crop a smaller region to align everything after the convolutions
 		crop_size: 180
 		crop_first: false
@@ -141,6 +150,7 @@ layers {
 	  data_transformations {
 		new_height: 190
 		new_width: 190
+		random_crop: false
 		# crop a smaller region to align everything after the convolutions
 		crop_size: 180
 		crop_first: false

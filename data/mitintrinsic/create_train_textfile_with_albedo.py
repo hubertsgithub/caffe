@@ -23,7 +23,7 @@ for dir in origdirnames:
 
     filepaths = []
     filepaths.append(origparentdirpath + '/' + 'original.png')
-    filepaths.append(origparentdirpath  + '/' + 'diffuse.png')
+    filepaths.append(origparentdirpath  + '/' + 'shading.png')
     filepaths.append(origparentdirpath + '/' + 'reflectance.png')
     filepaths.append(origparentdirpath + '/' + 'mask.png')
 
