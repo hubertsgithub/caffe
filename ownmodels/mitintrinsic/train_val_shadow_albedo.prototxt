@@ -1,0 +1,497 @@
+name: "IntrinsicCNN"
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "croppeddata"
+  top: "shading"
+  top: "albedo"
+  top: "mask"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+      # data
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label - rendered image
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		# don't subtract mean, just scale down, because we compute loss that way
+	  }
+      # label - shading
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+      # label - albedo
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # mask 
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+  }
+  image_data_param {
+    source: "data/mitintrinsic/train_with_albedo.txt"
+    batch_size: 7 
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "croppeddata"
+  top: "shading"
+  top: "albedo"
+  top: "mask"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+      # data
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label - rendered image
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		# don't subtract mean, just scale down, because we compute loss that way
+	  }
+      # label - shading
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		mean_value: 128
+	  }
+      # label - albedo
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # mask 
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 180
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+  }
+  image_data_param {
+    source: "data/mitintrinsic/val_with_albedo.txt"
+    batch_size: 1 
+  }
+  include: { phase: TEST }
+}
+layers {
+  name: "conv1-shading"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "conv1-shading"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1-shading"
+  type: RELU
+  bottom: "conv1-shading"
+  top: "conv1-shading"
+}
+layers {
+  name: "conv2-shading"
+  type: CONVOLUTION
+  bottom: "conv1-shading"
+  top: "conv2-shading"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2-shading"
+  type: RELU
+  bottom: "conv2-shading"
+  top: "conv2-shading"
+}
+layers {
+  name: "conv3-shading"
+  type: CONVOLUTION
+  bottom: "conv2-shading"
+  top: "conv3-shading"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 1 
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "loss-shading"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "conv3-shading"
+  bottom: "shading"
+  bottom: "mask"
+  top: "loss-shading"
+  euclidean_param {
+  	norm_with_count: true
+  }
+}
+layers {
+  name: "conv1-albedo"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "conv1-albedo"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1-albedo"
+  type: RELU
+  bottom: "conv1-albedo"
+  top: "conv1-albedo"
+}
+layers {
+  name: "conv2-albedo"
+  type: CONVOLUTION
+  bottom: "conv1-albedo"
+  top: "conv2-albedo"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2-albedo"
+  type: RELU
+  bottom: "conv2-albedo"
+  top: "conv2-albedo"
+}
+layers {
+  name: "conv3-albedo"
+  type: CONVOLUTION
+  bottom: "conv2-albedo"
+  top: "conv3-albedo"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 3 
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "threechannelmask"
+  bottom: "mask"
+  bottom: "mask"
+  bottom: "mask"
+  top: "threechannelmask"
+  type: CONCAT
+  concat_param {
+  	# concatenate along channels
+    concat_dim: 1
+  }
+}
+layers {
+  name: "loss-albedo"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "conv3-albedo"
+  bottom: "albedo"
+  bottom: "threechannelmask"
+  top: "loss-albedo"
+  euclidean_param {
+  	norm_with_count: true
+  }
+}
+# shift the values so they are between 0 and 1
+layers {
+  name: "shift-albedo"
+  type: POWER
+  bottom: "conv3-albedo"
+  top: "shift-albedo"
+  power_param {
+  	shift: 0.5
+  }
+}
+layers {
+  name: "shift-shading"
+  type: POWER
+  bottom: "conv3-shading"
+  top: "shift-shading"
+  power_param {
+  	shift: 0.5
+  }
+}
+# slice the 3D predicted albedo into three parts and compute the product with the predicted shading to get back the original image
+# We compute loss on that
+layers {
+  name: "slice1"
+  type: SLICE
+  bottom: "shift-albedo"
+  top: "slice1-0"
+  top: "slice1-1"
+  top: "slice1-2"
+  slice_param {
+  	slice_point: 1
+  	slice_point: 2
+  }
+}
+layers {
+  name: "eltprod1"
+  type: ELTWISE
+  bottom: "shift-shading"
+  bottom: "slice1-0"
+  top: "eltprod1"
+  eltwise_param {
+  	operation: PROD 
+  }
+}
+layers {
+  name: "eltprod2"
+  type: ELTWISE
+  bottom: "shift-shading"
+  bottom: "slice1-1"
+  top: "eltprod2"
+  eltwise_param {
+  	operation: PROD 
+  }
+}
+layers {
+  name: "eltprod3"
+  type: ELTWISE
+  bottom: "shift-shading"
+  bottom: "slice1-2"
+  top: "eltprod3"
+  eltwise_param {
+  	operation: PROD 
+  }
+}
+layers {
+  name: "concat"
+  bottom: "eltprod1"
+  bottom: "eltprod2"
+  bottom: "eltprod3"
+  top: "concat"
+  type: CONCAT
+  concat_param {
+  	# concatenate along channels
+    concat_dim: 1
+  }
+}
+layers {
+  name: "loss-shading-albedo"
+  type: EUCLIDEAN_MASKED_LOSS
+  bottom: "concat"
+  bottom: "croppeddata"
+  bottom: "threechannelmask"
+  top: "loss-shading-albedo"
+  euclidean_param {
+  	norm_with_count: true
+  }
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "shading"
+	bottom: "conv3-shading"
+	bottom: "albedo"
+	bottom: "conv3-albedo"
+	image_output_param {
+		file_name: "debugimgs_with_albedo/img"
+		display: 5000
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+	}
+    include: { phase: TRAIN }
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "shading"
+	bottom: "conv3-shading"
+	bottom: "albedo"
+	bottom: "conv3-albedo"
+	image_output_param {
+		file_name: "debugimgs_with_albedo/testimg"
+		display: 1
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+	}
+    include: { phase: TEST }
+}
