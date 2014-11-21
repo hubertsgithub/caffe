@@ -17,13 +17,13 @@ for dir in $DATA/*; do
     dirname=$(basename "$dir")
 	# Let the first directory be the validation set
 	if [ $first = "true" ]; then
-		echo "$DATAFOLDER/$FILTEREDDATA/$dirname-original.png $DATAFOLDER/$FILTEREDDATA/$dirname-shading.png $DATAFOLDER/$FILTEREDDATA/$dirname-mask.png" >> $FILTEREDDATA/val.txt
+		echo "$DATAFOLDER/$FILTEREDDATA/$dirname-diffuse.png $DATAFOLDER/$FILTEREDDATA/$dirname-shading.png $DATAFOLDER/$FILTEREDDATA/$dirname-mask.png" >> $FILTEREDDATA/val.txt
 		first=false
 	else
-		echo "$DATAFOLDER/$FILTEREDDATA/$dirname-original.png $DATAFOLDER/$FILTEREDDATA/$dirname-shading.png $DATAFOLDER/$FILTEREDDATA/$dirname-mask.png" >> $FILTEREDDATA/train.txt
+		echo "$DATAFOLDER/$FILTEREDDATA/$dirname-diffuse.png $DATAFOLDER/$FILTEREDDATA/$dirname-shading.png $DATAFOLDER/$FILTEREDDATA/$dirname-mask.png" >> $FILTEREDDATA/train.txt
 	fi
 
-    cp $dir/original.png $FILTEREDDATA/$dirname-original.png
+    cp $dir/diffuse.png $FILTEREDDATA/$dirname-diffuse.png
     cp $dir/shading.png $FILTEREDDATA/$dirname-shading.png
     cp $dir/mask.png $FILTEREDDATA/$dirname-mask.png
 done
