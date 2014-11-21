@@ -4,7 +4,6 @@ import os
 import cv2
 
 origpath = 'data/mitintrinsic/data'
-newpath = 'data/mitintrisic/resizeddata'
 resize = 190
 crop = 190
 
