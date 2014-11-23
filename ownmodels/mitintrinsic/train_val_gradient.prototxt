@@ -33,7 +33,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
-		mean_value: 128
+		#mean_value: 128
 	  }
       # label - y gradients
 	  data_transformations {
@@ -46,7 +46,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
-		mean_value: 128
+		#mean_value: 128
 	  }
       # mask 
 	  data_transformations {
@@ -101,7 +101,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
-		mean_value: 128
+		#mean_value: 128
 	  }
       # label - y gradients
 	  data_transformations {
@@ -114,7 +114,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
-		mean_value: 128
+		#mean_value: 128
 	  }
       # mask 
 	  data_transformations {
@@ -219,6 +219,22 @@ layers {
   top: "loss-gradx"
 }
 layers {
+  name: "slice-gradx"
+  type: SLICE
+  bottom: "conv3-gradx"
+  top: "slice-gradx-0"
+  top: "slice-gradx-1"
+  slice_param {
+  	slice_point: 1
+  }
+}
+layers {
+  name: "softmax-gradx"
+  type: SOFTMAX
+  bottom: "slice-gradx-0"
+  top: "softmax-gradx"
+}
+layers {
   name: "conv1-grady"
   type: CONVOLUTION
   bottom: "data"
@@ -302,9 +318,27 @@ layers {
   top: "loss-grady"
 }
 layers {
+  name: "slice-grady"
+  type: SLICE
+  bottom: "conv3-grady"
+  top: "slice-grady-0"
+  top: "slice-grady-1"
+  slice_param {
+  	slice_point: 1
+  }
+}
+layers {
+  name: "softmax-grady"
+  type: SOFTMAX
+  bottom: "slice-grady-0"
+  top: "softmax-grady"
+}
+layers {
 	name: "silentmask"
 	type: SILENCE
 	bottom: "mask"
+	bottom: "slice-gradx-1"
+	bottom: "slice-grady-1"
 }
 layers {
 	name: "imgsave"
@@ -323,19 +357,19 @@ layers {
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 	}
     include: { phase: TRAIN }
@@ -345,9 +379,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "conv3-gradx"
+	bottom: "softmax-gradx"
 	bottom: "grady"
-	bottom: "conv3-grady"
+	bottom: "softmax-grady"
 	image_output_param {
 		file_name: "debugimgs_with_grad/testimg"
 		display: 1
@@ -357,19 +391,19 @@ layers {
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 		transformation {
 			upscale: 255.0
-			mean_to_add: 128.0
+			mean_to_add: 0.0
 		}
 	}
     include: { phase: TEST } 
