@@ -200,7 +200,7 @@ layers {
   weight_decay: 0
   weight_decay: 0
   convolution_param {
-    num_output: 1 
+    num_output: 2 
     kernel_size: 3
     weight_filler {
       type: "xavier"
@@ -212,21 +212,11 @@ layers {
   }
 }
 layers {
-  name: "softmax-gradx"
-  type: SOFTMAX
-  bottom: "conv3-gradx"
-  top: "softmax-gradx"
-}
-layers {
   name: "loss-gradx"
-  type: EUCLIDEAN_MASKED_LOSS
-  bottom: "softmax-gradx"
+  type: SOFTMAX_LOSS
+  bottom: "conv3-gradx"
   bottom: "gradx"
-  bottom: "mask"
   top: "loss-gradx"
-  euclidean_param {
-  	norm_with_count: true
-  }
 }
 layers {
   name: "conv1-grady"
@@ -293,7 +283,7 @@ layers {
   weight_decay: 0
   weight_decay: 0
   convolution_param {
-    num_output: 1 
+    num_output: 2 
     kernel_size: 3
     weight_filler {
       type: "xavier"
@@ -305,29 +295,12 @@ layers {
   }
 }
 layers {
-  name: "softmax-grady"
-  type: SOFTMAX
-  bottom: "conv3-grady"
-  top: "softmax-grady"
-}
-layers {
   name: "loss-grady"
-  type: EUCLIDEAN_MASKED_LOSS
-  bottom: "softmax-grady"
+  type: SOFTMAX_LOSS
+  bottom: "conv3-grady"
   bottom: "grady"
-  bottom: "mask"
   top: "loss-grady"
-  euclidean_param {
-  	norm_with_count: true
-  }
 }
-#layers {
-#  name: "loss-grady"
-#  type: SOFTMAX_LOSS
-#  bottom: "conv3-grady"
-#  bottom: "grady"
-#  top: "loss-grady"
-#}
 layers {
 	name: "silentmask"
 	type: SILENCE
@@ -338,9 +311,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "softmax-gradx"
+	bottom: "conv3-gradx"
 	bottom: "grady"
-	bottom: "softmax-grady"
+	bottom: "conv3-grady"
 	image_output_param {
 		file_name: "debugimgs_with_grad/img"
 		display: 5000
@@ -372,9 +345,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "softmax-gradx"
+	bottom: "conv3-gradx"
 	bottom: "grady"
-	bottom: "softmax-grady"
+	bottom: "conv3-grady"
 	image_output_param {
 		file_name: "debugimgs_with_grad/testimg"
 		display: 1
