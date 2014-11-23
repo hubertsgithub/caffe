@@ -235,6 +235,7 @@ message LayerParameter {
     NONE = 0;
     ABSVAL = 35;
     ACCURACY = 1;
+    ACCURACY_MAP = 6293;
     ARGMAX = 30;
     BNLL = 2;
     CONCAT = 3;
