@@ -45,8 +45,8 @@ for dir in origdirnames:
     b_y = np.where(np.abs(s_y) > np.abs(r_y), 1., 0.)
     b_x = np.where(np.abs(s_x) > np.abs(r_x), 1., 0.)
 
-    b_y = b_y * 255.0
-    b_x = b_x * 255.0
+    #b_y = b_y * 255.0
+    #b_x = b_x * 255.0
 
     convertedfilepathx = os.path.join(origparentdirpath, 'gradbinary-x-converted.png')
     convertedfilepathy = os.path.join(origparentdirpath, 'gradbinary-y-converted.png')

@@ -31,9 +31,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
-		scale: 0.00392156862
 		is_color: false
-		#mean_value: 128
 	  }
       # label - y gradients
 	  data_transformations {
@@ -44,9 +42,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
-		scale: 0.00392156862
 		is_color: false
-		#mean_value: 128
 	  }
       # mask 
 	  data_transformations {
@@ -99,9 +95,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
-		scale: 0.00392156862
 		is_color: false
-		#mean_value: 128
 	  }
       # label - y gradients
 	  data_transformations {
@@ -112,9 +106,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
-		scale: 0.00392156862
 		is_color: false
-		#mean_value: 128
 	  }
       # mask 
 	  data_transformations {
