@@ -345,9 +345,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "conv3-gradx"
+	bottom: "softmax-gradx"
 	bottom: "grady"
-	bottom: "conv3-grady"
+	bottom: "softmax-grady"
 	image_output_param {
 		file_name: "debugimgs_with_grad/img"
 		display: 5000
