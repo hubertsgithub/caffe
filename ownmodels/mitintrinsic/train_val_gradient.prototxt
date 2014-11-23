@@ -216,6 +216,7 @@ layers {
   type: SOFTMAX_LOSS
   bottom: "conv3-gradx"
   bottom: "gradx"
+  bottom: "mask"
   top: "loss-gradx"
 }
 layers {
@@ -315,6 +316,7 @@ layers {
   type: SOFTMAX_LOSS
   bottom: "conv3-grady"
   bottom: "grady"
+  bottom: "mask"
   top: "loss-grady"
 }
 layers {
