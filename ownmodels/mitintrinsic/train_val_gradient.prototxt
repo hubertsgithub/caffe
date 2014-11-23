@@ -217,6 +217,11 @@ layers {
   bottom: "conv3-gradx"
   bottom: "gradx"
   top: "loss-gradx"
+}
+layers {
+  name: "softmax-gradx"
+  type: SOFTMAX
+  bottom: "conv3-gradx"
   top: "softmax-gradx"
 }
 layers {
@@ -311,6 +316,11 @@ layers {
   bottom: "conv3-grady"
   bottom: "grady"
   top: "loss-grady"
+}
+layers {
+  name: "softmax-grady"
+  type: SOFTMAX
+  bottom: "conv3-grady"
   top: "softmax-grady"
 }
 layers {
@@ -369,9 +379,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "softmax-gradx"
+	bottom: "slice-gradx-0"
 	bottom: "grady"
-	bottom: "softmax-grady"
+	bottom: "slice-grady-0"
 	image_output_param {
 		file_name: "debugimgs_with_grad/testimg"
 		display: 1
