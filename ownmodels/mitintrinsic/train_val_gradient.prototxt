@@ -338,9 +338,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "conv3-gradx"
+	bottom: "softmax-gradx"
 	bottom: "grady"
-	bottom: "conv3-grady"
+	bottom: "softmax-grady"
 	image_output_param {
 		file_name: "debugimgs_with_grad/img"
 		display: 5000
@@ -372,9 +372,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "conv3-gradx"
+	bottom: "softmax-gradx"
 	bottom: "grady"
-	bottom: "conv3-grady"
+	bottom: "softmax-grady"
 	image_output_param {
 		file_name: "debugimgs_with_grad/testimg"
 		display: 1
@@ -399,5 +399,5 @@ layers {
 			mean_to_add: 128.0
 		}
 	}
-    include: { phase: TEST }
+    include: { phase: TEST } 
 }
