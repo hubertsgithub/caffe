@@ -217,22 +217,17 @@ layers {
   bottom: "conv3-gradx"
   bottom: "gradx"
   top: "loss-gradx"
+  top: "softmax-gradx"
 }
 layers {
   name: "slice-gradx"
   type: SLICE
-  bottom: "conv3-gradx"
+  bottom: "softmax-gradx"
   top: "slice-gradx-0"
   top: "slice-gradx-1"
   slice_param {
   	slice_point: 1
   }
-}
-layers {
-  name: "softmax-gradx"
-  type: SOFTMAX
-  bottom: "slice-gradx-0"
-  top: "softmax-gradx"
 }
 layers {
   name: "conv1-grady"
@@ -316,22 +311,17 @@ layers {
   bottom: "conv3-grady"
   bottom: "grady"
   top: "loss-grady"
+  top: "softmax-grady"
 }
 layers {
   name: "slice-grady"
   type: SLICE
-  bottom: "conv3-grady"
+  bottom: "softmax-grady"
   top: "slice-grady-0"
   top: "slice-grady-1"
   slice_param {
   	slice_point: 1
   }
-}
-layers {
-  name: "softmax-grady"
-  type: SOFTMAX
-  bottom: "slice-grady-0"
-  top: "softmax-grady"
 }
 layers {
 	name: "silentmask"
@@ -345,9 +335,9 @@ layers {
 	type: IMAGE_OUTPUT
 	bottom: "data"
 	bottom: "gradx"
-	bottom: "softmax-gradx"
+	bottom: "slice-gradx-0"
 	bottom: "grady"
-	bottom: "softmax-grady"
+	bottom: "slice-grady-0"
 	image_output_param {
 		file_name: "debugimgs_with_grad/img"
 		display: 5000
