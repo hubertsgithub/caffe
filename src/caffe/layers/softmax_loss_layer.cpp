@@ -45,6 +45,9 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
   if (bottom.size() == 3) {
       // spatially weighted version
       const Dtype* spatial_weight = bottom[2]->cpu_data();
+      // Compute the sum of the weight
+      const Dtype weight_sum = bottom[2]->asum_data();
+
       CHECK_EQ(bottom[2]->num(), bottom[0]->num());
       CHECK_EQ(bottom[2]->channels(), 1);
       CHECK_EQ(bottom[2]->height(), bottom[0]->height());
@@ -66,7 +69,7 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
         }
       }
       CHECK(!std::isnan(loss));
-      top[0]->mutable_cpu_data()[0] = loss / num;
+      top[0]->mutable_cpu_data()[0] = loss / weight_sum / num;
   } else {
       // no spatial weights
       for (int i = 0; i < num; ++i) {
@@ -126,6 +129,9 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     if (bottom.size() == 3) {
         // scale by spatial weight
         const Dtype* spatial_weight = bottom[2]->cpu_data();
+		// Compute the sum of the weight
+		const Dtype weight_sum = bottom[2]->asum_data();
+
         int idx = 0;
         for (int i = 0; i < num; ++i) {
             for (int c = 0; c < nlabels; ++c) {
@@ -135,7 +141,7 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
             }
         }
         // Scale gradient
-        caffe_scal(prob_.count(), loss_weight / num, bottom_diff);
+        caffe_scal(prob_.count(), loss_weight / weight_sum / num, bottom_diff);
     } else {
         // Scale gradient
         caffe_scal(prob_.count(), loss_weight / spatial_dim / num, bottom_diff);
