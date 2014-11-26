@@ -7,6 +7,7 @@
 
 #include "caffe/caffe.hpp"
 #include "caffe/util/io.hpp"
+#include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
 using caffe::Blob;
@@ -45,8 +46,8 @@ DEFINE_int32(gradient_upscale, 2,
              "Optional; the backpropagated gradient blob values will be upscaled by this value before adding the mean and saving as an image.");
 DEFINE_int32(saliency_upscale, 3,
              "Optional; the backpropagated gradient blob values will be upscaled by this value before adding the mean and saving as an image.");
-DEFINE_string(gradientdir, "",
-              "Optional; path to directory where the gradients will be saved, it should exist!");
+DEFINE_string(visdir, "",
+              "Optional; path to directory where the visualizations will be saved, it should exist!");
 DEFINE_bool(onlycmax, true,
             "Optional; if true we only compute the gradients for the maximum value through the channels in the measured blob.");
 
@@ -209,8 +210,75 @@ int test() {
 }
 RegisterBrewFunction(test);
 
-// Visualize: visualize the gradients of a model.
-int visualize() {
+struct VisData {
+	Net<float>* caffe_net;
+
+	Blob<float>* dataBlob;
+	int dataLayerid;
+
+	Blob<float>* visBlob;
+	int visLayerid;
+
+	VisData() {
+		caffe_net = NULL;
+		dataBlob = NULL;
+		visBlob = NULL;
+	}
+
+	~VisData() {
+		delete caffe_net;
+	}
+};
+
+VisData* locateDataAndVisualizedLayers() {
+	VisData* ret = new VisData();
+
+	NetParameter param;
+	caffe::ReadNetParamsFromTextFileOrDie(FLAGS_model, &param);
+	// Set force backward since we have to compute backward for the data layer
+	param.set_force_backward(true);
+	ret->caffe_net = new Net<float>(param);
+
+	// We switch on debug_info to see every detail during forward and back propagation
+	ret->caffe_net->set_debug_info(true);
+
+	ret->caffe_net->CopyTrainedLayersFrom(FLAGS_weights);
+
+	ret->dataLayerid = ret->caffe_net->layerid_by_name(FLAGS_datalayer);
+	// If we couldn't find a layer with this name, maybe we can find a blob!
+	// If this is a deploy network definition there will probably be a blob instead of a layer
+	if (ret->dataLayerid == -1) {
+		int dataBlobid = ret->caffe_net->blobid_by_name(FLAGS_datalayer);
+		CHECK(dataBlobid != -1) << "Invalid data name, couldn't find a layer or blob with this name!";
+
+		ret->dataBlob = ret->caffe_net->blobs()[dataBlobid].get();
+	} else {
+		// We assume that the first top of the data layer contains the input image
+		ret->dataBlob = ret->caffe_net->top_vecs()[ret->dataLayerid][0];
+	}
+
+	LOG(INFO) << "Data blob dimensions:";
+	LOG(INFO) << "num: " << ret->dataBlob->num();
+	LOG(INFO) << "channels: " << ret->dataBlob->channels();
+	LOG(INFO) << "height: " << ret->dataBlob->height();
+	LOG(INFO) << "width: " << ret->dataBlob->width();
+
+	ret->visLayerid = ret->caffe_net->layerid_by_name(FLAGS_visualizedlayer);
+	CHECK(ret->visLayerid != -1) << "Invalid measured name, couldn't find a layer with this name!";
+	// We assume that the first top of the measured layer contains the measured blob
+	ret->visBlob = ret->caffe_net->top_vecs()[ret->visLayerid][0];
+
+	LOG(INFO) << "Measured blob dimensions:";
+	LOG(INFO) << "num: " << ret->visBlob->num();
+	LOG(INFO) << "channels: " << ret->visBlob->channels();
+	LOG(INFO) << "height: " << ret->visBlob->height();
+	LOG(INFO) << "width: " << ret->visBlob->width();
+
+	return ret;
+}
+
+// gradient: visualize the gradients of a model.
+int gradient() {
 	CHECK_GT(FLAGS_model.size(), 0) << "Need a model definition for gradient.";
 	CHECK_GT(FLAGS_weights.size(), 0) << "Need model weights for gradient.";
 	CHECK_GT(FLAGS_datalayer.size(), 0) << "Need data layer name for gradient.";
@@ -228,73 +296,35 @@ int visualize() {
 	// Instantiate the caffe net.
 	Caffe::set_phase(Caffe::TEST);
 
-	NetParameter param;
-	caffe::ReadNetParamsFromTextFileOrDie(FLAGS_model, &param);
-	// Set force backward since we have to compute backward for the data layer
-	param.set_force_backward(true);
-	Net<float> caffe_net(param);
-	// We switch on debug_info to see every detail during forward and back propagation
-	caffe_net.set_debug_info(true);
-
-	caffe_net.CopyTrainedLayersFrom(FLAGS_weights);
-
-	std::string dataName = FLAGS_datalayer;
-	Blob<float>* dataBlob = NULL;
-	int dataLayerid = caffe_net.layerid_by_name(dataName);
-	// If we couldn't find a layer with this name, maybe we can find a blob!
-	// If this is a deploy network definition there will probably be a blob instead of a layer
-	if (dataLayerid == -1) {
-		int dataBlobid = caffe_net.blobid_by_name(dataName);
-		CHECK(dataBlobid != -1) << "Invalid data name, couldn't find a layer or blob with this name!";
-
-		dataBlob = caffe_net.blobs()[dataBlobid].get();
-	} else {
-		// We assume that the first top of the data layer contains the input image
-		dataBlob = caffe_net.top_vecs()[dataLayerid][0];
-	}
-
-	LOG(INFO) << "Data blob dimensions:";
-	LOG(INFO) << "num: " << dataBlob->num();
-	LOG(INFO) << "channels: " << dataBlob->channels();
-	LOG(INFO) << "height: " << dataBlob->height();
-	LOG(INFO) << "width: " << dataBlob->width();
-
-	std::string measuredName = FLAGS_visualizedlayer;
-	int visLayerid = caffe_net.layerid_by_name(measuredName);
-	CHECK(visLayerid != -1) << "Invalid measured name, couldn't find a layer with this name!";
-	// We assume that the first top of the measured layer contains the measured blob
-	Blob<float>* measuredBlob = caffe_net.top_vecs()[visLayerid][0];
-
-	LOG(INFO) << "Measured blob dimensions:";
-	LOG(INFO) << "num: " << measuredBlob->num();
-	LOG(INFO) << "channels: " << measuredBlob->channels();
-	LOG(INFO) << "height: " << measuredBlob->height();
-	LOG(INFO) << "width: " << measuredBlob->width();
+	VisData* vd = locateDataAndVisualizedLayers();
+	Net<float>& caffe_net = *vd->caffe_net;
+	Blob<float>* dataBlob = vd->dataBlob;
+	Blob<float>* visBlob = vd->visBlob;
+	int visLayerid = vd->visLayerid;
 
 	LOG(INFO) << "Forward...";
 
 	vector<Blob<float>* > bottom_vec;
 	float loss = 0;
 	caffe_net.Forward(bottom_vec, &loss);
-	const float* result_vec = measuredBlob->cpu_data();
+	const float* result_vec = visBlob->cpu_data();
 	vector<int> cmaxs;
-	vector<bool> istherecmax(measuredBlob->channels(), false);
+	vector<bool> istherecmax(visBlob->channels(), false);
 
-	for (int n = 0; n < measuredBlob->num(); ++n) {
-		for (int h = 0; h < measuredBlob->height(); ++h) {
-			for (int w = 0; w < measuredBlob->width(); ++w) {
+	for (int n = 0; n < visBlob->num(); ++n) {
+		for (int h = 0; h < visBlob->height(); ++h) {
+			for (int w = 0; w < visBlob->width(); ++w) {
 				int cmax = 0;
 				float scoremax = -1000.0;
-				for (int c = 0; c < measuredBlob->channels(); ++c) {
-					const float score = result_vec[measuredBlob->offset(n, c, h, w)];
+				for (int c = 0; c < visBlob->channels(); ++c) {
+					const float score = result_vec[visBlob->offset(n, c, h, w)];
 					if (score > scoremax) {
 						scoremax = score;
 						cmax = c;
 					}
-					//LOG(INFO) << "Score (" << measuredName << ")-n" << n << "-c" << c << "-h" << h << "-w" << w << "= " << score;
 				}
-				LOG(INFO) << "Max score (" << measuredName << ")-n" << n << "-h" << h << "-w" << w << "= " << scoremax;
-				LOG(INFO) << "Max channel (" << measuredName << ")-n" << n << "-h" << h << "-w" << w << "= " << cmax;
+				LOG(INFO) << "Max score (" << FLAGS_visualizedlayer << ")-n" << n << "-h" << h << "-w" << w << "= " << scoremax;
+				LOG(INFO) << "Max channel (" << FLAGS_visualizedlayer << ")-n" << n << "-h" << h << "-w" << w << "= " << cmax;
 				cmaxs.push_back(cmax);
 				istherecmax[cmax] = true;
 			}
@@ -305,23 +335,23 @@ int visualize() {
 	for (int n = 0; n < dataBlob->num(); ++n) {
 		cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
 		std::stringstream filenameStr;
-		filenameStr << FLAGS_gradientdir << "/gradient-" << caffe_net.name() << "-n" << n << "-input.jpg";
+		filenameStr << FLAGS_visdir << "/gradient-" << caffe_net.name() << "-n" << n << "-input.jpg";
 		caffe::WriteImageFromCVMat(filenameStr.str(), mat);
 	}
 
-	float* measuredBlobVec = measuredBlob->mutable_cpu_diff();
+	float* visBlobVec = visBlob->mutable_cpu_diff();
 
-	for (int c = 0; c < measuredBlob->channels(); ++c) {
+	for (int c = 0; c < visBlob->channels(); ++c) {
 		if (FLAGS_onlycmax && !istherecmax[c]) {
 			continue;
 		}
-		for (int h = 0; h < measuredBlob->height(); ++h) {
-			for (int w = 0; w < measuredBlob->width(); ++w) {
+		for (int h = 0; h < visBlob->height(); ++h) {
+			for (int w = 0; w < visBlob->width(); ++w) {
 				// Initialize with zeros
-				memset(measuredBlobVec, 0, measuredBlob->count());
-				LOG(INFO) << "Setting " << measuredName << "-c" << c << "-h" << h << "-w" << w << " diff value to 1 for all n";
-				for (int n = 0; n < measuredBlob->num(); ++n) {
-					measuredBlobVec[measuredBlob->offset(n, c, h, w)] = 1;
+				memset(visBlobVec, 0, visBlob->count());
+				LOG(INFO) << "Setting " << FLAGS_visualizedlayer << "-c" << c << "-h" << h << "-w" << w << " diff value to 1 for all n";
+				for (int n = 0; n < visBlob->num(); ++n) {
+					visBlobVec[visBlob->offset(n, c, h, w)] = 1;
 				}
 
 				LOG(INFO) << "Backward...";
@@ -330,7 +360,7 @@ int visualize() {
 				Blob<float> tmpblob;
 				tmpblob.CopyFrom(*dataBlob, true, true);
 
-				for (int n = 0; n < measuredBlob->num(); ++n) {
+				for (int n = 0; n < visBlob->num(); ++n) {
 					if (FLAGS_onlycmax && c != cmaxs[n]) {
 						continue;
 					}
@@ -357,18 +387,18 @@ int visualize() {
 
 					cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, false, n, 255.0, 0);
 					std::stringstream filenameStr;
-					filenameStr << FLAGS_gradientdir << "/gradient-" << caffe_net.name() <<
+					filenameStr << FLAGS_visdir << "/gradient-" << caffe_net.name() <<
 					            "-n" << n <<
-					            "-" << measuredName <<
+					            "-" << FLAGS_visualizedlayer <<
 					            "-c" << c <<
 					            "-h" << h <<
 					            "-w" << w << ".jpg";
 
-					LOG(INFO) << "Saving gradient for " << measuredName << "-n" << n << "-c" << c << "-h" << h << "-w" << w << " to " << filenameStr.str();
+					LOG(INFO) << "Saving gradient for " << FLAGS_visualizedlayer << "-n" << n << "-c" << c << "-h" << h << "-w" << w << " to " << filenameStr.str();
 					caffe::WriteImageFromCVMat(filenameStr.str(), mat);
 				}
 
-				for (int n = 0; n < measuredBlob->num(); ++n) {
+				for (int n = 0; n < visBlob->num(); ++n) {
 					if (FLAGS_onlycmax && c != cmaxs[n]) {
 						continue;
 					}
@@ -401,14 +431,14 @@ int visualize() {
 
 					cv::Mat mat = caffe::ConvertBlobToCVMat(tmpblob, false, n, 255.0, 0);
 					std::stringstream filenameStr;
-					filenameStr << FLAGS_gradientdir << "/gradient-" << caffe_net.name() <<
+					filenameStr << FLAGS_visdir << "/gradient-" << caffe_net.name() <<
 					            "-n" << n <<
-					            "-" << measuredName <<
+					            "-" << FLAGS_visualizedlayer <<
 					            "-c" << c <<
 					            "-h" << h <<
 					            "-w" << w << "-saliency.jpg";
 
-					LOG(INFO) << "Saving gradient (saliency) for " << measuredName << "-n" << n << "-c" << c << "-h" << h << "-w" << w << " to " << filenameStr.str();
+					LOG(INFO) << "Saving gradient (saliency) for " << FLAGS_visualizedlayer << "-n" << n << "-c" << c << "-h" << h << "-w" << w << " to " << filenameStr.str();
 					caffe::WriteImageFromCVMat(filenameStr.str(), mat);
 				}
 			}
@@ -417,7 +447,86 @@ int visualize() {
 
 	return 0;
 }
-RegisterBrewFunction(visualize);
+RegisterBrewFunction(gradient);
+
+// classimage: compute a representative image for each class.
+int classimage() {
+	CHECK_GT(FLAGS_model.size(), 0) << "Need a model definition for classimage.";
+	CHECK_GT(FLAGS_weights.size(), 0) << "Need model weights for classimage.";
+	CHECK_GT(FLAGS_datalayer.size(), 0) << "Need data layer name for classimage.";
+	CHECK_GT(FLAGS_visualizedlayer.size(), 0) << "Need visualized layer name for classimage.";
+
+	// Set device id and mode
+	if (FLAGS_gpu >= 0) {
+		LOG(INFO) << "Use GPU with device ID " << FLAGS_gpu;
+		Caffe::SetDevice(FLAGS_gpu);
+		Caffe::set_mode(Caffe::GPU);
+	} else {
+		LOG(INFO) << "Use CPU.";
+		Caffe::set_mode(Caffe::CPU);
+	}
+	// Instantiate the caffe net.
+	Caffe::set_phase(Caffe::TEST);
+
+	VisData* vd = locateDataAndVisualizedLayers();
+	Net<float>& caffe_net = *vd->caffe_net;
+	Blob<float>* dataBlob = vd->dataBlob;
+	Blob<float>* visBlob = vd->visBlob;
+	int visLayerid = vd->visLayerid;
+
+	LOG(INFO) << "Initializing with mean image...";
+	// TODO: MEAN IMAGE
+	memset(dataBlob->mutable_cpu_data(), 0, dataBlob->count());
+
+	float* visBlobVec = visBlob->mutable_cpu_diff();
+	int itCount = 100;
+	float learning_rate = 0.01;
+
+	for (int c = 0; c < visBlob->channels(); ++c) {
+		for (int h = 0; h < visBlob->height(); ++h) {
+			for (int w = 0; w < visBlob->width(); ++w) {
+				// Initialize with zeros
+				memset(visBlobVec, 0, visBlob->count());
+
+				LOG(INFO) << "Setting " << FLAGS_visualizedlayer << "-c" << c << "-h" << h << "-w" << w << " diff value to 1 for all n";
+
+				for (int it = 0; it < itCount; ++it) {
+					LOG(INFO) << "Forward...";
+					vector<Blob<float>* > bottom_vec;
+					float loss = 0;
+					caffe_net.Forward(bottom_vec, &loss);
+
+					LOG(INFO) << "Backward...";
+					caffe_net.BackwardFrom(visLayerid);
+
+					// Update the image using the computed gradient
+					caffe::caffe_axpy(dataBlob->count(),
+					           (-1)*learning_rate,
+					           dataBlob->cpu_diff(),
+					           dataBlob->mutable_cpu_data());
+
+					// Go through the input images and save for each n
+					for (int n = 0; n < dataBlob->num(); ++n) {
+						cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
+						std::stringstream filenameStr;
+						filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-it" << it << "-n" << n << ".jpg";
+						caffe::WriteImageFromCVMat(filenameStr.str(), mat);
+					}
+				}
+			}
+		}
+	}
+	// Go through the input images and save for each n
+	for (int n = 0; n < dataBlob->num(); ++n) {
+		cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
+		std::stringstream filenameStr;
+		filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-n" << n << ".jpg";
+		caffe::WriteImageFromCVMat(filenameStr.str(), mat);
+	}
+
+	return 0;
+}
+RegisterBrewFunction(classimage);
 
 // Time: benchmark the execution time of a model.
 int time() {
@@ -519,7 +628,8 @@ int main(int argc, char** argv) {
 	                        "commands:\n"
 	                        "  train           train or finetune a model\n"
 	                        "  test            score a model\n"
-	                        "  visualize       visualize a model\n"
+	                        "  gradient       visualize the gradient of a model\n"
+	                        "  classimage       compute representative class images descent for a model using gradient\n"
 	                        "  device_query    show GPU diagnostic information\n"
 	                        "  time            benchmark model execution time");
 	// Run tool or show usage.
