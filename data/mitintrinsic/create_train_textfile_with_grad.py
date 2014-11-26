@@ -31,22 +31,23 @@ for dir in origdirnames:
     mask = intrinsic.load_png(os.path.join(origparentdirpath, 'mask-converted.png'))
     mask = np.mean(mask, axis = 2)
 
-    images = map(lambda image: np.clip(image, .001, np.infty), images)
+    #images = map(lambda image: np.clip(image, .001, np.infty), images)
     # Convert to grayscale
     images = map(lambda image: np.mean(image, axis = 2), images)
 
     # Compute log images
-    images = map(lambda image: np.where(mask, np.log(image), 0.), images)
+    #images = map(lambda image: np.where(mask, np.log(image), 0.), images)
     # Compute gradients
     s_y, s_x = poisson.get_gradients(images[0])
     r_y, r_x = poisson.get_gradients(images[1])
 
     # Shading gradient -> 1, reflectance gradient -> 0
-    b_y = np.where(np.abs(s_y) > np.abs(r_y), 1., 0.)
-    b_x = np.where(np.abs(s_x) > np.abs(r_x), 1., 0.)
+    epsilon = 0.01
+    b_y = np.where(np.logical_or(np.abs(s_y) > np.abs(r_y), np.abs(r_y) < epsilon), 1., 0.)
+    b_x = np.where(np.logical_or(np.abs(s_x) > np.abs(r_x), np.abs(r_x) < epsilon), 1., 0.)
 
-    #b_y = b_y * 255.0
-    #b_x = b_x * 255.0
+    b_y = b_y * 255.0
+    b_x = b_x * 255.0
 
     convertedfilepathx = os.path.join(origparentdirpath, 'gradbinary-x-converted.png')
     convertedfilepathy = os.path.join(origparentdirpath, 'gradbinary-y-converted.png')
