@@ -54,7 +54,7 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
       // same loss function, scaled by a spatial weight
       for (int i = 0; i < num; ++i) {
         for (int j = 0; j < spatial_dim; j++) {
-          const int label_value = static_cast<int>(label[i * spatial_dim + j]);
+          const int label_value = static_cast<int>(label[i * spatial_dim + j] + 0.5);
           CHECK_GE(label_value, 0);
           if (label_value < nlabels) {
               CHECK_GT(dim, label_value * spatial_dim);
@@ -71,7 +71,7 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
       // no spatial weights
       for (int i = 0; i < num; ++i) {
         for (int j = 0; j < spatial_dim; j++) {
-          const int label_value = static_cast<int>(label[i * spatial_dim + j]);
+          const int label_value = static_cast<int>(label[i * spatial_dim + j] + 0.5);
           CHECK_GE(label_value, 0);
           if (label_value < nlabels) {
               CHECK_GT(dim, label_value * spatial_dim);

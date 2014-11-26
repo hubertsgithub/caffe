@@ -31,6 +31,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
+		scale: 0.00392156862
 		is_color: false
 	  }
       # label - y gradients
@@ -42,6 +43,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
+		scale: 0.00392156862
 		is_color: false
 	  }
       # mask 
@@ -95,6 +97,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
+		scale: 0.00392156862
 		is_color: false
 	  }
       # label - y gradients
@@ -106,6 +109,7 @@ layers {
 		crop_size: 180
 		crop_first: false
 		mirror: false
+		scale: 0.00392156862
 		is_color: false
 	  }
       # mask 
