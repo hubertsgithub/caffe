@@ -474,21 +474,32 @@ int classimage() {
 	Blob<float>* visBlob = vd->visBlob;
 	int visLayerid = vd->visLayerid;
 
-	LOG(INFO) << "Initializing with mean image...";
-	// TODO: MEAN IMAGE
-	memset(dataBlob->mutable_cpu_data(), 0, dataBlob->count());
-
-	float* visBlobVec = visBlob->mutable_cpu_diff();
-	int itCount = 100;
-	float learning_rate = 0.01;
+	int itCount = 100000;
+	float learning_rate = 0.1;
+	float weight_decay = 0.5;
+	Blob<float>* labelBlob = new Blob<float>();
+	labelBlob->ReshapeLike(*visBlob);
 
 	for (int c = 0; c < visBlob->channels(); ++c) {
 		for (int h = 0; h < visBlob->height(); ++h) {
 			for (int w = 0; w < visBlob->width(); ++w) {
-				// Initialize with zeros
-				memset(visBlobVec, 0, visBlob->count());
+				memset(labelBlob->mutable_cpu_data(), 0, labelBlob->count());
+				for (int n = 0; n < labelBlob->num(); ++n) {
+					labelBlob->mutable_cpu_data()[labelBlob->offset(n, c, h, w)] = 1;
+				}
 
-				LOG(INFO) << "Setting " << FLAGS_visualizedlayer << "-c" << c << "-h" << h << "-w" << w << " diff value to 1 for all n";
+				LOG(INFO) << "Initializing with mean image...";
+				// TODO: MEAN IMAGE
+				memset(dataBlob->mutable_cpu_data(), 0, dataBlob->count());
+				// Go through the input images and save for each n
+				for (int n = 0; n < dataBlob->num(); ++n) {
+					cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
+					std::stringstream filenameStr;
+					filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-ait-n" << n << ".jpg";
+
+					LOG(INFO) << "Saving image: " << filenameStr.str();
+					caffe::WriteImageFromCVMat(filenameStr.str(), mat);
+				}
 
 				for (int it = 0; it < itCount; ++it) {
 					LOG(INFO) << "Forward...";
@@ -496,8 +507,20 @@ int classimage() {
 					float loss = 0;
 					caffe_net.Forward(bottom_vec, &loss);
 
+					// Compute loss
+					caffe::caffe_sub(visBlob->count(),
+							labelBlob->cpu_data(),
+							visBlob->cpu_data(),
+							visBlob->mutable_cpu_diff());
+
 					LOG(INFO) << "Backward...";
 					caffe_net.BackwardFrom(visLayerid);
+
+					// L2 regularization, update the diff
+					caffe::caffe_axpy(dataBlob->count(),
+					           weight_decay,
+					           dataBlob->cpu_data(),
+					           dataBlob->mutable_cpu_diff());
 
 					// Update the image using the computed gradient
 					caffe::caffe_axpy(dataBlob->count(),
@@ -505,11 +528,14 @@ int classimage() {
 					           dataBlob->cpu_diff(),
 					           dataBlob->mutable_cpu_data());
 
+					LOG(INFO) << "Updated image data sum: " << dataBlob->asum_data();
+
 					// Go through the input images and save for each n
 					for (int n = 0; n < dataBlob->num(); ++n) {
 						cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
 						std::stringstream filenameStr;
 						filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-it" << it << "-n" << n << ".jpg";
+						LOG(INFO) << "Saving image: " << filenameStr.str();
 						caffe::WriteImageFromCVMat(filenameStr.str(), mat);
 					}
 				}
@@ -521,6 +547,7 @@ int classimage() {
 		cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
 		std::stringstream filenameStr;
 		filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-n" << n << ".jpg";
+		LOG(INFO) << "Saving image: " << filenameStr.str();
 		caffe::WriteImageFromCVMat(filenameStr.str(), mat);
 	}
 
