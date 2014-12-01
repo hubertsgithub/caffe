@@ -348,7 +348,7 @@ int gradient() {
 		for (int h = 0; h < visBlob->height(); ++h) {
 			for (int w = 0; w < visBlob->width(); ++w) {
 				// Initialize with zeros
-				memset(visBlobVec, 0, visBlob->count());
+				caffe::caffe_set(visBlob->count(), 0.0f, visBlobVec);
 				LOG(INFO) << "Setting " << FLAGS_visualizedlayer << "-c" << c << "-h" << h << "-w" << w << " diff value to 1 for all n";
 				for (int n = 0; n < visBlob->num(); ++n) {
 					visBlobVec[visBlob->offset(n, c, h, w)] = 1;
@@ -474,7 +474,7 @@ int classimage() {
 	Blob<float>* visBlob = vd->visBlob;
 	int visLayerid = vd->visLayerid;
 
-	int itCount = 100000;
+	int itCount = 100;
 	float learning_rate = 0.1;
 	float weight_decay = 0.5;
 	Blob<float>* labelBlob = new Blob<float>();
@@ -483,19 +483,19 @@ int classimage() {
 	for (int c = 0; c < visBlob->channels(); ++c) {
 		for (int h = 0; h < visBlob->height(); ++h) {
 			for (int w = 0; w < visBlob->width(); ++w) {
-				memset(labelBlob->mutable_cpu_data(), 0, labelBlob->count());
+				caffe::caffe_set(labelBlob->count(), 0.0f, labelBlob->mutable_cpu_data());
 				for (int n = 0; n < labelBlob->num(); ++n) {
 					labelBlob->mutable_cpu_data()[labelBlob->offset(n, c, h, w)] = 1;
 				}
 
 				LOG(INFO) << "Initializing with mean image...";
 				// TODO: MEAN IMAGE
-				memset(dataBlob->mutable_cpu_data(), 0, dataBlob->count());
+				caffe::caffe_set(dataBlob->count(), 0.0f, dataBlob->mutable_cpu_data());
 				// Go through the input images and save for each n
 				for (int n = 0; n < dataBlob->num(); ++n) {
 					cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
 					std::stringstream filenameStr;
-					filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-ait-n" << n << ".jpg";
+					filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-ait-n" << n << "-c" << c << ".jpg";
 
 					LOG(INFO) << "Saving image: " << filenameStr.str();
 					caffe::WriteImageFromCVMat(filenameStr.str(), mat);
@@ -534,7 +534,7 @@ int classimage() {
 					for (int n = 0; n < dataBlob->num(); ++n) {
 						cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
 						std::stringstream filenameStr;
-						filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-it" << it << "-n" << n << ".jpg";
+						filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-it" << it << "-n" << n << "-c" << c <<  ".jpg";
 						LOG(INFO) << "Saving image: " << filenameStr.str();
 						caffe::WriteImageFromCVMat(filenameStr.str(), mat);
 					}
