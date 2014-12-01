@@ -33,7 +33,7 @@ DEFINE_string(weights, "",
 DEFINE_int32(iterations, 50,
              "The number of iterations to run.");
 
-// Only for gradient
+// Only for gradient and classimage
 DEFINE_string(datalayer, "",
               "Optional; the name of the data layer where the gradient will be propagated back.");
 DEFINE_string(visualizedlayer, "",
@@ -50,6 +50,10 @@ DEFINE_string(visdir, "",
               "Optional; path to directory where the visualizations will be saved, it should exist!");
 DEFINE_bool(onlycmax, true,
             "Optional; if true we only compute the gradients for the maximum value through the channels in the measured blob.");
+DEFINE_double(learningrate, 5,
+            "Optional; the learning rate used in class image computation.");
+DEFINE_double(weightdecay, 0.0005,
+            "Optional; the weight decay used in class image computation.");
 
 // A simple registry for caffe commands.
 typedef int (*BrewFunction)();
@@ -474,9 +478,9 @@ int classimage() {
 	Blob<float>* visBlob = vd->visBlob;
 	int visLayerid = vd->visLayerid;
 
-	int itCount = 100;
-	float learning_rate = 0.1;
-	float weight_decay = 0.5;
+	int itCount = FLAGS_iterations;
+	float learning_rate = FLAGS_learningrate;
+	float weight_decay = FLAGS_weightdecay;
 	Blob<float>* labelBlob = new Blob<float>();
 	labelBlob->ReshapeLike(*visBlob);
 
@@ -485,7 +489,7 @@ int classimage() {
 			for (int w = 0; w < visBlob->width(); ++w) {
 				caffe::caffe_set(labelBlob->count(), 0.0f, labelBlob->mutable_cpu_data());
 				for (int n = 0; n < labelBlob->num(); ++n) {
-					labelBlob->mutable_cpu_data()[labelBlob->offset(n, c, h, w)] = 1;
+					labelBlob->mutable_cpu_data()[labelBlob->offset(n, c, h, w)] = -1;
 				}
 
 				LOG(INFO) << "Initializing with mean image...";
@@ -508,9 +512,8 @@ int classimage() {
 					caffe_net.Forward(bottom_vec, &loss);
 
 					// Compute loss
-					caffe::caffe_sub(visBlob->count(),
+					caffe::caffe_copy(visBlob->count(),
 							labelBlob->cpu_data(),
-							visBlob->cpu_data(),
 							visBlob->mutable_cpu_diff());
 
 					LOG(INFO) << "Backward...";
@@ -530,13 +533,15 @@ int classimage() {
 
 					LOG(INFO) << "Updated image data sum: " << dataBlob->asum_data();
 
-					// Go through the input images and save for each n
-					for (int n = 0; n < dataBlob->num(); ++n) {
-						cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
-						std::stringstream filenameStr;
-						filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-it" << it << "-n" << n << "-c" << c <<  ".jpg";
-						LOG(INFO) << "Saving image: " << filenameStr.str();
-						caffe::WriteImageFromCVMat(filenameStr.str(), mat);
+					if (it % 100 == 0) {
+						// Go through the input images and save for each n
+						for (int n = 0; n < dataBlob->num(); ++n) {
+							cv::Mat mat = caffe::ConvertBlobToCVMat(*dataBlob, true, n, FLAGS_datalayer_upscale, FLAGS_datalayer_mean_to_add);
+							std::stringstream filenameStr;
+							filenameStr << FLAGS_visdir << "/classimage-" << caffe_net.name() << "-it" << it << "-n" << n << "-c" << c <<  ".jpg";
+							LOG(INFO) << "Saving image: " << filenameStr.str();
+							caffe::WriteImageFromCVMat(filenameStr.str(), mat);
+						}
 					}
 				}
 			}
