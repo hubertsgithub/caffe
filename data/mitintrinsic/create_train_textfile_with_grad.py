@@ -8,6 +8,32 @@ import numpy as np
 import intrinsic
 import poisson
 
+def computegradimgs(shading, reflectance, mask):
+    #mask = np.mean(maskimg, axis = 2)
+
+    #images = map(lambda image: np.clip(image, .001, np.infty), images)
+    # Convert to grayscale
+    if len(shading.shape) == 3:
+        shading = np.mean(shading, axis = 2)
+    if len(reflectance.shape) == 3:
+        reflectance = np.mean(reflectance, axis = 2)
+
+    # Compute log images
+    #images = map(lambda image: np.where(mask, np.log(image), 0.), images)
+    # Compute gradients
+    s_y, s_x = poisson.get_gradients(shading)
+    r_y, r_x = poisson.get_gradients(reflectance)
+
+    # Shading gradient -> 1, reflectance gradient -> 0
+    epsilon = 0.01
+    b_y = np.where(np.logical_or(np.abs(s_y) > np.abs(r_y), np.abs(r_y) < epsilon), 1., 0.)
+    b_x = np.where(np.logical_or(np.abs(s_x) > np.abs(r_x), np.abs(r_x) < epsilon), 1., 0.)
+
+    b_y = b_y * 255.0
+    b_x = b_x * 255.0
+
+    return b_x, b_y
+
 origpath = 'data/mitintrinsic/data'
 
 origdirnames = listdir(origpath)
@@ -24,30 +50,23 @@ for dir in origdirnames:
         continue
 
     filepaths = []
-    filepaths.append(os.path.join(origparentdirpath, 'shading-converted.png'))
-    filepaths.append(os.path.join(origparentdirpath, 'reflectance-converted.png'))
+    filepaths.append(os.path.join(origparentdirpath, 'shading.png'))
+    filepaths.append(os.path.join(origparentdirpath, 'reflectance.png'))
+    filepaths.append(os.path.join(origparentdirpath, 'mask.png'))
 
     images = [intrinsic.load_png(fp) for fp in filepaths]
-    mask = intrinsic.load_png(os.path.join(origparentdirpath, 'mask-converted.png'))
-    mask = np.mean(mask, axis = 2)
+    b_x, b_y = computegradimgs(images[0], images[1], images[2])
 
-    #images = map(lambda image: np.clip(image, .001, np.infty), images)
-    # Convert to grayscale
-    images = map(lambda image: np.mean(image, axis = 2), images)
+    cv2.imwrite(os.path.join(origparentdirpath, 'thresholdx.png'), b_x)
+    cv2.imwrite(os.path.join(origparentdirpath, 'thresholdy.png'), b_y)
 
-    # Compute log images
-    #images = map(lambda image: np.where(mask, np.log(image), 0.), images)
-    # Compute gradients
-    s_y, s_x = poisson.get_gradients(images[0])
-    r_y, r_x = poisson.get_gradients(images[1])
+    filepaths = []
+    filepaths.append(os.path.join(origparentdirpath, 'shading-converted.png'))
+    filepaths.append(os.path.join(origparentdirpath, 'reflectance-converted.png'))
+    filepaths.append(os.path.join(origparentdirpath, 'mask-converted.png'))
 
-    # Shading gradient -> 1, reflectance gradient -> 0
-    epsilon = 0.01
-    b_y = np.where(np.logical_or(np.abs(s_y) > np.abs(r_y), np.abs(r_y) < epsilon), 1., 0.)
-    b_x = np.where(np.logical_or(np.abs(s_x) > np.abs(r_x), np.abs(r_x) < epsilon), 1., 0.)
-
-    b_y = b_y * 255.0
-    b_x = b_x * 255.0
+    images = [intrinsic.load_png(fp) for fp in filepaths]
+    b_x, b_y = computegradimgs(images[0], images[1], images[2])
 
     convertedfilepathx = os.path.join(origparentdirpath, 'gradbinary-x-converted.png')
     convertedfilepathy = os.path.join(origparentdirpath, 'gradbinary-y-converted.png')
