@@ -511,6 +511,10 @@ int classimage() {
 					float loss = 0;
 					caffe_net.Forward(bottom_vec, &loss);
 
+					for (int n = 0; n < dataBlob->num(); ++n) {
+						LOG(INFO) << "Class value of the image for n" << n << ": " << visBlob->cpu_data()[visBlob->offset(n, c, h, w)];
+					}
+
 					// Compute loss
 					caffe::caffe_copy(visBlob->count(),
 							labelBlob->cpu_data(),
