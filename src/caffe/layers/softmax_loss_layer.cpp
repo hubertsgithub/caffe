@@ -116,7 +116,7 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     caffe_copy(prob_.count(), prob_data, bottom_diff);
     for (int i = 0; i < num; ++i) {
       for (int j = 0; j < spatial_dim; ++j) {
-        const int label_value = static_cast<int>(label[i * spatial_dim + j]);
+        const int label_value = static_cast<int>(label[i * spatial_dim + j] + 0.5);
         CHECK_GE(label_value, 0);
         CHECK_LE(label_value, nlabels);
         if (label_value < nlabels) {
