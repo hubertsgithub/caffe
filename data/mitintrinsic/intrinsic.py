@@ -15,6 +15,10 @@ def load_png(fname):
     image = np.vstack(itertools.imap(np.uint16, pngdata))
     if image.size == 3*w*h:
         image = np.reshape(image, (h, w, 3))
+    elif image.size == 4*w*h:
+        image = np.reshape(image, (h, w, 4))
+        image = image[:, :, 0:3]
+
     return image.astype(float) / 255.
 
 def load_object_helper(tag, condition):
@@ -26,32 +30,44 @@ def load_object_helper(tag, condition):
     assert condition in ['mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular', 'thresholdx', 'thresholdy']
 
     obj_dir = os.path.join('data', tag)
+    converted = '-converted'
 
     if condition == 'mask':
-        filename = os.path.join(obj_dir, 'mask.png')
-        mask = load_png(filename)
-        return (mask > 0)
+        filename = os.path.join(obj_dir, 'mask' + converted + '.png')
+        img = load_png(filename)
+        if len(img.shape) == 3:
+            img = np.mean(img, axis=2)
+        return (img > 0)
     if condition == 'original':
-        filename = os.path.join(obj_dir, 'original.png')
+        filename = os.path.join(obj_dir, 'original' + converted + '.png')
         return load_png(filename)
     if condition == 'diffuse':
-        filename = os.path.join(obj_dir, 'diffuse.png')
+        filename = os.path.join(obj_dir, 'diffuse' + converted + '.png')
         return load_png(filename)
     if condition == 'shading':
-        filename = os.path.join(obj_dir, 'shading.png')
-        return load_png(filename)
+        filename = os.path.join(obj_dir, 'shading' + converted + '.png')
+        img = load_png(filename)
+        if len(img.shape) == 3:
+            img = np.mean(img, axis=2)
+        return img
     if condition == 'reflectance':
-        filename = os.path.join(obj_dir, 'reflectance.png')
+        filename = os.path.join(obj_dir, 'reflectance' + converted + '.png')
         return load_png(filename)
     if condition == 'specular':
-        filename = os.path.join(obj_dir, 'specular.png')
+        filename = os.path.join(obj_dir, 'specular' + converted + '.png')
         return load_png(filename)
     if condition == 'thresholdx':
-        filename = os.path.join(obj_dir, 'thresholdx.png')
-        return load_png(filename)
+        filename = os.path.join(obj_dir, 'thresholdx' + converted + '.png')
+        img = load_png(filename)
+        if len(img.shape) == 3:
+            img = np.mean(img, axis=2)
+        return img
     if condition == 'thresholdy':
-        filename = os.path.join(obj_dir, 'thresholdy.png')
-        return load_png(filename)
+        filename = os.path.join(obj_dir, 'thresholdy' + converted + '.png')
+        img = load_png(filename)
+        if len(img.shape) == 3:
+            img = np.mean(img, axis=2)
+        return img
 
 # cache for efficiency because PyPNG is pure Python
 cache = {}
@@ -120,6 +136,8 @@ def score_image(true_shading, true_refl, estimate_shading, estimate_refl, mask, 
 
 
 def retinex(image, mask, threshold, L1=False):
+    print 'threshold: {0}'.format(threshold)
+
     image = np.clip(image, 3., np.infty)
     log_image = np.where(mask, np.log(image), 0.)
     i_y, i_x = poisson.get_gradients(log_image)
@@ -133,15 +151,19 @@ def retinex(image, mask, threshold, L1=False):
         log_refl = poisson.solve(r_y, r_x, mask)
     refl = mask * np.exp(log_refl)
 
+    print np.sum(mask)
+    print np.sum(refl)
+
     return np.where(mask, image / refl, 0.), refl
 
 def retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1=False):
     image = np.clip(image, 3., np.infty)
+
     log_image = np.where(mask, np.log(image), 0.)
     i_y, i_x = poisson.get_gradients(log_image)
 
-    r_y = np.where(threshold_image_y == 0, i_y, 0.)
-    r_x = np.where(threshold_image_x == 0, i_x, 0.)
+    r_y = np.where(threshold_image_y < 0.5, i_y, 0.)
+    r_x = np.where(threshold_image_x < 0.5, i_x, 0.)
 
     if L1:
         log_refl = poisson.solve_L1(r_y, r_x, mask)
@@ -286,9 +308,12 @@ class GrayscaleRetinexWithThresholdImageEstimator:
     def get_input(tag):
         image = load_object(tag, 'diffuse')
         image = np.mean(image, axis=2)
+
         mask = load_object(tag, 'mask')
+
         threshold_image_x = load_object(tag, 'thresholdx')
         threshold_image_y = load_object(tag, 'thresholdy')
+
         return image, mask, threshold_image_x, threshold_image_y
 
     @staticmethod

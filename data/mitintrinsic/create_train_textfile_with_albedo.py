@@ -5,7 +5,7 @@ import cv2
 
 origpath = 'data/mitintrinsic/data'
 resize = 190
-crop = 190
+crop = 180
 
 origdirnames = listdir(origpath)
 origdirnames.sort()
@@ -32,11 +32,11 @@ for dir in origdirnames:
             print filepath + " doesn't exist, moving on..."
             continue
 
-        image = cv2.imread(filepath)
+        image = cv2.imread(filepath, flags = cv2.CV_LOAD_IMAGE_UNCHANGED)
         r = float(resize) / image.shape[0]
         dim = (int(image.shape[1] * r), resize)
         # perform the actual resizing of the image and show it
-        resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+        resized = cv2.resize(image, dim, interpolation = cv2.INTER_NEAREST)
         middle = [x / 2 for x in resized.shape]
         fromw = max(0, middle[0] - crop / 2)
         tow = min(resized.shape[0], middle[0] + crop / 2)
