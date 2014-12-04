@@ -9,6 +9,7 @@ display: 100
 max_iter: 450000
 momentum: 0.9
 weight_decay: 0.0005
+regularization_type: "L2"
 snapshot: 10000
 snapshot_prefix: "ownmodels/mitintrinsic/snapshots/caffenet_train"
 solver_mode: GPU

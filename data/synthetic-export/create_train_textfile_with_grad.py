@@ -8,6 +8,7 @@ import numpy as np
 import poisson
 import multilayer_exr
 
+resize_to_percent = 50
 
 def scale_then_to_srgb(image):
     image = image / np.percentile(image, 99.9)
@@ -57,6 +58,11 @@ for filename in datafilenames:
     shading = layers['diff_dir'] + layers['diff_ind']
     reflectance = layers['diff_col']
     combined = shading * reflectance
+
+    shading = sp.misc.imresize(shading, resize_to_percent)
+    reflectance = sp.misc.imresize(reflectance, resize_to_percent)
+    combined = sp.misc.imresize(combined, resize_to_percent)
+
     gray_combined = np.mean(combined, axis=2)
     p = np.percentile(gray_combined, 0.01)
     mask = (gray_combined > p).astype(np.float32)
@@ -84,7 +90,7 @@ for filename in datafilenames:
     f.write('{0} {1} {2} {3}\n'.format(combinedpath, convertedfilepathx, convertedfilepathy, maskpath))
 
     if first:
-        f = open(os.path.join(datapath, 'train_with_gradient.txt'), 'w')
+        f = open(os.path.join(rootpath, 'train_with_gradient.txt'), 'w')
         first = False
 
 f.close()

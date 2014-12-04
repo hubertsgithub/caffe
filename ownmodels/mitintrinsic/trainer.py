@@ -28,19 +28,21 @@ if not os.path.exists(root + trainfilename):
     print 'Traning file {0} doesn\'t exist! Please provide a valid model name!'.format(trainfilename)
     sys.exit()
 
-# copy the sample solver file and modify it
-fin = open(root + samplesolverfilename, 'r')
-lines = fin.readlines()
-fin.close()
+# if the solver file exists, just use it
+if not os.path.exists(root + solverfilename):
+    # copy the sample solver file and modify it
+    fin = open(root + samplesolverfilename, 'r')
+    lines = fin.readlines()
+    fin.close()
 
-fout = open(root + solverfilename, 'w')
-for l in lines:
-    newl = l.replace('train_val.prototxt', trainfilename)
-    newl = newl.replace('caffenet_train', 'caffenet_train_{0}'.format(modelname))
-    newl = newl.replace('solver_mode: GPU', 'solver_mode: {0}'.format(platform))
-    fout.write(newl)
+    fout = open(root + solverfilename, 'w')
+    for l in lines:
+        newl = l.replace('train_val.prototxt', trainfilename)
+        newl = newl.replace('caffenet_train', 'caffenet_train_{0}'.format(modelname))
+        newl = newl.replace('solver_mode: GPU', 'solver_mode: {0}'.format(platform))
+        fout.write(newl)
 
-fout.close()
+    fout.close()
 
 commandtxt = ['./build/tools/caffe', 'train', '--solver={0}{1}'.format(root, solverfilename)]
 print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
