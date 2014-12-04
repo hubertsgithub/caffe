@@ -2,11 +2,19 @@ import os
 from os import listdir
 from os.path import exists
 
-import cv2
+import scipy as sp
 import numpy as np
 
 import poisson
 import multilayer_exr
+
+
+def scale_then_to_srgb(image):
+    image = image / np.percentile(image, 99.9)
+    image = np.clip(image, 0.0, 1.0)
+    image = multilayer_exr.rgb_to_srgb(image)
+    return 255.0 * image
+
 
 def computegradimgs(shading, reflectance, mask):
     # Compute gradients
@@ -43,18 +51,17 @@ for filename in datafilenames:
 
     if not ext == '.exr':
         continue
-    try:
-        layers = multilayer_exr.open_multilayer_exr(filepath)
-    except:
-        print 'Something went wrong with image {0}'.format(filepath)
-        continue
+
+    layers = multilayer_exr.open_multilayer_exr(filepath)
 
     shading = layers['diff_dir'] + layers['diff_ind']
     reflectance = layers['diff_col']
-    mask = np.ones_like(shading)
     combined = shading * reflectance
+    gray_combined = np.mean(combined, axis=2)
+    p = np.percentile(gray_combined, 0.01)
+    mask = (gray_combined > p).astype(np.float32)
 
-    b_x, b_y = computegradimgs(shading, reflectance, mask)
+    b_x, b_y = computegradimgs(np.mean(shading, axis=2), np.mean(reflectance, axis=2), mask)
 
     convertedfilepathx = os.path.join(datapath, name + '-gradbinary-x-converted.png')
     convertedfilepathy = os.path.join(datapath, name + '-gradbinary-y-converted.png')
@@ -63,16 +70,18 @@ for filename in datafilenames:
     maskpath = os.path.join(datapath, name + '-mask.png')
     combinedpath = os.path.join(datapath, name + '-combined.png')
 
-    cv2.imwrite(convertedfilepathx, b_x)
-    cv2.imwrite(convertedfilepathy, b_y)
-    cv2.imwrite(shadingpath, multilayer_exr.rgb_to_srgb(shading))
-    cv2.imwrite(reflectancepath, multilayer_exr.rgb_to_srgb(reflectance))
-    cv2.imwrite(maskpath, multilayer_exr.srgb_to_rgb(mask))
-    cv2.imwrite(combinedpath, multilayer_exr.srgb_to_rgb(combined))
+    print 'shading max: {0} min: {1}'.format(np.max(shading), np.min(shading))
+    print 'reflectance max: {0} min: {1}'.format(np.max(reflectance), np.min(reflectance))
+    print 'combined max: {0} min: {1}'.format(np.max(combined), np.min(combined))
 
-    f.write('{0} {1} {2} {3}\n'.format(combinedpath,
-                                          convertedfilepathx, convertedfilepathy,
-                                          maskpath))
+    sp.misc.imsave(convertedfilepathx, b_x)
+    sp.misc.imsave(convertedfilepathy, b_y)
+    sp.misc.imsave(shadingpath, scale_then_to_srgb(shading))
+    sp.misc.imsave(reflectancepath, scale_then_to_srgb(reflectance))
+    sp.misc.imsave(maskpath, scale_then_to_srgb(mask))
+    sp.misc.imsave(combinedpath, scale_then_to_srgb(combined))
+
+    f.write('{0} {1} {2} {3}\n'.format(combinedpath, convertedfilepathx, convertedfilepathy, maskpath))
 
     if first:
         f = open(os.path.join(datapath, 'train_with_gradient.txt'), 'w')
