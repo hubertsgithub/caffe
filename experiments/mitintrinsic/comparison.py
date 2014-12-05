@@ -13,6 +13,7 @@ SAVEROOTDIR = 'experiments/mitintrinsic'
 SET1 = ['box', 'cup1', 'cup2', 'dinosaur', 'panther', 'squirrel', 'sun', 'teabag2']
 SET2 = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', 'turtle']
 ALL_TAGS = SET1 + SET2
+ALL_TAGS = ['box']
 
 # The following four objects weren't used in the evaluation because they have
 # slight problems, but you may still find them useful.
@@ -71,6 +72,7 @@ def run_experiment():
     assert os.path.isdir(RESULTS_DIR), '%s: directory does not exist' % RESULTS_DIR
 
     estimators = [#('Baseline (BAS)', intrinsic.BaselineEstimator),
+                  ('Zhao2012', intrinsic.Zhao2012Estimator),
                   #('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                   #('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),

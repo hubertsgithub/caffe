@@ -1,14 +1,22 @@
 import itertools
-import numpy as np
 import os
-import png
 import sys
 
+import numpy as np
+import scipy as sp
+import png
+from PIL import Image
+
 import poisson
+
+
+sys.path.append('experiments')
+import zhao2012
 
 LOADROOTDIR = 'data/mitintrinsic/'
 
 ############################### Data ###########################################
+
 
 def load_png(fname):
     reader = png.Reader(fname)
@@ -17,6 +25,7 @@ def load_png(fname):
     if image.size == 3*w*h:
         image = np.reshape(image, (h, w, 3))
     return image.astype(float) / 255.
+
 
 def load_object_helper(tag, condition):
     """Load an image of a given object as a NumPy array. The values condition may take are:
@@ -61,6 +70,7 @@ def load_object(tag, condition):
         cache[tag, condition] = load_object_helper(tag, condition)
     return cache[tag, condition]
 
+
 def load_multiple(tag):
     """Load the images of a given object for all lighting conditions. Returns an
     m x n x 3 x 10 NumPy array, where the third dimension is the color channel and
@@ -69,7 +79,6 @@ def load_multiple(tag):
     filename = os.path.join(obj_dir, 'light01.png')
     img0 = load_png(filename)
     result = np.zeros(img0.shape + (10,))
-
 
     for i in range(10):
         filename = os.path.join(obj_dir, 'light%02d.png' % (i+1))
@@ -80,6 +89,7 @@ def load_multiple(tag):
 
 
 ############################# Error metric #####################################
+
 
 def ssq_error(correct, estimate, mask):
     """Compute the sum-squared-error for an image, where the estimate is
@@ -228,7 +238,23 @@ def weiss_retinex(image, multi_images, mask, threshold, L1=False):
     return shading, refl
 
 
+def zhao2012algo(image, mask, threshold, L1=False):
+    image = image / np.max(image)
+    image = np.where(mask[:, :, np.newaxis], image ** (1./2.2), 1.)
+    image = image * 255.0
+    pil_image = Image.fromarray(image.astype(np.uint8))
+    texture_patch_distance = 0.0003
+    texture_patch_variance = 0.03
+    gamma = False
+    r, s = zhao2012.run(pil_image, threshold, texture_patch_distance, texture_patch_variance, gamma)
+    reflscaled = np.array(r) / 255.0
+    refl = np.mean(reflscaled, axis=2) * mask
+    shadingscaled = np.array(s) / 255.0
+    shading = np.mean(shadingscaled, axis=2) * mask
+    print 'min: {0}, max: {1}, mean: {2}'.format(np.min(reflscaled), np.max(reflscaled), np.mean(reflscaled))
+    print 'min: {0}, max: {1}, mean: {2}'.format(np.min(shadingscaled), np.max(shadingscaled), np.mean(shadingscaled))
 
+    return shading, refl
 
 
 #################### Wrapper classes for experiments ###########################
@@ -355,3 +381,20 @@ class WeissRetinexEstimator:
     def param_choices():
         return [{'threshold': t} for t in np.logspace(-3., 1., 15)]
 
+
+class Zhao2012Estimator:
+    def __init__(self, threshold=0.001, L1=False):
+        self.threshold = threshold
+
+    def estimate_shading_refl(self, image, mask, L1=False):
+        return zhao2012algo(image, mask, self.threshold, L1)
+
+    @staticmethod
+    def get_input(tag):
+        image = load_object(tag, 'diffuse')
+        mask = load_object(tag, 'mask')
+        return image, mask
+
+    @staticmethod
+    def param_choices():
+        return [{}]#'threshold': t} for t in np.logspace(-3., 1., 15)]
