@@ -73,7 +73,7 @@ for dir in origdirnames:
     cv2.imwrite(convertedfilepathx, b_x)
     cv2.imwrite(convertedfilepathy, b_y)
 
-    f.write('{0} {1} {2} {3}\n'.format(os.path.join(origparentdirpath, 'diffuse-converted.png'),
+    f.write('{0} {1} {2} {3}\n'.format(os.path.join(origparentdirpath, 'diffuse-converted-gamma.png'),
                                           convertedfilepathx, convertedfilepathy,
                                           os.path.join(origparentdirpath, 'mask-converted.png')))
 

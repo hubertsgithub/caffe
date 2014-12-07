@@ -24,6 +24,10 @@ def load_png(fname):
     image = np.vstack(itertools.imap(np.uint16, pngdata))
     if image.size == 3*w*h:
         image = np.reshape(image, (h, w, 3))
+    print fname
+    print np.min(image)
+    print np.max(image)
+    print np.average(image)
     return image.astype(float) / 255.
 
 
