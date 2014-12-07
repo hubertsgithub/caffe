@@ -40,16 +40,21 @@ def save_png(array, fname):
 
 def resize_and_crop_channel(ch_arr):
     image = Image.fromarray(ch_arr)
-    w, h = image.size
-    if w > h:
-        r = float(resize) / w
-        dim = (resize, int(h * r))
-        image = image.resize(dim, Image.BILINEAR)
+    keep_aspect_ratio = False
+    if keep_aspect_ratio:
+        w, h = image.size
+        if w > h:
+            r = float(resize) / w
+            dim = (resize, int(h * r))
+            image = image.resize(dim, Image.BILINEAR)
+        else:
+            r = float(resize) / h
+            dim = (int(w * r), resize)
+            image = image.resize(dim, Image.BILINEAR)
     else:
-        r = float(resize) / h
-        dim = (int(w * r), resize)
-        image = image.resize(dim, Image.BILINEAR)
+        image = image.resize((resize, resize), Image.BILINEAR)
 
+    w, h = image.size
     middle = [x / 2 for x in image.size]
     fromw = max(0, middle[0] - crop / 2)
     tow = min(w, middle[0] + crop / 2)

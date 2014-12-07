@@ -18,6 +18,8 @@ def predict_thresholds(model_file, pretrained_weights, input_image):
     net.set_phase_test()
     net.set_mode_cpu()
 
+    caffe.io.save_image('input_image.png', input_image, scale=1.0)
+
     predictions = net.dense_predict([input_image])  # predict takes any number of images, and formats them for the Caffe net automatically
     predictions = map(lambda p: p.squeeze(axis=(0, 1)), predictions)
 

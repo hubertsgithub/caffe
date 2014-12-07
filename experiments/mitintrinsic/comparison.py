@@ -13,7 +13,7 @@ SAVEROOTDIR = 'experiments/mitintrinsic'
 SET1 = ['box', 'cup1', 'cup2', 'dinosaur', 'panther', 'squirrel', 'sun', 'teabag2']
 SET2 = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', 'turtle']
 ALL_TAGS = SET1 + SET2
-ALL_TAGS = ['box']
+ALL_TAGS = SET1
 
 # The following four objects weren't used in the evaluation because they have
 # slight problems, but you may still find them useful.
@@ -71,13 +71,15 @@ def run_experiment():
 
     assert os.path.isdir(RESULTS_DIR), '%s: directory does not exist' % RESULTS_DIR
 
-    estimators = [#('Baseline (BAS)', intrinsic.BaselineEstimator),
+    estimators = [
+                  #('Baseline (BAS)', intrinsic.BaselineEstimator),
                   #('Zhao2012', intrinsic.Zhao2012Estimator),
-                  #('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
-                  #('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
+                  ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
+                  ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
                   #('Weiss + Retinex (W+RET)', intrinsic.WeissRetinexEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images', intrinsic.GrayscaleRetinexWithThresholdImageEstimator)]
+                  ('Grayscale Retinex with CNN predicted threshold images', intrinsic.GrayscaleRetinexWithThresholdImageEstimator)
+                  ]
     tags = ALL_TAGS
     ntags = len(tags)
 
@@ -103,13 +105,15 @@ def run_experiment():
             true_refl = intrinsic.load_object(tag, 'reflectance')
             true_refl = np.mean(true_refl, axis=2)
             mask = intrinsic.load_object(tag, 'mask')
+            print 'Estimating reflectance and albedo for ' + tag
 
             for j, params in enumerate(choices):
                 estimator = EstimatorClass(**params)
                 est_shading, est_refl = estimator.estimate_shading_refl(*inp)
                 scores[i,j] = intrinsic.score_image(true_shading, true_refl,
                                                     est_shading, est_refl, mask)
-
+                print 'Params: {0}'.format(params)
+                print 'Score: {0}'.format(scores[i,j])
                 print_dot(count, ntags * nchoices)
                 count += 1
 

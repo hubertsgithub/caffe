@@ -40,31 +40,32 @@ def load_object_helper(tag, condition):
     assert condition in ['mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular', 'thresholdx', 'thresholdy']
 
     obj_dir = os.path.join(LOADROOTDIR, 'data', tag)
+    convert_str = '-converted'
 
     if condition == 'mask':
-        filename = os.path.join(obj_dir, 'mask.png')
+        filename = os.path.join(obj_dir, 'mask{0}.png'.format(convert_str))
         mask = load_png(filename)
         return (mask > 0)
     if condition == 'original':
-        filename = os.path.join(obj_dir, 'original.png')
+        filename = os.path.join(obj_dir, 'original{0}.png'.format(convert_str))
         return load_png(filename)
     if condition == 'diffuse':
-        filename = os.path.join(obj_dir, 'diffuse.png')
+        filename = os.path.join(obj_dir, 'diffuse{0}.png'.format(convert_str))
         return load_png(filename)
     if condition == 'shading':
-        filename = os.path.join(obj_dir, 'shading.png')
+        filename = os.path.join(obj_dir, 'shading{0}.png'.format(convert_str))
         return load_png(filename)
     if condition == 'reflectance':
-        filename = os.path.join(obj_dir, 'reflectance.png')
+        filename = os.path.join(obj_dir, 'reflectance{0}.png'.format(convert_str))
         return load_png(filename)
     if condition == 'specular':
-        filename = os.path.join(obj_dir, 'specular.png')
+        filename = os.path.join(obj_dir, 'specular{0}.png'.format(convert_str))
         return load_png(filename)
     if condition == 'thresholdx':
-        filename = os.path.join(obj_dir, 'thresholdx.png')
+        filename = os.path.join(obj_dir, 'thresholdx{0}.png'.format(convert_str))
         return load_png(filename)
     if condition == 'thresholdy':
-        filename = os.path.join(obj_dir, 'thresholdy.png')
+        filename = os.path.join(obj_dir, 'thresholdy{0}.png'.format(convert_str))
         return load_png(filename)
 
 # cache for efficiency because PyPNG is pure Python
@@ -136,6 +137,11 @@ def retinex(image, mask, threshold, L1=False):
     log_image = np.where(mask, np.log(image), 0.)
     i_y, i_x = poisson.get_gradients(log_image)
 
+    print 'Shape: {0}'.format(i_x.shape)
+    print 'Min: {0}'.format(np.min(i_x))
+    print 'Max: {0}'.format(np.max(i_x))
+    print 'Avg: {0}'.format(np.average(i_x))
+
     r_y = np.where(np.abs(i_y) > threshold, i_y, 0.)
     r_x = np.where(np.abs(i_x) > threshold, i_x, 0.)
 
@@ -149,18 +155,29 @@ def retinex(image, mask, threshold, L1=False):
 
 def retinex_with_thresholdimage(image, mask, L1=False):
     MODELPATH = 'ownmodels/mitintrinsic'
-    MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient.prototxt')
-    PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_iter_50000.caffemodel')
+    MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient_pad.prototxt')
+    PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_pad_iter_130000.caffemodel')
 
-    threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, image)
+    print 'Shape: {0}'.format(image.shape)
+    print 'Min: {0}'.format(np.min(image))
+    print 'Max: {0}'.format(np.max(image))
+    print 'Avg: {0}'.format(np.average(image))
+    gamma_corrected_image = image / 255. #np.power(image / 255., 1/2.2)
+    threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, gamma_corrected_image)
+    print 'Shape: {0}'.format(threshold_image_x.shape)
+    print 'Min: {0}'.format(np.min(threshold_image_x))
+    print 'Max: {0}'.format(np.max(threshold_image_x))
+    print 'Avg: {0}'.format(np.average(threshold_image_x))
 
     image = np.mean(image, axis=2)
     image = np.clip(image, 3., np.infty)
     log_image = np.where(mask, np.log(image), 0.)
     i_y, i_x = poisson.get_gradients(log_image)
 
-    r_y = np.where(threshold_image_y < 0.5, i_y, 0.)
-    r_x = np.where(threshold_image_x < 0.5, i_x, 0.)
+    r_y = (1. - threshold_image_y) * i_y
+    r_x = (1. - threshold_image_x) * i_x
+    #r_y = np.where(threshold_image_y < 0.5, i_y, 0.)
+    #r_x = np.where(threshold_image_x < 0.5, i_x, 0.)
 
     if L1:
         log_refl = poisson.solve_L1(r_y, r_x, mask)
