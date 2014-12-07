@@ -48,6 +48,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
 
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
+  const Dtype gamma = param_.gamma();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_uint8 = data.size() > 0;
   const bool has_mean_values = mean_values_.size() > 0;
@@ -57,6 +58,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   CHECK_GE(datum_height, crop_size);
   CHECK_GE(datum_width, crop_size);
   CHECK(!crop_first) << "Datum transformation does not support crop first";
+  CHECK_LE(abs(gamma - 1.0), 0.001) << "Gamma not supported here";
 
   Dtype* mean = NULL;
   if (has_mean_file) {
@@ -134,12 +136,14 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   const int width = transformed_blob->width();
   const int num = transformed_blob->num();
   const bool crop_first = param_.crop_first();
+  const Dtype gamma = param_.gamma();
 
   CHECK_EQ(channels, datum_channels);
   CHECK_LE(height, datum_height);
   CHECK_LE(width, datum_width);
   CHECK_GE(num, 1);
   CHECK(!crop_first) << "Datum transformation does not support crop first";
+  CHECK_LE(abs(gamma - 1.0), 0.001) << "Gamma not supported here";
 
   const int crop_size = param_.crop_size();
 
@@ -164,11 +168,13 @@ void DataTransformer<Dtype>::Transform(const vector<Datum> & datum_vector,
   const int height = transformed_blob->height();
   const int width = transformed_blob->width();
   const bool crop_first = param_.crop_first();
+  const Dtype gamma = param_.gamma();
 
   CHECK_GT(datum_num, 0) << "There is no datum to add";
   CHECK_LE(datum_num, num) <<
     "The size of datum_vector must be smaller than transformed_blob->num()";
   CHECK(!crop_first) << "Datum transformation does not support crop first";
+  CHECK_LE(abs(gamma - 1.0), 0.001) << "Gamma not supported here";
 
   Blob<Dtype> uni_blob(1, channels, height, width);
   for (int item_id = 0; item_id < datum_num; ++item_id) {
@@ -201,6 +207,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
 
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
+  const Dtype gamma = param_.gamma();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
 
@@ -289,13 +296,13 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
         if (has_mean_file) {
           int mean_index = (c * img_height + h_off - crop_size / 2 + h) * img_width + w_off - crop_size / 2 + w;
           transformed_data[top_index] =
-            (pixel - mean[mean_index]) * scale;
+            pow(pixel*scale, gamma) - mean[mean_index] * scale;
         } else {
           if (has_mean_values) {
             transformed_data[top_index] =
-              (pixel - mean_values_[c]) * scale;
+              pow(pixel*scale, gamma) - mean_values_[c] * scale;
           } else {
-            transformed_data[top_index] = pixel * scale;
+            transformed_data[top_index] = pow(pixel*scale, gamma);
           }
         }
       }
@@ -325,6 +332,7 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
 
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
+  const Dtype gamma = param_.gamma();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
 

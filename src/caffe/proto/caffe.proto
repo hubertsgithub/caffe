@@ -380,6 +380,9 @@ message TransformationParameter {
   optional bool random_crop = 3234098 [default = true];
   // Specify if we would like to crop first and resize after that.
   optional bool crop_first = 3234099 [default = false];
+  // Specify the gamma value which will be used to transform the image after scaling
+  // The scaling should scale into the [0, 1] interval, otherwise you will get incorrect values after gamma correction!
+  optional float gamma = 3234100 [default = 1.0];
   // mean_file and mean_value cannot be specified at the same time
   optional string mean_file = 4;
   // if specified can be repeated once (would substract it from all the channels)
