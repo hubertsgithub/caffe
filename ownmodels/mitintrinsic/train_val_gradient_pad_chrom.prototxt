@@ -393,7 +393,7 @@ layers {
 	bottom: "slice-grady-0"
 	bottom: "slice-grady-1"
 	image_output_param {
-		file_name: "debugimgs_with_grad/img"
+		file_name: "debugimgs_with_grad_chrom/img"
 		display: 5000
 		transformation {
 			upscale: 255.0
@@ -437,7 +437,7 @@ layers {
 	bottom: "slice-grady-0"
 	bottom: "slice-grady-1"
 	image_output_param {
-		file_name: "debugimgs_with_grad/testimg"
+		file_name: "debugimgs_with_grad_chrom/testimg"
 		display: 1
 		transformation {
 			upscale: 255.0
