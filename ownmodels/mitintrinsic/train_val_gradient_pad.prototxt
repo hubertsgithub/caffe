@@ -18,6 +18,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: true
+		gamma: 2.2
 		mean_value: 128
 		mean_value: 128
 		mean_value: 128
@@ -84,6 +85,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: true
+		gamma: 2.2
 		mean_value: 128
 		mean_value: 128
 		mean_value: 128
