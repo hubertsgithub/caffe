@@ -32,7 +32,7 @@ for dir in origdirnames:
     filepaths.append(origparentdirpath + '/' + 'reflectance.png')
     filepaths.append(origparentdirpath + '/' + 'mask.png')
 
-    first_file = True
+    cnn_input_file = True
     convertedfilepaths = []
     for filepath in filepaths:
         if not exists(filepath):
@@ -52,11 +52,14 @@ for dir in origdirnames:
         convertedfilepath = fileName + '-converted' + fileExtension
 
         # save the image and put the gamma corrected image into the convertedfilepaths
-        if first_file:
+        if cnn_input_file:
             common.save_png(res_arr, convertedfilepath)
+            chrom = common.compute_chromaticity_image(res_arr)
+            common.save_png(chrom, fileName + '-converted-chrom' + fileExtension)
+
             res_arr = np.power(res_arr, 1./gamma)
             convertedfilepath = fileName + '-converted-gamma' + fileExtension
-            first_file = False
+            cnn_input_file = False
 
         convertedfilepaths.append(convertedfilepath)
         common.save_png(res_arr, convertedfilepath)

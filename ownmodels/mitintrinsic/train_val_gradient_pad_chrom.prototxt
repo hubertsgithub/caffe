@@ -1,0 +1,472 @@
+name: "IntrinsicCNN"
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "chrom"
+  top: "gradx"
+  top: "grady"
+  top: "mask"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+      # data - loaded as grayscale image
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 1.0 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label - x gradients
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+      # label - y gradients
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+      # mask 
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+  }
+  image_data_param {
+    source: "data/mitintrinsic/train_with_gradient.txt"
+    batch_size: 7 
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+	type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "chrom"
+  top: "gradx"
+  top: "grady"
+  top: "mask"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+      # data - loaded as grayscale image
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 1.0 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+      # label - x gradients
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+      # label - y gradients
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+      # mask 
+	  data_transformations {
+		new_height: 190
+		new_width: 190
+		random_crop: false
+		# crop a smaller region to align everything after the convolutions
+		crop_size: 190
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+	  }
+  }
+  image_data_param {
+    source: "data/mitintrinsic/val_with_gradient.txt"
+    batch_size: 1 
+  }
+  include: { phase: TEST }
+}
+layers {
+  name: "concatinput"
+  bottom: "data"
+  bottom: "chrom"
+  top: "concatinput"
+  type: CONCAT
+  concat_param {
+    concat_dim: 1
+  }
+}
+layers {
+  name: "conv1-gradx"
+  type: CONVOLUTION
+  bottom: "concatinput"
+  top: "conv1-gradx"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1-gradx"
+  type: RELU
+  bottom: "conv1-gradx"
+  top: "conv1-gradx"
+}
+layers {
+  name: "conv2-gradx"
+  type: CONVOLUTION
+  bottom: "conv1-gradx"
+  top: "conv2-gradx"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2-gradx"
+  type: RELU
+  bottom: "conv2-gradx"
+  top: "conv2-gradx"
+}
+layers {
+  name: "conv3-gradx"
+  type: CONVOLUTION
+  bottom: "conv2-gradx"
+  top: "conv3-gradx"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 2 
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "loss-gradx"
+  type: SOFTMAX_LOSS
+  bottom: "conv3-gradx"
+  bottom: "gradx"
+  bottom: "mask"
+  top: "loss-gradx"
+}
+layers {
+  name: "softmax-gradx"
+  type: SOFTMAX
+  bottom: "conv3-gradx"
+  top: "softmax-gradx"
+}
+layers {
+  name: "slice-gradx"
+  type: SLICE
+  bottom: "softmax-gradx"
+  top: "slice-gradx-0"
+  top: "slice-gradx-1"
+  slice_param {
+  	slice_point: 1
+  }
+}
+layers {
+  name: "conv1-grady"
+  type: CONVOLUTION
+  bottom: "concatinput"
+  top: "conv1-grady"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1-grady"
+  type: RELU
+  bottom: "conv1-grady"
+  top: "conv1-grady"
+}
+layers {
+  name: "conv2-grady"
+  type: CONVOLUTION
+  bottom: "conv1-grady"
+  top: "conv2-grady"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2-grady"
+  type: RELU
+  bottom: "conv2-grady"
+  top: "conv2-grady"
+}
+layers {
+  name: "conv3-grady"
+  type: CONVOLUTION
+  bottom: "conv2-grady"
+  top: "conv3-grady"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 2 
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "loss-grady"
+  type: SOFTMAX_LOSS
+  bottom: "conv3-grady"
+  bottom: "grady"
+  bottom: "mask"
+  top: "loss-grady"
+}
+layers {
+  name: "softmax-grady"
+  type: SOFTMAX
+  bottom: "conv3-grady"
+  top: "softmax-grady"
+}
+layers {
+  name: "slice-grady"
+  type: SLICE
+  bottom: "softmax-grady"
+  top: "slice-grady-0"
+  top: "slice-grady-1"
+  slice_param {
+  	slice_point: 1
+  }
+}
+layers {
+	name: "silentmask"
+	type: SILENCE
+	bottom: "mask"
+	bottom: "slice-gradx-1"
+	bottom: "slice-grady-1"
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "gradx"
+	bottom: "slice-gradx-0"
+	bottom: "slice-gradx-1"
+	bottom: "grady"
+	bottom: "slice-grady-0"
+	bottom: "slice-grady-1"
+	image_output_param {
+		file_name: "debugimgs_with_grad/img"
+		display: 5000
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+	}
+    include: { phase: TRAIN }
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "gradx"
+	bottom: "slice-gradx-0"
+	bottom: "slice-gradx-1"
+	bottom: "grady"
+	bottom: "slice-grady-0"
+	bottom: "slice-grady-1"
+	image_output_param {
+		file_name: "debugimgs_with_grad/testimg"
+		display: 1
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 0.0
+		}
+	}
+    include: { phase: TEST } 
+}

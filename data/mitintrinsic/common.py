@@ -86,3 +86,13 @@ def computegradimgs(shading, reflectance, mask):
     b_x = b_x * 255.0
 
     return b_x, b_y
+
+def compute_chromaticity_image(image):
+    if len(image.shape) != 3:
+        raise ValueError('The image should have 3 channels (RGB)!')
+
+    sumimg = np.sum(image, axis = 2)
+    sumimg = np.clip(sumimg, 0.01, np.inf)
+    chrom = image / sumimg[:, :, np.newaxis]
+
+    return chrom
