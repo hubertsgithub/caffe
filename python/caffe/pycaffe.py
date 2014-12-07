@@ -222,7 +222,7 @@ def _Net_set_mean(self, input_, mean, mode='elementwise'):
                                          in_shape[2:]).transpose((2,0,1))
         self.mean[input_] = mean
     elif mode == 'channel':
-        self.mean[input_] = mean.mean(1).mean(1).reshape((in_shape[1], 1, 1))
+        self.mean[input_] = mean.reshape((in_shape[1], 1, 1))
     else:
         raise Exception('Mode not in {}'.format(['elementwise', 'channel']))
 

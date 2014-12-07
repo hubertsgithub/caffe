@@ -9,9 +9,9 @@ from PIL import Image
 
 import poisson
 
-
 sys.path.append('experiments')
 import zhao2012
+import runcnn
 
 LOADROOTDIR = 'data/mitintrinsic/'
 
@@ -125,10 +125,7 @@ def score_image(true_shading, true_refl, estimate_shading, estimate_refl, mask, 
            0.5 * local_error(true_refl, estimate_refl, mask, window_size, window_size//2)
 
 
-
-
 ################################## Algorithms ##################################
-
 
 def retinex(image, mask, threshold, L1=False):
     image = np.clip(image, 3., np.infty)
@@ -146,13 +143,20 @@ def retinex(image, mask, threshold, L1=False):
 
     return np.where(mask, image / refl, 0.), refl
 
-def retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1=False):
+def retinex_with_thresholdimage(image, mask, L1=False):
+    MODELPATH = 'ownmodels/mitintrinsic'
+    MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient.prototxt')
+    PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_iter_50000.caffemodel')
+
+    threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, image)
+
+    image = np.mean(image, axis=2)
     image = np.clip(image, 3., np.infty)
     log_image = np.where(mask, np.log(image), 0.)
     i_y, i_x = poisson.get_gradients(log_image)
 
-    r_y = np.where(threshold_image_y == 0, i_y, 0.)
-    r_x = np.where(threshold_image_x == 0, i_x, 0.)
+    r_y = np.where(threshold_image_y < 0.5, i_y, 0.)
+    r_x = np.where(threshold_image_x < 0.5, i_x, 0.)
 
     if L1:
         log_refl = poisson.solve_L1(r_y, r_x, mask)
@@ -306,17 +310,14 @@ class GrayscaleRetinexEstimator:
         return [{'threshold': t} for t in np.logspace(-3., 1., 15)]
 
 class GrayscaleRetinexWithThresholdImageEstimator:
-    def estimate_shading_refl(self, image, mask, threshold_image_x, threshold_image_y, L1=False):
-        return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
+    def estimate_shading_refl(self, image, mask, L1=False):
+        return retinex_with_thresholdimage(image, mask, L1)
 
     @staticmethod
     def get_input(tag):
         image = load_object(tag, 'diffuse')
-        image = np.mean(image, axis=2)
         mask = load_object(tag, 'mask')
-        threshold_image_x = load_object(tag, 'thresholdx')
-        threshold_image_y = load_object(tag, 'thresholdy')
-        return image, mask, threshold_image_x, threshold_image_y
+        return image, mask
 
     @staticmethod
     def param_choices():

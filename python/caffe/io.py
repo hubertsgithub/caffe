@@ -29,6 +29,31 @@ def load_image(filename, color=True):
         img = img[:, :, :3]
     return img
 
+def save_image(filename, img, scale = 255.0, mean = [0, 0, 0], gamma = 1.0):
+    """
+    Save an image.
+
+    Take
+    filename: string
+    img: a numpy array containing the image data (H x W x 3) or (H x W),
+        the img values should be between 0.0 and 1.0 to gamma work properly
+    scale: the image is scaled up with this value
+    mean: array containing the value which will be added to all pixels in the image
+    gamma: the image will be gamma corrected with this value
+
+    Give
+    """
+
+    img = np.power(img, gamma)
+    img = img * scale
+    if len(img.shape) == 2:
+        img = img + np.mean(mean)
+    elif img.shape[2] == 3:
+        img = np.add(img, mean)
+    else:
+        raise ValueError('Invalid image dimensions: {}'.format(img.shape))
+
+    skimage.io.imsave(filename, img)
 
 def resize_image(im, new_dims, interp_order=1):
     """

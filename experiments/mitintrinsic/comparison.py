@@ -72,7 +72,7 @@ def run_experiment():
     assert os.path.isdir(RESULTS_DIR), '%s: directory does not exist' % RESULTS_DIR
 
     estimators = [#('Baseline (BAS)', intrinsic.BaselineEstimator),
-                  ('Zhao2012', intrinsic.Zhao2012Estimator),
+                  #('Zhao2012', intrinsic.Zhao2012Estimator),
                   #('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                   #('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
