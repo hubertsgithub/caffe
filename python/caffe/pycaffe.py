@@ -222,7 +222,11 @@ def _Net_set_mean(self, input_, mean, mode='elementwise'):
                                          in_shape[2:]).transpose((2,0,1))
         self.mean[input_] = mean
     elif mode == 'channel':
-        self.mean[input_] = mean.reshape((in_shape[1], 1, 1))
+        print self.mean
+        print in_shape
+        print mean.shape
+        self.mean[input_] = np.resize(mean, (in_shape[1], 1, 1))
+        print self.mean[input_].shape
     else:
         raise Exception('Mode not in {}'.format(['elementwise', 'channel']))
 
@@ -297,9 +301,12 @@ def _Net_preprocess(self, input_name, input_):
     raw_scale = self.raw_scale.get(input_name)
     channel_order = self.channel_swap.get(input_name)
     in_size = self.blobs[input_name].data.shape[2:]
+    print 'in_size: {0}'.format(in_size)
+    print 'caffe_in.shape: {0}'.format(caffe_in.shape)
     if caffe_in.shape[:2] != in_size:
         caffe_in = caffe.io.resize_image(caffe_in, in_size)
     if channel_order is not None:
+        print channel_order
         caffe_in = caffe_in[:, :, channel_order]
     caffe_in = caffe_in.transpose((2, 0, 1))
     if raw_scale is not None:

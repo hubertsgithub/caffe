@@ -13,6 +13,9 @@ sys.path.append('experiments')
 import zhao2012
 import runcnn
 
+sys.path.append('data/mitintrinsic')
+import common
+
 LOADROOTDIR = 'data/mitintrinsic/'
 
 ############################### Data ###########################################
@@ -153,22 +156,7 @@ def retinex(image, mask, threshold, L1=False):
 
     return np.where(mask, image / refl, 0.), refl
 
-def retinex_with_thresholdimage(image, mask, L1=False):
-    MODELPATH = 'ownmodels/mitintrinsic'
-    MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient_pad.prototxt')
-    PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_pad_iter_130000.caffemodel')
-
-    print 'Shape: {0}'.format(image.shape)
-    print 'Min: {0}'.format(np.min(image))
-    print 'Max: {0}'.format(np.max(image))
-    print 'Avg: {0}'.format(np.average(image))
-    gamma_corrected_image = image / 255. #np.power(image / 255., 1/2.2)
-    threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, gamma_corrected_image)
-    print 'Shape: {0}'.format(threshold_image_x.shape)
-    print 'Min: {0}'.format(np.min(threshold_image_x))
-    print 'Max: {0}'.format(np.max(threshold_image_x))
-    print 'Avg: {0}'.format(np.average(threshold_image_x))
-
+def retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1=False):
     image = np.mean(image, axis=2)
     image = np.clip(image, 3., np.infty)
     log_image = np.where(mask, np.log(image), 0.)
@@ -330,9 +318,55 @@ class GrayscaleRetinexEstimator:
     def param_choices():
         return [{'threshold': t} for t in np.logspace(-3., 1., 15)]
 
-class GrayscaleRetinexWithThresholdImageEstimator:
+class GrayscaleRetinexWithThresholdImageChromEstimator:
     def estimate_shading_refl(self, image, mask, L1=False):
-        return retinex_with_thresholdimage(image, mask, L1)
+        MODELPATH = 'ownmodels/mitintrinsic'
+        MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient_pad_chrom.prototxt')
+        PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_pad_chrom_iter_50000.caffemodel')
+
+        print 'Shape: {0}'.format(image.shape)
+        print 'Min: {0}'.format(np.min(image))
+        print 'Max: {0}'.format(np.max(image))
+        print 'Avg: {0}'.format(np.average(image))
+        gamma_corrected_image = image / 255. #np.power(image / 255., 1/2.2)
+        chrom_image = common.compute_chromaticity_image(gamma_corrected_image)
+        gamma_corrected_image = np.mean(gamma_corrected_image, axis=2)
+        threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, [gamma_corrected_image, chrom_image])
+        print 'Shape: {0}'.format(threshold_image_x.shape)
+        print 'Min: {0}'.format(np.min(threshold_image_x))
+        print 'Max: {0}'.format(np.max(threshold_image_x))
+        print 'Avg: {0}'.format(np.average(threshold_image_x))
+
+        return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
+
+    @staticmethod
+    def get_input(tag):
+        image = load_object(tag, 'diffuse')
+        mask = load_object(tag, 'mask')
+        return image, mask
+
+    @staticmethod
+    def param_choices():
+        return [{}]
+
+class GrayscaleRetinexWithThresholdImageRGBEstimator:
+    def estimate_shading_refl(self, image, mask, L1=False):
+        MODELPATH = 'ownmodels/mitintrinsic'
+        MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient_pad.prototxt')
+        PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_pad_iter_130000.caffemodel')
+
+        print 'Shape: {0}'.format(image.shape)
+        print 'Min: {0}'.format(np.min(image))
+        print 'Max: {0}'.format(np.max(image))
+        print 'Avg: {0}'.format(np.average(image))
+        gamma_corrected_image = image / 255. #np.power(image / 255., 1/2.2)
+        threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, [gamma_corrected_image])
+        print 'Shape: {0}'.format(threshold_image_x.shape)
+        print 'Min: {0}'.format(np.min(threshold_image_x))
+        print 'Max: {0}'.format(np.max(threshold_image_x))
+        print 'Avg: {0}'.format(np.average(threshold_image_x))
+
+        return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
 
     @staticmethod
     def get_input(tag):

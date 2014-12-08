@@ -8,19 +8,19 @@ import scipy as sp
 sys.path.append('python')
 import caffe
 
-def predict_thresholds(model_file, pretrained_weights, input_image):
+def predict_thresholds(model_file, pretrained_weights, input_images):
     net = caffe.Classifier(model_file, pretrained_weights,
-            mean=np.array([0.5, 0.5, 0.5]),
-            channel_swap=(0, 1, 2),
+            mean=np.array([0.5]),
             raw_scale=1,
             image_dims=(190, 190))
 
     net.set_phase_test()
     net.set_mode_cpu()
 
-    caffe.io.save_image('input_image.png', input_image, scale=1.0)
+    for i, im in enumerate(input_images):
+        caffe.io.save_image('input_image{0}.png'.format(i), im, scale=1.0)
 
-    predictions = net.dense_predict([input_image])  # predict takes any number of images, and formats them for the Caffe net automatically
+    predictions = net.dense_predict(input_images)  # predict takes any number of images, and formats them for the Caffe net automatically
     predictions = map(lambda p: p.squeeze(axis=(0, 1)), predictions)
 
     cnt = 0
