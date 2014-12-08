@@ -300,8 +300,7 @@ layers {
   weight_decay: 0
   convolution_param {
     num_output: 2 
-    kernel_size: 3
-    pad: 1
+    kernel_size: 1
     weight_filler {
       type: "xavier"
     }
@@ -464,8 +463,7 @@ layers {
   weight_decay: 0
   convolution_param {
     num_output: 2 
-    kernel_size: 3
-    pad: 1
+    kernel_size: 1
     weight_filler {
       type: "xavier"
     }
