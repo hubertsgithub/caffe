@@ -16,9 +16,11 @@ gamma = 2.2
 origdirnames = listdir(origpath)
 origdirnames.sort()
 
-f = open('data/mitintrinsic/val_with_albedo.txt', 'w')
+VALSET = ['box', 'paper1']
 
-first = True
+f_train = open('data/mitintrinsic/train_with_albedo.txt', 'w')
+f_val = open('data/mitintrinsic/val_with_albedo.txt', 'w')
+
 for dir in origdirnames:
     origparentdirpath = origpath + '/' + dir
 
@@ -64,12 +66,14 @@ for dir in origdirnames:
         convertedfilepaths.append(convertedfilepath)
         common.save_png(res_arr, convertedfilepath)
 
+    if dir in VALSET:
+        f = f_val
+    else:
+        f = f_train
+
     f.write('{0} {1} {2} {3} {4}\n'.format(convertedfilepaths[0], convertedfilepaths[0], convertedfilepaths[1], convertedfilepaths[2], convertedfilepaths[3]))
 
-    if first:
-        f = open('data/mitintrinsic/train_with_albedo.txt', 'w')
-        first = False
-
-f.close()
+f_train.close()
+f_val.close()
 
 print "Done!"
