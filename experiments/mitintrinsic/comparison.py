@@ -75,9 +75,10 @@ def run_experiment():
                   #('Baseline (BAS)', intrinsic.BaselineEstimator),
                   ('Grayscale Retinex with CNN predicted threshold images using RGB images', intrinsic.GrayscaleRetinexWithThresholdImageRGBEstimator),
                   ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image', intrinsic.GrayscaleRetinexWithThresholdImageChromEstimator),
+                  ('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                   #('Zhao2012', intrinsic.Zhao2012Estimator),
-                  #('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
-                  #('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
+                  ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
+                  ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
                   #('Weiss + Retinex (W+RET)', intrinsic.WeissRetinexEstimator),
                   ]
