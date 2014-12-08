@@ -1,0 +1,200 @@
+name: "IntrinsicCNN"
+input: "data"
+input_dim: 1
+input_dim: 3
+input_dim: 190
+input_dim: 190
+layers {
+  name: "conv1-gradx"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "conv1-gradx"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1-gradx"
+  type: RELU
+  bottom: "conv1-gradx"
+  top: "conv1-gradx"
+}
+layers {
+  name: "conv2-gradx"
+  type: CONVOLUTION
+  bottom: "conv1-gradx"
+  top: "conv2-gradx"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2-gradx"
+  type: RELU
+  bottom: "conv2-gradx"
+  top: "conv2-gradx"
+}
+layers {
+  name: "conv3-gradx"
+  type: CONVOLUTION
+  bottom: "conv2-gradx"
+  top: "conv3-gradx"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 2 
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "softmax-gradx"
+  type: SOFTMAX
+  bottom: "conv3-gradx"
+  top: "softmax-gradx"
+}
+layers {
+  name: "slice-gradx"
+  type: SLICE
+  bottom: "softmax-gradx"
+  top: "slice-gradx-0"
+  top: "slice-gradx-1"
+  slice_param {
+  	slice_point: 1
+  }
+}
+layers {
+  name: "conv1-grady"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "conv1-grady"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu1-grady"
+  type: RELU
+  bottom: "conv1-grady"
+  top: "conv1-grady"
+}
+layers {
+  name: "conv2-grady"
+  type: CONVOLUTION
+  bottom: "conv1-grady"
+  top: "conv2-grady"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2-grady"
+  type: RELU
+  bottom: "conv2-grady"
+  top: "conv2-grady"
+}
+layers {
+  name: "conv3-grady"
+  type: CONVOLUTION
+  bottom: "conv2-grady"
+  top: "conv3-grady"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 0
+  weight_decay: 0
+  convolution_param {
+    num_output: 2 
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "softmax-grady"
+  type: SOFTMAX
+  bottom: "conv3-grady"
+  top: "softmax-grady"
+}
+layers {
+  name: "slice-grady"
+  type: SLICE
+  bottom: "softmax-grady"
+  top: "slice-grady-0"
+  top: "slice-grady-1"
+  slice_param {
+  	slice_point: 1
+  }
+}
+layers {
+	name: "silentmask"
+	type: SILENCE
+	bottom: "slice-gradx-0"
+	bottom: "slice-grady-0"
+}
