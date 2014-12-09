@@ -313,18 +313,63 @@ class GrayscaleRetinexEstimator:
     def param_choices():
         return [{'threshold': t} for t in np.logspace(-3., 1., 15)]
 
-class GrayscaleRetinexWithThresholdImageChromEstimator:
+def run_retinex_with_chrom_cnn_model(image, mask, model_name, model_iteration, L1):
+    MODELPATH = 'ownmodels/mitintrinsic'
+    MODEL_FILE = os.path.join(MODELPATH, 'deploy_{0}.prototxt'.format(model_name))
+    PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_{0}_iter_{1}.caffemodel'.format(model_name, model_iteration))
+
+    gamma_corrected_image = image / 255. #np.power(image / 255., 1/2.2)
+    chrom_image = common.compute_chromaticity_image(gamma_corrected_image)
+    gamma_corrected_image = np.mean(gamma_corrected_image, axis=2)
+    threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, [gamma_corrected_image, chrom_image])
+
+    return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
+
+class GrayscaleRetinexWithThresholdImageChromSmallNetEstimator:
     def estimate_shading_refl(self, image, mask, L1=False):
-        MODELPATH = 'ownmodels/mitintrinsic'
-        MODEL_FILE = os.path.join(MODELPATH, 'deploy_gradient_pad_chrom2.prototxt')
-        PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_gradient_pad_chrom2_iter_30000.caffemodel')
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom', '50000', L1)
 
-        gamma_corrected_image = image / 255. #np.power(image / 255., 1/2.2)
-        chrom_image = common.compute_chromaticity_image(gamma_corrected_image)
-        gamma_corrected_image = np.mean(gamma_corrected_image, axis=2)
-        threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, [gamma_corrected_image, chrom_image])
+    @staticmethod
+    def get_input(tag):
+        image = load_object(tag, 'diffuse')
+        mask = load_object(tag, 'mask')
+        return image, mask
 
-        return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
+    @staticmethod
+    def param_choices():
+        return [{}]
+
+class GrayscaleRetinexWithThresholdImageChromBigNetEstimator:
+    def estimate_shading_refl(self, image, mask, L1=False):
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom2', '40000', L1)
+
+    @staticmethod
+    def get_input(tag):
+        image = load_object(tag, 'diffuse')
+        mask = load_object(tag, 'mask')
+        return image, mask
+
+    @staticmethod
+    def param_choices():
+        return [{}]
+
+class GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator:
+    def estimate_shading_refl(self, image, mask, L1=False):
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat', '20000', L1)
+
+    @staticmethod
+    def get_input(tag):
+        image = load_object(tag, 'diffuse')
+        mask = load_object(tag, 'mask')
+        return image, mask
+
+    @staticmethod
+    def param_choices():
+        return [{}]
+
+class GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator:
+    def estimate_shading_refl(self, image, mask, L1=False):
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat_maxpool', '10000', L1)
 
     @staticmethod
     def get_input(tag):

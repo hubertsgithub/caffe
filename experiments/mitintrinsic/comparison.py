@@ -13,7 +13,6 @@ SAVEROOTDIR = 'experiments/mitintrinsic'
 SET1 = ['box', 'cup1', 'cup2', 'dinosaur', 'panther', 'squirrel', 'sun', 'teabag2']
 SET2 = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', 'turtle']
 ALL_TAGS = SET1 + SET2
-ALL_TAGS = SET1
 
 # The following four objects weren't used in the evaluation because they have
 # slight problems, but you may still find them useful.
@@ -74,7 +73,10 @@ def run_experiment():
     estimators = [
                   #('Baseline (BAS)', intrinsic.BaselineEstimator),
                   ('Grayscale Retinex with CNN predicted threshold images using RGB images', intrinsic.GrayscaleRetinexWithThresholdImageRGBEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image', intrinsic.GrayscaleRetinexWithThresholdImageChromEstimator),
+                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, small network 3 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromSmallNetEstimator),
+                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetEstimator),
+                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator),
+                  #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                   ('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                   #('Zhao2012', intrinsic.Zhao2012Estimator),
                   ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
