@@ -3,18 +3,16 @@ import os
 import sys
 
 import numpy as np
-import scipy as sp
 import png
+import scipy as sp
 from PIL import Image
 
-import poisson
-
 sys.path.append('experiments')
-import zhao2012
-import runcnn
-
 sys.path.append('data/mitintrinsic')
 import common
+import poisson
+import runcnn
+import zhao2012
 
 LOADROOTDIR = 'data/mitintrinsic/'
 
@@ -123,7 +121,7 @@ def local_error(correct, estimate, mask, window_size, window_shift):
             estimate_curr = estimate[i:i+window_size, j:j+window_size]
             mask_curr = mask[i:i+window_size, j:j+window_size]
             ssq += ssq_error(correct_curr, estimate_curr, mask_curr)
-	    total += np.sum(mask_curr * correct_curr**2)
+            total += np.sum(mask_curr * correct_curr**2)
     assert -np.isnan(ssq/total)
 
     return ssq / total
@@ -275,13 +273,13 @@ class BaselineEstimator:
         self.mode = mode
 
     def estimate_shading_refl(self, image, mask, L1=False):
-	if self.mode == 'refl':
-	    refl = image
-	    shading = 1. * mask
-	else:
-	    refl = 1. * mask
-	    shading = image
-        return shading, refl
+        if self.mode == 'refl':
+            refl = image
+            shading = 1. * mask
+        else:
+            refl = 1. * mask
+            shading = image
+            return shading, refl
 
     @staticmethod
     def get_input(tag):
