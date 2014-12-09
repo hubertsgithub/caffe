@@ -16,17 +16,22 @@ def predict_thresholds(model_file, pretrained_weights, input_images):
 
     net.set_phase_test()
     net.set_mode_cpu()
+    dirpath = os.path.join('experiments/cnn-input-output', net.name)
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
 
     for i, im in enumerate(input_images):
-        caffe.io.save_image('input_image{0}.png'.format(i), im, scale=1.0)
+        caffe.io.save_image(os.path.join(dirpath, '{0}-input_image{1}.png'.format(predict_thresholds.counter, i)), im, scale=1.0)
 
     predictions = net.dense_predict(input_images)  # predict takes any number of images, and formats them for the Caffe net automatically
     predictions = map(lambda p: p.squeeze(axis=(0, 1)), predictions)
 
     cnt = 0
     for p in predictions:
-        caffe.io.save_image('testimg{0}.png'.format(cnt), p, scale=1.0)
-        cnt = cnt + 1
+        caffe.io.save_image(os.path.join(dirpath, '{0}-output_img{1}.png'.format(predict_thresholds.counter, cnt)), p, scale=1.0)
+        cnt += 1
 
+    predict_thresholds.counter += 1
     return predictions
 
+predict_thresholds.counter = 0

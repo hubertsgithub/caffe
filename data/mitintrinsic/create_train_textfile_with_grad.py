@@ -1,10 +1,12 @@
 import os
+import sys
 from os import listdir
 from os.path import exists
 
 import cv2
 import numpy as np
 
+sys.path.append('data')
 import common
 import poisson
 

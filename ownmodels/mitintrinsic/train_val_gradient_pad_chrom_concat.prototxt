@@ -1,4 +1,4 @@
-name: "IntrinsicCNN"
+name: "IntrinsicCNNGradPadChromBigConcat"
 layers {
   name: "data"
 	type: MULTI_IMAGE_DATA

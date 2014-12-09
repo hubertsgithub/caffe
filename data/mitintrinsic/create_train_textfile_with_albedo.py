@@ -1,11 +1,13 @@
 from os import listdir
 from os.path import exists
 import os
+import sys
 from PIL import Image
 import png
 import itertools
 import numpy as np
 
+sys.path.append('data')
 import common
 
 origpath = 'data/mitintrinsic/data'

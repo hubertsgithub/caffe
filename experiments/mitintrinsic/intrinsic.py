@@ -8,13 +8,15 @@ import scipy as sp
 from PIL import Image
 
 sys.path.append('experiments')
-sys.path.append('data/mitintrinsic')
+sys.path.append('data')
+import globals
 import common
 import poisson
 import runcnn
 import zhao2012
 
-LOADROOTDIR = 'data/mitintrinsic/'
+LOADROOTDIRMIT = 'data/mitintrinsic/'
+LOADROOTDIRINDOOR = 'data/synthetic-export/'
 
 ############################### Data ###########################################
 
@@ -25,11 +27,17 @@ def load_png(fname):
     image = np.vstack(itertools.imap(np.uint16, pngdata))
     if image.size == 3*w*h:
         image = np.reshape(image, (h, w, 3))
+
     print fname
     print np.min(image)
     print np.max(image)
     print np.average(image)
-    return image.astype(float) / 255.
+
+    image = image.astype(float)
+    if globals.CHOOSEMIT:
+        image = image / 255.
+
+    return image
 
 
 def load_object_helper(tag, condition):
@@ -40,34 +48,60 @@ def load_object_helper(tag, condition):
     'shading' returns a grayscale image, and all the other options return color images."""
     assert condition in ['mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular', 'thresholdx', 'thresholdy']
 
-    obj_dir = os.path.join(LOADROOTDIR, 'data', tag)
-    convert_str = '-converted'
+    if globals.CHOOSEMIT:
+        obj_dir = os.path.join(LOADROOTDIRMIT, 'data', tag)
+        convert_str = '-converted'
 
-    if condition == 'mask':
-        filename = os.path.join(obj_dir, 'mask{0}.png'.format(convert_str))
-        mask = load_png(filename)
-        return (mask > 0)
-    if condition == 'original':
-        filename = os.path.join(obj_dir, 'original{0}.png'.format(convert_str))
-        return load_png(filename)
-    if condition == 'diffuse':
-        filename = os.path.join(obj_dir, 'diffuse{0}.png'.format(convert_str))
-        return load_png(filename)
-    if condition == 'shading':
-        filename = os.path.join(obj_dir, 'shading{0}.png'.format(convert_str))
-        return load_png(filename)
-    if condition == 'reflectance':
-        filename = os.path.join(obj_dir, 'reflectance{0}.png'.format(convert_str))
-        return load_png(filename)
-    if condition == 'specular':
-        filename = os.path.join(obj_dir, 'specular{0}.png'.format(convert_str))
-        return load_png(filename)
-    if condition == 'thresholdx':
-        filename = os.path.join(obj_dir, 'gradbinary-x-converted.png'.format(convert_str))
-        return load_png(filename)
-    if condition == 'thresholdy':
-        filename = os.path.join(obj_dir, 'gradbinary-y-converted.png'.format(convert_str))
-        return load_png(filename)
+        if condition == 'mask':
+            filename = os.path.join(obj_dir, 'mask{0}.png'.format(convert_str))
+            mask = load_png(filename)
+            return (mask > 0)
+        if condition == 'original':
+            filename = os.path.join(obj_dir, 'original{0}.png'.format(convert_str))
+            return load_png(filename)
+        if condition == 'diffuse':
+            filename = os.path.join(obj_dir, 'diffuse{0}.png'.format(convert_str))
+            return load_png(filename)
+        if condition == 'shading':
+            filename = os.path.join(obj_dir, 'shading{0}.png'.format(convert_str))
+            return load_png(filename)
+        if condition == 'reflectance':
+            filename = os.path.join(obj_dir, 'reflectance{0}.png'.format(convert_str))
+            return load_png(filename)
+        if condition == 'specular':
+            filename = os.path.join(obj_dir, 'specular{0}.png'.format(convert_str))
+            return load_png(filename)
+        if condition == 'thresholdx':
+            filename = os.path.join(obj_dir, 'gradbinary-x-converted.png'.format(convert_str))
+            return load_png(filename)
+        if condition == 'thresholdy':
+            filename = os.path.join(obj_dir, 'gradbinary-y-converted.png'.format(convert_str))
+            return load_png(filename)
+    else:
+        obj_dir = os.path.join(LOADROOTDIRINDOOR, 'data')
+        if condition == 'mask':
+            filename = os.path.join(obj_dir, '{0}-mask.png'.format(tag))
+            mask = load_png(filename)
+            return (mask > 0)
+        if condition == 'original':
+            raise ValueError('Unsupported value for indoors dataset')
+        if condition == 'diffuse':
+            filename = os.path.join(obj_dir, '{0}-combined.png'.format(tag))
+            return load_png(filename)
+        if condition == 'shading':
+            filename = os.path.join(obj_dir, '{0}-shading.png'.format(tag))
+            return np.mean(load_png(filename), axis=2)
+        if condition == 'reflectance':
+            filename = os.path.join(obj_dir, '{0}-reflectance.png'.format(tag))
+            return load_png(filename)
+        if condition == 'specular':
+            raise ValueError('Unsupported value for indoors dataset')
+        if condition == 'thresholdx':
+            filename = os.path.join(obj_dir, '{0}-gradbinary-x-converted.png'.format(tag))
+            return load_png(filename)
+        if condition == 'thresholdy':
+            filename = os.path.join(obj_dir, '{0}-gradbinary-y-converted.png'.format(tag))
+            return load_png(filename)
 
 # cache for efficiency because PyPNG is pure Python
 cache = {}
@@ -81,7 +115,9 @@ def load_multiple(tag):
     """Load the images of a given object for all lighting conditions. Returns an
     m x n x 3 x 10 NumPy array, where the third dimension is the color channel and
     the fourth dimension is the image number."""
-    obj_dir = os.path.join(LOADROOTDIR, 'data', tag)
+    assert CHOOSEMIT
+
+    obj_dir = os.path.join(LOADROOTDIRMIT, 'data', tag)
     filename = os.path.join(obj_dir, 'light01.png')
     img0 = load_png(filename)
     result = np.zeros(img0.shape + (10,))
@@ -339,7 +375,7 @@ class GrayscaleRetinexWithThresholdImageChromSmallNetEstimator:
 
 class GrayscaleRetinexWithThresholdImageChromBigNetEstimator:
     def estimate_shading_refl(self, image, mask, L1=False):
-        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom2', '40000', L1)
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom2', '50000', L1)
 
     @staticmethod
     def get_input(tag):

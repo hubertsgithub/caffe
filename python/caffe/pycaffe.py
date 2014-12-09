@@ -23,6 +23,12 @@ def _Net_blobs(self):
     """
     return OrderedDict(zip(self._blob_names, self._blobs))
 
+@property
+def _Net_name(self):
+    """
+    The name of the network
+    """
+    return self._name
 
 @property
 def _Net_params(self):
@@ -386,6 +392,7 @@ def _Net_batch(self, blobs):
 
 # Attach methods to Net.
 Net.blobs = _Net_blobs
+Net.name = _Net_name
 Net.params = _Net_params
 Net.forward = _Net_forward
 Net.backward = _Net_backward

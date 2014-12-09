@@ -2,17 +2,26 @@ import numpy as np
 import os
 import sys
 
+import globals
 import html
 import intrinsic
+
+globals.init()
 
 SAVEROOTDIR = 'experiments/mitintrinsic'
 
 # The following objects were used in the evaluation. For the learning algorithms
 # (not included here), we used two-fold cross-validation with the following
 # randomly chosen split.
-SET1 = ['box', 'cup1', 'cup2', 'dinosaur', 'panther', 'squirrel', 'sun', 'teabag2']
-SET2 = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', 'turtle']
-ALL_TAGS = SET1 + SET2
+SET1MIT = ['box', 'cup1', 'cup2', 'dinosaur', 'panther', 'squirrel', 'sun', 'teabag2']
+SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', 'turtle']
+
+SETINDOOR = map(lambda n: str(n), range(1, 25))
+
+if globals.CHOOSEMIT:
+    ALL_TAGS = SET1MIT + SET2MIT
+else:
+    ALL_TAGS = SETINDOOR
 
 # The following four objects weren't used in the evaluation because they have
 # slight problems, but you may still find them useful.

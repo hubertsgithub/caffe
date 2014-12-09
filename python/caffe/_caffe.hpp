@@ -132,6 +132,7 @@ class PyNet {
     return vector<PyLayer>(net_->layers().begin(), net_->layers().end());
   }
 
+  string name() { return net_->name(); }
   vector<string> blob_names() { return net_->blob_names(); }
   vector<string> layer_names() { return net_->layer_names(); }
 
