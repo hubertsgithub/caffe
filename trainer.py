@@ -43,7 +43,7 @@ fin.close()
 fout = open(os.path.join(root, solverfilename), 'w')
 for l in lines:
     newl = l.replace('train_val.prototxt', trainfilename)
-    newl = newl.replace('caffenet_train', 'caffenet_train_{0}'.format(modelname))
+    newl = newl.replace('caffenet_train\"', 'caffenet_train_{0}\"'.format(modelname))
     newl = newl.replace('solver_mode: GPU', 'solver_mode: {0}'.format(platform))
     fout.write(newl)
 
