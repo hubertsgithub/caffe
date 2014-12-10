@@ -9,8 +9,10 @@ from PIL import Image
 
 sys.path.append('experiments')
 sys.path.append('data')
+sys.path.append('data/synthetic-export')
 import globals
 import common
+import multilayer_exr
 import poisson
 import runcnn
 import zhao2012
@@ -34,6 +36,10 @@ def load_png(fname):
     image = image.astype(float)
     if globals.CHOOSEMIT:
         image = image / 255.
+    else:
+        image = image / 255.
+        image = multilayer_exr.srgb_to_rgb(image)
+        image = image * 255.
 
     return image
 
