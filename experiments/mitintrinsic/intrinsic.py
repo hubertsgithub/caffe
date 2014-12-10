@@ -29,9 +29,7 @@ def load_png(fname):
         image = np.reshape(image, (h, w, 3))
 
     print fname
-    print np.min(image)
-    print np.max(image)
-    print np.average(image)
+    common.print_array_info(image)
 
     image = image.astype(float)
     if globals.CHOOSEMIT:
@@ -200,6 +198,9 @@ def retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_
         log_refl = poisson.solve_L1(r_y, r_x, mask)
     else:
         log_refl = poisson.solve(r_y, r_x, mask)
+
+    common.print_array_info(log_refl)
+    #log_refl = np.clip(log_refl, -40., 20.)
     refl = mask * np.exp(log_refl)
 
     return np.where(mask, image / refl, 0.), refl
@@ -315,7 +316,7 @@ class BaselineEstimator:
         else:
             refl = 1. * mask
             shading = image
-            return shading, refl
+        return shading, refl
 
     @staticmethod
     def get_input(tag):
@@ -389,7 +390,7 @@ class GrayscaleRetinexWithThresholdImageChromBigNetEstimator:
 
 class GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator:
     def estimate_shading_refl(self, image, mask, L1=False):
-        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat', '20000', L1)
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat', '50000', L1)
 
     @staticmethod
     def get_input(tag):
@@ -403,7 +404,7 @@ class GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator:
 
 class GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator:
     def estimate_shading_refl(self, image, mask, L1=False):
-        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat_maxpool', '10000', L1)
+        return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat_maxpool', '50000', L1)
 
     @staticmethod
     def get_input(tag):

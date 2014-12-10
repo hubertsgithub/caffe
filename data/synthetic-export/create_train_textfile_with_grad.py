@@ -11,8 +11,8 @@ import common
 import multilayer_exr
 
 resize_to_percent = 50
-resize = 190
-newsize = (resize, resize)
+resize = 800
+crop = 190
 
 def scale_then_to_srgb(image):
     image = image / np.percentile(image, 99.9)
@@ -47,9 +47,9 @@ for filename in datafilenames:
     reflectance = layers['diff_col']
     combined = shading * reflectance
 
-    shading = sp.misc.imresize(shading, newsize)
-    reflectance = sp.misc.imresize(reflectance, newsize)
-    combined = sp.misc.imresize(combined, newsize)
+    shading = common.resize_and_crop_image(shading, resize, crop, keep_aspect_ratio=True)
+    reflectance = common.resize_and_crop_image(reflectance, resize, crop, keep_aspect_ratio=True)
+    combined = common.resize_and_crop_image(combined, resize, crop, keep_aspect_ratio=True)
 
     gray_combined = np.mean(combined, axis=2)
     p = np.percentile(gray_combined, 0.01)

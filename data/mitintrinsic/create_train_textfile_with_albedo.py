@@ -44,13 +44,7 @@ for dir in origdirnames:
             continue
 
         arr = common.load_png(filepath)
-        if len(arr.shape) == 3:
-            rets = []
-            for c in range(3):
-                rets.append(common.resize_and_crop_channel(arr[:, :, c], resize, crop))
-            res_arr = np.dstack(rets)
-        else:
-            res_arr = common.resize_and_crop_channel(arr, resize, crop)
+        res_arr = common.resize_and_crop_image(arr, resize, crop)
 
         fileName, fileExtension = os.path.splitext(filepath)
         convertedfilepath = fileName + '-converted' + fileExtension
