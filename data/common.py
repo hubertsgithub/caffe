@@ -2,6 +2,7 @@ from PIL import Image
 import png
 import itertools
 import numpy as np
+import scipy as sp
 import poisson
 
 SCALE16BIT = 65535.
@@ -10,7 +11,10 @@ def print_array_info(array):
     print 'Shape: {0}'.format(array.shape)
     print 'Min: {0}'.format(np.min(array))
     print 'Max: {0}'.format(np.max(array))
-    print 'Avg: {0}'.format(np.average(array))
+    if sp.sparse.issparse(array):
+        print 'Avg: {0}'.format(array.mean())
+    else:
+        print 'Avg: {0}'.format(np.average(array))
 
 def load_png(fname):
     reader = png.Reader(fname)
