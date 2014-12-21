@@ -7,7 +7,10 @@ import poisson
 
 SCALE16BIT = 65535.
 
-def print_array_info(array):
+def print_array_info(array, array_name=''):
+    if array_name != '':
+        print 'ARRAY: {0}'.format(array_name)
+
     print 'Shape: {0}'.format(array.shape)
     print 'Min: {0}'.format(np.min(array))
     print 'Max: {0}'.format(np.max(array))
