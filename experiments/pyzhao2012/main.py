@@ -14,6 +14,8 @@ ROOTPATH = 'experiments/pyzhao2012'
 THRESHOLD = 0.25
 LAMBDA_L = 1.
 LAMBDA_A = 1000.
+ABS_CONSTR_VAL = 0.
+
 
 def main():
     smalladd = '-converted'
@@ -54,7 +56,7 @@ def runzhao(img, mask):
     (width, height) = log_grayimg.shape
     resolution = width * height
     x0 = np.zeros(resolution)
-    x0.fill(0.25)
+    x0.fill(-0.5)
     #(log_shading, minfunval, infodict) = optimize.fmin_l_bfgs_b(func=func, x0=x0, fprime=func_deriv, args=(log_grayimg, chromimg, mask, LAMBDA_L, LAMBDA_A, threshold, max_inds), iprint=0)
     res = optimize.minimize(method='L-BFGS-B', fun=func, x0=x0, jac=func_deriv, args=(log_grayimg, chromimg, mask, LAMBDA_L, LAMBDA_A, threshold, max_inds), options={'disp': True})
     log_shading = res.x
@@ -76,6 +78,7 @@ def runzhao(img, mask):
 
     return shading, np.where(mask, grayimg / shading, 0.)
 
+
 def computeRetinexContour(log_grayimg, chromimg, mask, threshold, max_inds):
     (width, height) = log_grayimg.shape
     contourimg = np.ones_like(log_grayimg)
@@ -87,17 +90,14 @@ def computeRetinexContour(log_grayimg, chromimg, mask, threshold, max_inds):
                 continue
 
             # go through all neighbors
-            for dh in range(-1, 1, 2):
-                for dw in range(-1, 1, 2):
-                    ch = h + dh
-                    cw = w + dw
+            neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
+            for ch, cw in neighbors:
+                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                    continue
 
-                    if ch < 0 or cw < 0 or ch >= height or cw >= width:
-                        continue
-
-                    weight = computeWeight(chromimg, w, h, cw, ch, threshold)
-                    if weight == 0.:
-                        contourimg[w, h] = 0.
+                weight = computeWeight(chromimg, w, h, cw, ch, threshold)
+                if weight == 0.:
+                    contourimg[w, h] = 0.
 
     contourimg = contourimg * mask
     common.save_png(contourimg, os.path.join(ROOTPATH, 'contourimg.png'))
@@ -116,27 +116,25 @@ def func(s, log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, max_inds
             p = h * w
 
             # go through all neighbors
-            for dh in range(-1, 1, 2):
-                for dw in range(-1, 1, 2):
-                    ch = h + dh
-                    cw = w + dw
+            neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
+            for ch, cw in neighbors:
+                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                    continue
 
-                    if ch < 0 or cw < 0 or ch >= height or cw >= width:
-                        continue
+                dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+                weight = computeWeight(chromimg, w, h, cw, ch, threshold)
+                q = ch * cw
 
-                    dI = log_grayimg[w][h] - log_grayimg[cw][ch]
-                    weight = computeWeight(chromimg, w, h, cw, ch, threshold)
-                    q = ch * cw
-
-                    dS = s[p] - s[q]
-                    sum += (dS ** 2 + weight * (dI - dS) ** 2) * lambda_l
+                dS = s[p] - s[q]
+                sum += (dS ** 2 + weight * (dI - dS) ** 2) * lambda_l
 
     # absolute scale constraint
     for i in max_inds:
         p = i[0] * i[1]
-        sum += (s[p] - 1) ** 2 * lambda_a
+        sum += (s[p] - ABS_CONSTR_VAL) ** 2 * lambda_a
 
     return sum
+
 
 def func_deriv(s, log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, max_inds):
     (width, height) = log_grayimg.shape
@@ -146,37 +144,35 @@ def func_deriv(s, log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, ma
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            #if not mask[w, h]:
-            #    continue
+            if not mask[w, h]:
+                continue
 
             p = h * w
 
             sum = 0.0
 
             # go through all neighbors
-            for dh in range(-1, 1, 2):
-                for dw in range(-1, 1, 2):
-                    ch = h + dh
-                    cw = w + dw
+            neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
+            for ch, cw in neighbors:
+                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                    continue
 
-                    if ch < 0 or cw < 0 or ch >= height or cw >= width:
-                        continue
+                dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+                weight = computeWeight(chromimg, w, h, cw, ch, threshold)
+                q = ch * cw
 
-                    dI = log_grayimg[w][h] - log_grayimg[cw][ch]
-                    weight = computeWeight(chromimg, w, h, cw, ch, threshold)
-                    q = ch * cw
-
-                    # * 2 at the end, because we compute the same for all neigbors and (a - b)^2 and (b - a)^2 are the same
-                    sum += (2 * (1 + weight) * s[p] + s[q] * (-2 * (1 + weight)) - 2 * weight * dI) * lambda_l * 2
+                # * 2 at the end, because we compute the same for all neighbors and (a - b)^2 and (b - a)^2 are the same
+                sum += (2 * (1 + weight) * s[p] + s[q] * (-2 * (1 + weight)) - 2 * weight * dI) * lambda_l * 2
 
             grad[p] += sum
 
     # absolute scale constraint
     for i in max_inds:
         p = i[0] * i[1]
-        grad[p] += 2 * (s[p] - 1) * lambda_a
+        grad[p] += 2 * (s[p] - ABS_CONSTR_VAL) * lambda_a
 
     return grad
+
 
 def buildMatrices(log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, max_inds):
     (width, height) = log_grayimg.shape
@@ -196,34 +192,31 @@ def buildMatrices(log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, ma
             p = h * w
 
             # go through all neighbors
-            for dh in range(-1, 1, 2):
-                for dw in range(-1, 1, 2):
-                    ch = h + dh
-                    cw = w + dw
+            neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
+            for ch, cw in neighbors:
+                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                    continue
 
-                    if ch < 0 or cw < 0 or ch >= height or cw >= width:
-                        continue
+                dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+                weight = computeWeight(chromimg, w, h, cw, ch, threshold)
 
-                    dI = log_grayimg[w][h] - log_grayimg[cw][ch]
-                    weight = computeWeight(chromimg, w, h, cw, ch, threshold)
+                q = ch * cw
 
-                    q = ch * cw
+                A[p, p] += (1 + weight) * lambda_l
+                A[p, q] += (-2 * (1 + weight)) * lambda_l
+                A[q, q] += (1 + weight) * lambda_l
 
-                    A[p, p] += (1 + weight) * lambda_l
-                    A[p, q] += (-2 * (1 + weight)) * lambda_l
-                    A[q, q] += (1 + weight) * lambda_l
+                b[p] += (-2 * weight * dI) * lambda_l
+                b[q] += (2 * weight * dI) * lambda_l
 
-                    b[p] += (-2 * weight * dI) * lambda_l
-                    b[q] += (2 * weight * dI) * lambda_l
-
-                    c += (weight * dI * dI) * lambda_l
+                c += (weight * dI * dI) * lambda_l
 
     # absolute scale constraint
     for i in max_inds:
         p = i[0] * i[1]
         A[p, p] += 1 * lambda_a
-        b[p] += -2 * lambda_a
-        c += 1 * lambda_a
+        b[p] += -2 * ABS_CONSTR_VAL * lambda_a
+        c += ABS_CONSTR_VAL ** 2 * lambda_a
 
     b *= -1
     A *= 2
