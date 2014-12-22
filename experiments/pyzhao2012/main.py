@@ -12,6 +12,7 @@ from scipy import spatial
 import itertools
 import pyamg
 import random
+import json
 
 ROOTPATH = 'experiments/pyzhao2012'
 
@@ -21,18 +22,35 @@ LAMBDA_R = 1.
 LAMBDA_A = 1000.
 ABS_CONSTR_VAL = 0.
 GROUP_SIM_THRESHOLD = 0.05
+THRESHOLD_CONFIDENCE = 0.9
+SUPERPIXEL_RADIUS = 3
+
+MITINTRINSIC = True
 
 
 def main():
-    smalladd = ''#'-converted'
-    img = common.load_png(os.path.join(ROOTPATH, 'diffuse{0}.png'.format(smalladd)))
-    mask = common.load_png(os.path.join(ROOTPATH, 'mask{0}.png'.format(smalladd))) > 0
-    common.save_png(img, os.path.join(ROOTPATH, 'img.png'))
 
-    shading, reflectance = runzhao(img, mask)
+    if MITINTRINSIC:
+        smalladd = ''#'-converted'
+        img = common.load_png(os.path.join(ROOTPATH, 'diffuse{0}.png'.format(smalladd)))
+        mask = common.load_png(os.path.join(ROOTPATH, 'mask{0}.png'.format(smalladd))) > 0
+        groups = None
+    else:
+        img = common.load_image(os.path.join(ROOTPATH, '662.png'), is_srgb=True)
+        width, height = img.shape[0:2]
+        mask = np.ones((width, height))
+        judgements = json.load(open(os.path.join(ROOTPATH, '662.json')))
+        groups = findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE, SUPERPIXEL_RADIUS)
+        #groups = []
+
+    shading, reflectance = runzhao(img, mask, groups)
     reflectance = computeColorReflectance(reflectance, img)
     common.print_array_info(shading, 'final shading')
     common.print_array_info(reflectance, 'final reflectance')
+
+    # gamma correction
+    shading = common.rgb_to_srgb(shading)
+    reflectance = common.rgb_to_srgb(reflectance)
 
     common.save_png(shading, os.path.join(ROOTPATH, 'shading.png'))
     common.save_png(reflectance, os.path.join(ROOTPATH, 'reflectance.png'))
@@ -45,11 +63,14 @@ def computeColorReflectance(gray_refl, img):
     return gray_refl[:, :, np.newaxis] * chromimg
 
 
-def runzhao(img, mask):
+def runzhao(img, mask, groups = None):
     '''
     Input
     img: W x H x 3
         color image in linear RGB colorspace, values in [0.0, 1.0]
+
+    Output
+    A tuple: (shading, reflectance), both grayscale, linear RGB colorspace, values in [0.0, 1.0]
     '''
 
     threshold = THRESHOLD
@@ -79,8 +100,13 @@ def runzhao(img, mask):
     #log_shading = np.zeros_like(grayimg)
     #log_shading[used_indtuple] = res.x
 
-    groups = findGroups(chromimg, used_indlist, 3, GROUP_SIM_THRESHOLD)
+    if groups == None:
+        groups = []
+        #groups = findGroups(chromimg, used_indlist, 3, GROUP_SIM_THRESHOLD)
+
+    grouped_pxcount = sum(1 for g in groups for px in g)
     print 'Number of groups: {0} / {1} pixels'.format(len(groups), used_pxcount)
+    print 'Number of grouped pixels: {0} / {1} pixels'.format(grouped_pxcount, used_pxcount)
 
     A, b, c = buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, LAMBDA_L, LAMBDA_R, LAMBDA_A, threshold, max_inds)
 
@@ -158,6 +184,81 @@ def getWindow(chromimg, w, h, window_size):
     window_shift = (window_size-1)/2
 
     return chromimg[(w-window_shift):(w+window_shift), (h-window_shift):(h+window_shift)]
+
+
+def findIIWGroups(judgements, width, height, threshold_confidence, superpixel_radius):
+    points = judgements['intrinsic_points']
+    comparisons = judgements['intrinsic_comparisons']
+    id_to_points = {p['id']: p for p in points}
+
+    cur_groupid = 0
+    pointid_groupid = {}
+    for c in comparisons:
+        # "darker" is "J_i" in our paper
+        darker = c['darker']
+        if darker not in ('1', '2', 'E'):
+            continue
+
+        # we are interested only in point pairs with 'equal' reflectance
+        if darker != 'E':
+            continue
+
+        # "darker_score" is "w_i" in our paper
+        weight = c['darker_score']
+        if weight <= 0 or weight is None:
+            continue
+
+        # if the confidence is not high enough, skip point
+        if weight < threshold_confidence:
+            continue
+
+        pointid1 = c['point1']
+        pointid2 = c['point2']
+        point1 = id_to_points[pointid1]
+        point2 = id_to_points[pointid2]
+        if not point1['opaque'] or not point2['opaque']:
+            continue
+
+        if pointid1 in pointid_groupid:
+            pointid_groupid[pointid2] = pointid_groupid[pointid1]
+        elif pointid2 in pointid_groupid:
+            pointid_groupid[pointid1] = pointid_groupid[pointid2]
+        else:
+            # create new group
+            pointid_groupid[pointid1] = pointid_groupid[pointid2] = cur_groupid
+            cur_groupid += 1
+
+    # go through the dictionary and create groups
+    groupid_pointid = {}
+    for pointid, groupid in pointid_groupid.iteritems():
+        if groupid not in groupid_pointid:
+            groupid_pointid[groupid] = []
+
+        groupid_pointid[groupid].append(pointid)
+
+    groups = []
+    # create final groups
+    for groupid, pointlist in groupid_pointid.iteritems():
+        g = []
+        for pid in pointlist:
+            point = id_to_points[pid]
+            w = int(point['x'] * width)
+            h = int(point['y'] * height)
+
+            # put the neighbors of the point in the group too
+            for dw, dh in itertools.product(range(-superpixel_radius, superpixel_radius), repeat=2):
+                cw = w + dw
+                ch = h + dh
+
+                if cw < 0 or ch < 0 or cw >= width or ch >= height:
+                    continue
+
+                g.append([cw, ch])
+
+        groups.append(g)
+
+    return groups
+
 
 def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, threshold, max_inds):
     (width, height) = log_grayimg.shape

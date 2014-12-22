@@ -7,6 +7,7 @@ import poisson
 
 SCALE16BIT = 65535.
 
+
 def print_array_info(array, array_name=''):
     if array_name != '':
         print 'ARRAY: {0}'.format(array_name)
@@ -19,6 +20,7 @@ def print_array_info(array, array_name=''):
     else:
         print 'Avg: {0}'.format(np.average(array))
 
+
 def load_png(fname):
     reader = png.Reader(fname)
     w, h, pngdata, params = reader.read()
@@ -29,6 +31,7 @@ def load_png(fname):
     print_array_info(image)
     return image.astype(float) / SCALE16BIT
 
+
 def save_png(array, fname):
     greyscale = (array.ndim == 2)
     array = (SCALE16BIT*array).astype(np.uint32)
@@ -38,6 +41,43 @@ def save_png(array, fname):
     if not greyscale:
         array = array.reshape(m, n*3)
     writer.write(f, array)
+
+
+def load_image(filename, is_srgb=True):
+    """ Load an image that is either linear or sRGB-encoded. """
+
+    if not filename:
+        raise ValueError("Empty filename")
+    image = np.asarray(Image.open(filename)).astype(np.float) / 255.0
+    if is_srgb:
+        return srgb_to_rgb(image)
+    else:
+        return image
+
+
+def srgb_to_rgb(srgb):
+    """ Convert an sRGB image to a linear RGB image """
+
+    ret = np.zeros_like(srgb)
+    idx0 = srgb <= 0.04045
+    idx1 = srgb > 0.04045
+    ret[idx0] = srgb[idx0] / 12.92
+    ret[idx1] = np.power((srgb[idx1] + 0.055) / 1.055, 2.4)
+    return ret
+
+
+def rgb_to_srgb(rgb):
+    """ Convert an image from linear RGB to sRGB.
+
+    :param rgb: numpy array in range (0.0 to 1.0)
+    """
+    ret = np.zeros_like(rgb)
+    idx0 = rgb <= 0.0031308
+    idx1 = rgb > 0.0031308
+    ret[idx0] = rgb[idx0] * 12.92
+    ret[idx1] = np.power(1.055 * rgb[idx1], 1.0 / 2.4) - 0.055
+    return ret
+
 
 def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
     '''
@@ -73,6 +113,7 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
     ret = np.array(image)
     return ret
 
+
 def resize_and_crop_image(arr, resize, crop, keep_aspect_ratio=False):
     if len(arr.shape) == 3:
         rets = []
@@ -86,15 +127,16 @@ def resize_and_crop_image(arr, resize, crop, keep_aspect_ratio=False):
 
     return res_arr
 
+
 def computegradimgs(shading, reflectance, mask):
     #mask = np.mean(maskimg, axis = 2)
 
     #images = map(lambda image: np.clip(image, .001, np.infty), images)
     # Convert to grayscale
     if len(shading.shape) == 3:
-        shading = np.mean(shading, axis = 2)
+        shading = np.mean(shading, axis=2)
     if len(reflectance.shape) == 3:
-        reflectance = np.mean(reflectance, axis = 2)
+        reflectance = np.mean(reflectance, axis=2)
 
     # Compute log images
     #images = map(lambda image: np.where(mask, np.log(image), 0.), images)
@@ -112,11 +154,12 @@ def computegradimgs(shading, reflectance, mask):
 
     return b_x, b_y
 
+
 def compute_chromaticity_image(image):
     if len(image.shape) != 3:
         raise ValueError('The image should have 3 channels (RGB)!')
 
-    sumimg = np.sum(image, axis = 2)
+    sumimg = np.sum(image, axis=2)
     sumimg = np.clip(sumimg, 0.01, np.inf)
     chrom = image / sumimg[:, :, np.newaxis]
 
