@@ -14,7 +14,7 @@ import pyamg
 import random
 import json
 
-ROOTPATH = 'experiments/pyzhao2012'
+ROOTPATH = 'experiments/pyzhao2012/input'
 
 THRESHOLD = 0.025
 LAMBDA_L = 1.
@@ -25,11 +25,10 @@ GROUP_SIM_THRESHOLD = 0.05
 THRESHOLD_CONFIDENCE = 0.9
 SUPERPIXEL_RADIUS = 3
 
-MITINTRINSIC = True
+MITINTRINSIC = False
 
 
 def main():
-
     if MITINTRINSIC:
         smalladd = ''#'-converted'
         img = common.load_png(os.path.join(ROOTPATH, 'diffuse{0}.png'.format(smalladd)))
