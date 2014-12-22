@@ -11,14 +11,14 @@ from scipy import optimize
 
 ROOTPATH = 'experiments/pyzhao2012'
 
-THRESHOLD = 0.25
+THRESHOLD = 0.025
 LAMBDA_L = 1.
 LAMBDA_A = 1000.
 ABS_CONSTR_VAL = 0.
 
 
 def main():
-    smalladd = '-converted'
+    smalladd = ''#'-converted'
     img = common.load_png(os.path.join(ROOTPATH, 'diffuse{0}.png'.format(smalladd)))
     mask = common.load_png(os.path.join(ROOTPATH, 'mask{0}.png'.format(smalladd))) > 0
     common.save_png(img, os.path.join(ROOTPATH, 'img.png'))
@@ -28,7 +28,7 @@ def main():
     common.print_array_info(reflectance)
 
     common.save_png(shading, os.path.join(ROOTPATH, 'shading.png'))
-    common.save_png(shading, os.path.join(ROOTPATH, 'reflectance.png'))
+    common.save_png(reflectance, os.path.join(ROOTPATH, 'reflectance.png'))
 
 
 def runzhao(img, mask):
@@ -45,38 +45,38 @@ def runzhao(img, mask):
     grayimg = np.mean(img, axis=2)
     common.save_png(grayimg, os.path.join(ROOTPATH, 'grayimg.png'))
 
-    approx_max = np.percentile(grayimg, 99)
+    approx_max = np.percentile(grayimg, 99.9)
     max_inds = np.transpose(np.nonzero(grayimg >= approx_max))
     common.print_array_info(max_inds, 'max_inds')
+
+    used_indtuple = np.nonzero(mask)
+    used_indlist = np.transpose(used_indtuple)
+    used_pxcount = used_indlist.shape[0]
+    print 'Unmasked pixel count: {0}'.format(used_pxcount)
+    used_inddic = dict([(tuple(x), i) for i, x in enumerate(used_indlist)])
 
     log_grayimg = np.where(mask, np.log(np.clip(grayimg, 0.0001, np.infty)), 0.)
 
     computeRetinexContour(log_grayimg, chromimg, mask, threshold, max_inds)
 
-    (width, height) = log_grayimg.shape
-    resolution = width * height
-    x0 = np.zeros(resolution)
-    x0.fill(-0.5)
-    #(log_shading, minfunval, infodict) = optimize.fmin_l_bfgs_b(func=func, x0=x0, fprime=func_deriv, args=(log_grayimg, chromimg, mask, LAMBDA_L, LAMBDA_A, threshold, max_inds), iprint=0)
-    res = optimize.minimize(method='L-BFGS-B', fun=func, x0=x0, jac=func_deriv, args=(log_grayimg, chromimg, mask, LAMBDA_L, LAMBDA_A, threshold, max_inds), options={'disp': True})
-    log_shading = res.x
+    #x0 = np.zeros(used_pxcount)
+    #x0.fill(0)
+    #res = optimize.minimize(method='L-BFGS-B', fun=func, x0=x0, jac=func_deriv, args=(log_grayimg, chromimg, used_inddic, LAMBDA_L, LAMBDA_A, threshold, max_inds), options={'disp': True})
+    #log_shading = np.zeros_like(grayimg)
+    #log_shading[used_indtuple] = res.x
 
-    #A, b, c = buildMatrices(log_grayimg, chromimg, mask, LAMBDA_L, LAMBDA_A, threshold, max_inds)
-    #common.print_array_info(A)
-    #common.print_array_info(b)
-    #print c
+    A, b, c = buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, LAMBDA_L, LAMBDA_A, threshold, max_inds)
 
-    #evals = sp.sparse.linalg.eigsh(A, k=15, return_eigenvectors=False, which='SM')
-    #print evals
-    #print np.all(evals > 0)
-    #log_shading = sp.sparse.linalg.spsolve(A, b)
-    log_shading = np.reshape(log_shading, grayimg.shape)
+    res = sp.sparse.linalg.spsolve(A, b)
+    log_shading = np.zeros_like(grayimg)
+    log_shading[used_indtuple] = res
     common.print_array_info(log_shading, 'log_shading')
+
     shading = mask * np.exp(log_shading)
     common.print_array_info(shading, 'shading')
     shading = shading / np.max(shading)
 
-    return shading, np.where(mask, grayimg / shading, 0.)
+    return shading, np.clip(np.where(mask, grayimg / shading, 0.), 0., 1.)
 
 
 def computeRetinexContour(log_grayimg, chromimg, mask, threshold, max_inds):
@@ -103,63 +103,62 @@ def computeRetinexContour(log_grayimg, chromimg, mask, threshold, max_inds):
     common.save_png(contourimg, os.path.join(ROOTPATH, 'contourimg.png'))
 
 
-def func(s, log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, max_inds):
+def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, threshold, max_inds):
     (width, height) = log_grayimg.shape
     sum = 0.0
 
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            if not mask[w, h]:
+            if (w, h) not in used_inddic:
                 continue
 
-            p = h * w
+            p = used_inddic[(w, h)]
 
             # go through all neighbors
             neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
             for ch, cw in neighbors:
-                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                if (cw, ch) not in used_inddic:
                     continue
 
                 dI = log_grayimg[w][h] - log_grayimg[cw][ch]
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold)
-                q = ch * cw
+                q = used_inddic[(cw, ch)]
 
                 dS = s[p] - s[q]
                 sum += (dS ** 2 + weight * (dI - dS) ** 2) * lambda_l
 
     # absolute scale constraint
     for i in max_inds:
-        p = i[0] * i[1]
+        p = used_inddic[(i[0], i[1])]
         sum += (s[p] - ABS_CONSTR_VAL) ** 2 * lambda_a
 
     return sum
 
 
-def func_deriv(s, log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, max_inds):
+def func_deriv(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, threshold, max_inds):
     (width, height) = log_grayimg.shape
-    resolution = width * height
-    grad = np.zeros(resolution)
+    grad = np.zeros_like(s)
 
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            if not mask[w, h]:
+            if (w, h) not in used_inddic:
                 continue
 
-            p = h * w
+            p = used_inddic[(w, h)]
 
             sum = 0.0
 
             # go through all neighbors
             neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
             for ch, cw in neighbors:
-                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                if (cw, ch) not in used_inddic:
                     continue
 
                 dI = log_grayimg[w][h] - log_grayimg[cw][ch]
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold)
-                q = ch * cw
+                q = used_inddic[(cw, ch)]
 
                 # * 2 at the end, because we compute the same for all neighbors and (a - b)^2 and (b - a)^2 are the same
                 sum += (2 * (1 + weight) * s[p] + s[q] * (-2 * (1 + weight)) - 2 * weight * dI) * lambda_l * 2
@@ -168,39 +167,36 @@ def func_deriv(s, log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, ma
 
     # absolute scale constraint
     for i in max_inds:
-        p = i[0] * i[1]
+        p = used_inddic[(i[0], i[1])]
         grad[p] += 2 * (s[p] - ABS_CONSTR_VAL) * lambda_a
 
     return grad
 
 
-def buildMatrices(log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, max_inds):
+def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, lambda_l, lambda_a, threshold, max_inds):
     (width, height) = log_grayimg.shape
-    resolution = width * height
-    print 'width: {0}, height: {1}, resolution: {2}'.format(width, height, resolution)
-    A = sp.sparse.lil_matrix((resolution, resolution))
-    b = np.zeros(resolution)
+    A = sp.sparse.lil_matrix((used_pxcount, used_pxcount))
+    b = np.zeros(used_pxcount)
     c = 0.0
 
     # Retinex constraint
     for h in range(height):
         print 'row {0}...'.format(h)
         for w in range(width):
-            #if not mask[w, h]:
-            #    continue
+            if (w, h) not in used_inddic:
+                continue
 
-            p = h * w
+            p = used_inddic[(w, h)]
 
             # go through all neighbors
             neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
             for ch, cw in neighbors:
-                if ch < 0 or cw < 0 or ch >= height or cw >= width:
+                if (cw, ch) not in used_inddic:
                     continue
 
                 dI = log_grayimg[w][h] - log_grayimg[cw][ch]
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold)
-
-                q = ch * cw
+                q = used_inddic[(cw, ch)]
 
                 A[p, p] += (1 + weight) * lambda_l
                 A[p, q] += (-2 * (1 + weight)) * lambda_l
@@ -213,7 +209,7 @@ def buildMatrices(log_grayimg, chromimg, mask, lambda_l, lambda_a, threshold, ma
 
     # absolute scale constraint
     for i in max_inds:
-        p = i[0] * i[1]
+        p = used_inddic[(i[0], i[1])]
         A[p, p] += 1 * lambda_a
         b[p] += -2 * ABS_CONSTR_VAL * lambda_a
         c += ABS_CONSTR_VAL ** 2 * lambda_a
