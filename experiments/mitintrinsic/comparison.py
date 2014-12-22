@@ -8,7 +8,7 @@ import intrinsic
 
 globals.init()
 
-SAVEROOTDIR = 'experiments/mitintrinsic'
+SAVEROOTDIR = 'experiments/mitintrinsic/allresults'
 
 # The following objects were used in the evaluation. For the learning algorithms
 # (not included here), we used two-fold cross-validation with the following
