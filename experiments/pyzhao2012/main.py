@@ -24,11 +24,19 @@ def main():
     common.save_png(img, os.path.join(ROOTPATH, 'img.png'))
 
     shading, reflectance = runzhao(img, mask)
-    common.print_array_info(shading)
-    common.print_array_info(reflectance)
+    reflectance = computeColorReflectance(reflectance, img)
+    common.print_array_info(shading, 'final shading')
+    common.print_array_info(reflectance, 'final reflectance')
 
     common.save_png(shading, os.path.join(ROOTPATH, 'shading.png'))
     common.save_png(reflectance, os.path.join(ROOTPATH, 'reflectance.png'))
+
+
+def computeColorReflectance(gray_refl, img):
+    chromimg = common.compute_chromaticity_image(img)
+
+    # multiply by 3, because we don't do that when computing the chromaticity image
+    return gray_refl[:, :, np.newaxis] * chromimg
 
 
 def runzhao(img, mask):
