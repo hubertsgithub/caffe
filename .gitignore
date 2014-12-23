@@ -93,3 +93,8 @@ experiments/mitintrinsic/allresults
 experiments/pyzhao2012/allresults
 experiments/pyzhao2012/input
 experiments/zhao2012/build
+
+ownmodels/mitintrinsic/miscsolvers
+ownmodels/mpisintel/miscsolvers
+debugimgs
+
