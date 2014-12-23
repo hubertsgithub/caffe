@@ -321,19 +321,19 @@ def weiss_retinex(image, multi_images, mask, threshold, L1=False):
     return shading, refl
 
 
-def zhao2012algo(image, mask, threshold, groups, L1=False):
+def zhao2012algo(image, mask, threshold_chrom, groups, L1=False):
     image = image / np.max(image)
     LAMBDA_L = 1.
     LAMBDA_R = 1.
     LAMBDA_A = 1000.
     ABS_CONST_VAL = 0.
     THRESHOLD_GROUP_SIM = 0.05
-    THRESHOLD_CHROM = 0.025
+    #THRESHOLD_CHROM = 0.025
 
     if len(groups) > 0:
         LAMBDA_R *= 20
 
-    shading, refl = pyzhao2012.run(image, mask, LAMBDA_L, LAMBDA_R, LAMBDA_A, ABS_CONST_VAL, THRESHOLD_GROUP_SIM, THRESHOLD_CHROM, groups)
+    shading, refl = pyzhao2012.run(image, mask, LAMBDA_L, LAMBDA_R, LAMBDA_A, ABS_CONST_VAL, THRESHOLD_GROUP_SIM, threshold_chrom, groups)
     shading *= 255.
     refl *= 255.
 
@@ -562,12 +562,12 @@ class WeissRetinexEstimator:
 
 
 class Zhao2012Estimator:
-    def __init__(self, threshold=0.001, L1=False):
-        self.threshold = threshold
+    def __init__(self, threshold_chrom=0.001, L1=False):
+        self.threshold_chrom = threshold_chrom
 
     def estimate_shading_refl(self, image, mask, L1=False):
         groups = []
-        return zhao2012algo(image, mask, self.threshold, groups, L1)
+        return zhao2012algo(image, mask, self.threshold_chrom, groups, L1)
 
     @staticmethod
     def get_input(tag):
@@ -577,7 +577,7 @@ class Zhao2012Estimator:
 
     @staticmethod
     def param_choices():
-        return [{}]  # 'threshold': t} for t in np.logspace(-3., 1., 15)]
+        return [{'threshold_chrom': t} for t in np.logspace(-5., 1., 15)]
 
 
 class Zhao2012GroundTruthGroupsEstimator:
