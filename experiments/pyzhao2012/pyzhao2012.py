@@ -12,19 +12,8 @@ from scipy import spatial
 import itertools
 import pyamg
 import random
-import json
 
 ROOTPATH = 'experiments/pyzhao2012/input'
-
-LAMBDA_L = 1.
-LAMBDA_R = 1.
-LAMBDA_A = 1000.
-ABS_CONSTR_VAL = 0.
-THRESHOLD_GROUP_SIM = 0.05
-THRESHOLD_CHROM = 0.025
-
-THRESHOLD_CONFIDENCE = 0.9
-SUPERPIXEL_RADIUS = 3
 
 #def main():
 #    if MITINTRINSIC:
@@ -37,7 +26,7 @@ SUPERPIXEL_RADIUS = 3
 #        width, height = img.shape[0:2]
 #        mask = np.ones((width, height))
 #        judgements = json.load(open(os.path.join(ROOTPATH, '662.json')))
-#        groups = findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE, SUPERPIXEL_RADIUS)
+#        groups = findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE, GROUP_WEIGHT)
 #        #groups = []
 #
 #    shading, reflectance = run(img, mask, groups)
@@ -53,7 +42,7 @@ SUPERPIXEL_RADIUS = 3
 #    common.save_png(reflectance, os.path.join(ROOTPATH, 'reflectance.png'))
 
 
-def run(img, mask, lambda_l, lambda_r, lambda_a, abs_constr_val, threshold_group_sim, threshold_chrom, groups=None):
+def run(img, mask, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_group_sim, threshold_chrom, groups=None):
     '''
     Input
     img: W x H x 3
@@ -85,7 +74,7 @@ def run(img, mask, lambda_l, lambda_r, lambda_a, abs_constr_val, threshold_group
 
     #x0 = np.zeros(used_pxcount)
     #x0.fill(0)
-    #res = optimize.minimize(method='L-BFGS-B', fun=func, x0=x0, jac=func_deriv, args=(log_grayimg, chromimg, used_inddic, LAMBDA_L, LAMBDA_A, threshold_chrom, max_inds), options={'disp': True})
+    #res = optimize.minimize(method='L-BFGS-B', fun=func, x0=x0, jac=func_deriv, args=(log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_val, threshold_chrom, max_inds), options={'disp': True})
     #log_shading = np.zeros_like(grayimg)
     #log_shading[used_indtuple] = res.x
 
@@ -97,7 +86,7 @@ def run(img, mask, lambda_l, lambda_r, lambda_a, abs_constr_val, threshold_group
     print 'Number of groups: {0} / {1} pixels'.format(len(groups), used_pxcount)
     print 'Number of grouped pixels: {0} / {1} pixels'.format(grouped_pxcount, used_pxcount)
 
-    A, b, c = buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, threshold_chrom, max_inds)
+    A, b, c = buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_chrom, max_inds)
 
     #res = sp.sparse.linalg.spsolve(A, b)
     solver = pyamg.ruge_stuben_solver(A)
@@ -177,7 +166,7 @@ def getWindow(chromimg, w, h, window_size):
     return chromimg[(w-window_shift):(w+window_shift), (h-window_shift):(h+window_shift)]
 
 
-def findIIWGroups(judgements, width, height, threshold_confidence, superpixel_radius):
+def findIIWGroups(judgements, width, height, threshold_confidence):
     points = judgements['intrinsic_points']
     comparisons = judgements['intrinsic_comparisons']
     id_to_points = {p['id']: p for p in points}
@@ -236,22 +225,14 @@ def findIIWGroups(judgements, width, height, threshold_confidence, superpixel_ra
             w = int(point['x'] * width)
             h = int(point['y'] * height)
 
-            # put the neighbors of the point in the group too
-            for dw, dh in itertools.product(range(-superpixel_radius, superpixel_radius), repeat=2):
-                cw = w + dw
-                ch = h + dh
-
-                if cw < 0 or ch < 0 or cw >= width or ch >= height:
-                    continue
-
-                g.append([cw, ch])
+            g.append([w, h])
 
         groups.append(g)
 
     return groups
 
 
-def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, threshold_chrom, max_inds):
+def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_chrom, max_inds):
     (width, height) = log_grayimg.shape
     A = sp.sparse.lil_matrix((used_pxcount, used_pxcount))
     b = np.zeros(used_pxcount)
@@ -319,8 +300,8 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
     for i in max_inds:
         p = used_inddic[(i[0], i[1])]
         A[p, p] += 1 * lambda_a
-        b[p] += -2 * ABS_CONSTR_VAL * lambda_a
-        c += ABS_CONSTR_VAL ** 2 * lambda_a
+        b[p] += -2 * abs_const_val * lambda_a
+        c += abs_const_val ** 2 * lambda_a
 
     b *= -1
     A *= 2
@@ -338,7 +319,7 @@ def computeWeight(chromimg, w, h, cw, ch, threshold_chrom):
         return 100.
 
 
-def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, threshold_chrom, max_inds):
+def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_val, threshold_chrom, max_inds):
     (width, height) = log_grayimg.shape
     sum = 0.0
 
@@ -366,12 +347,12 @@ def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, threshold_ch
     # absolute scale constraint
     for i in max_inds:
         p = used_inddic[(i[0], i[1])]
-        sum += (s[p] - ABS_CONSTR_VAL) ** 2 * lambda_a
+        sum += (s[p] - abs_const_val) ** 2 * lambda_a
 
     return sum
 
 
-def func_deriv(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, threshold_chrom, max_inds):
+def func_deriv(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_val, threshold_chrom, max_inds):
     (width, height) = log_grayimg.shape
     grad = np.zeros_like(s)
 
@@ -403,7 +384,7 @@ def func_deriv(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, thresh
     # absolute scale constraint
     for i in max_inds:
         p = used_inddic[(i[0], i[1])]
-        grad[p] += 2 * (s[p] - ABS_CONSTR_VAL) * lambda_a
+        grad[p] += 2 * (s[p] - abs_const_val) * lambda_a
 
     return grad
 

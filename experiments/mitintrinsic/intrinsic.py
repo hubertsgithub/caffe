@@ -326,13 +326,14 @@ def zhao2012algo(image, mask, threshold, groups, L1=False):
     LAMBDA_L = 1.
     LAMBDA_R = 1.
     LAMBDA_A = 1000.
-    ABS_CONSTR_VAL = 0.
+    ABS_CONST_VAL = 0.
     THRESHOLD_GROUP_SIM = 0.05
     THRESHOLD_CHROM = 0.025
 
-    THRESHOLD_CONFIDENCE = 0.9
-    SUPERPIXEL_RADIUS = 3
-    shading, refl = pyzhao2012.run(image, mask, LAMBDA_L, LAMBDA_R, LAMBDA_A, ABS_CONSTR_VAL, THRESHOLD_GROUP_SIM, THRESHOLD_CHROM, groups)
+    if len(groups) > 0:
+        LAMBDA_R *= 20
+
+    shading, refl = pyzhao2012.run(image, mask, LAMBDA_L, LAMBDA_R, LAMBDA_A, ABS_CONST_VAL, THRESHOLD_GROUP_SIM, THRESHOLD_CHROM, groups)
     shading *= 255.
     refl *= 255.
 
@@ -593,8 +594,7 @@ class Zhao2012GroundTruthGroupsEstimator:
 
         width, height = image.shape[0:2]
         THRESHOLD_CONFIDENCE = 0.9
-        SUPERPIXEL_RADIUS = 3
-        groups = pyzhao2012.findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE, SUPERPIXEL_RADIUS)
+        groups = pyzhao2012.findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE)
 
         return image, mask, groups
 
