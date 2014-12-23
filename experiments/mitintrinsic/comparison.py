@@ -18,10 +18,18 @@ SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', '
 
 SETINDOOR = map(lambda n: str(n), range(1, 25))
 
-if globals.CHOOSEMIT:
+with open('data/iiw-dataset/denseimages.txt') as f:
+    SETIIWDENSE = f.readlines()
+
+
+if globals.DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
-else:
+elif globals.DATASETCHOICE == 1:
     ALL_TAGS = SETINDOOR
+elif globals.DATASETCHOICE == 2:
+    ALL_TAGS = SETIIWDENSE
+else:
+    raise ValueError('Unknown dataset choice: {0}'.format(globals.DATASETCHOICE))
 
 # The following four objects weren't used in the evaluation because they have
 # slight problems, but you may still find them useful.
@@ -81,13 +89,13 @@ def run_experiment():
 
     estimators = [
                   ('Baseline (BAS)', intrinsic.BaselineEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images using RGB images', intrinsic.GrayscaleRetinexWithThresholdImageRGBEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, small network 3 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromSmallNetEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator),
-                  ('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
+                  #('Grayscale Retinex with CNN predicted threshold images using RGB images', intrinsic.GrayscaleRetinexWithThresholdImageRGBEstimator),
+                  #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, small network 3 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromSmallNetEstimator),
+                  #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetEstimator),
+                  #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator),
+                  #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                   #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
-                  #('Zhao2012', intrinsic.Zhao2012Estimator),
+                  ('Zhao2012', intrinsic.Zhao2012Estimator),
                   ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                   ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
@@ -118,7 +126,7 @@ def run_experiment():
             true_refl = intrinsic.load_object(tag, 'reflectance')
             true_refl = np.mean(true_refl, axis=2)
             mask = intrinsic.load_object(tag, 'mask')
-            print 'Estimating reflectance and albedo for ' + tag
+            print 'Estimating shading and reflectance for ' + tag
 
             for j, params in enumerate(choices):
                 estimator = EstimatorClass(**params)

@@ -164,3 +164,10 @@ def compute_chromaticity_image(image):
     chrom = image / sumimg[:, :, np.newaxis]
 
     return chrom
+
+
+def compute_color_reflectance(gray_refl, img):
+    chromimg = compute_chromaticity_image(img)
+
+    # multiply by 3, because we don't do that when computing the chromaticity image
+    return gray_refl[:, :, np.newaxis] * chromimg
