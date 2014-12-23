@@ -2,7 +2,6 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image
 
 sys.path.append('experiments')
 sys.path.append('experiments/pyzhao2012')
@@ -13,6 +12,7 @@ import common
 import poisson
 import runcnn
 import pyzhao2012
+import json
 
 LOADROOTDIRMIT = 'data/mitintrinsic/'
 LOADROOTDIRINDOOR = 'data/synthetic-export/'
@@ -43,7 +43,7 @@ def load_object_helper(tag, condition):
             'mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular'
 
     'shading' returns a grayscale image, and all the other options return color images."""
-    assert condition in ['mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular', 'thresholdx', 'thresholdy']
+    assert condition in ['mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular', 'thresholdx', 'thresholdy', 'judgements']
 
     if globals.DATASETCHOICE == 0:  # MIT
         obj_dir = os.path.join(LOADROOTDIRMIT, 'data', tag)
@@ -74,6 +74,8 @@ def load_object_helper(tag, condition):
         if condition == 'thresholdy':
             filename = os.path.join(obj_dir, 'gradbinary-y-converted.png'.format(convert_str))
             return load_png(filename)
+        if condition == 'judgements':
+            raise ValueError('Unsupported value for MITIntrinsic dataset')
     elif globals.DATASETCHOICE == 1:  # Indoor
         obj_dir = os.path.join(LOADROOTDIRINDOOR, 'data')
         if condition == 'mask':
@@ -99,10 +101,16 @@ def load_object_helper(tag, condition):
         if condition == 'thresholdy':
             filename = os.path.join(obj_dir, '{0}-gradbinary-y-converted.png'.format(tag))
             return load_png(filename)
+        if condition == 'judgements':
+            raise ValueError('Unsupported value for Indoors dataset')
     elif globals.DATASETCHOICE == 2:  # IIW
         obj_dir = os.path.join(LOADROOTDIRIIW, 'data')
         if condition == 'mask':
-            raise ValueError('Unsupported value for IIW dataset')
+            # load image and return a full true mask (i.e. no mask)
+            filename = os.path.join(obj_dir, '{0}.png'.format(tag))
+            img = load_png(filename)
+
+            return np.ones(img.shape[0:2], dtype=np.bool)
         if condition == 'original':
             raise ValueError('Unsupported value for IIW dataset')
         if condition == 'diffuse':
@@ -118,6 +126,9 @@ def load_object_helper(tag, condition):
             raise ValueError('Unsupported value for IIW dataset')
         if condition == 'thresholdy':
             raise ValueError('Unsupported value for IIW dataset')
+        if condition == 'judgements':
+            filename = os.path.join(obj_dir, '{0}.json'.format(tag))
+            return json.load(open(filename))
     else:
         raise ValueError('Unknown dataset choice: {0}'.format(globals.DATASETCHOICE))
 
@@ -310,7 +321,7 @@ def weiss_retinex(image, multi_images, mask, threshold, L1=False):
     return shading, refl
 
 
-def zhao2012algo(image, mask, threshold, L1=False):
+def zhao2012algo(image, mask, threshold, groups, L1=False):
     image = image / np.max(image)
     LAMBDA_L = 1.
     LAMBDA_R = 1.
@@ -321,7 +332,6 @@ def zhao2012algo(image, mask, threshold, L1=False):
 
     THRESHOLD_CONFIDENCE = 0.9
     SUPERPIXEL_RADIUS = 3
-    groups = []
     shading, refl = pyzhao2012.run(image, mask, LAMBDA_L, LAMBDA_R, LAMBDA_A, ABS_CONSTR_VAL, THRESHOLD_GROUP_SIM, THRESHOLD_CHROM, groups)
     shading *= 255.
     refl *= 255.
@@ -555,13 +565,38 @@ class Zhao2012Estimator:
         self.threshold = threshold
 
     def estimate_shading_refl(self, image, mask, L1=False):
-        return zhao2012algo(image, mask, self.threshold, L1)
+        groups = []
+        return zhao2012algo(image, mask, self.threshold, groups, L1)
 
     @staticmethod
     def get_input(tag):
         image = load_object(tag, 'diffuse')
         mask = load_object(tag, 'mask')
         return image, mask
+
+    @staticmethod
+    def param_choices():
+        return [{}]  # 'threshold': t} for t in np.logspace(-3., 1., 15)]
+
+class Zhao2012GroundTruthGroupsEstimator:
+    def __init__(self, threshold=0.001, L1=False):
+        self.threshold = threshold
+
+    def estimate_shading_refl(self, image, mask, groups, L1=False):
+        return zhao2012algo(image, mask, self.threshold, groups, L1)
+
+    @staticmethod
+    def get_input(tag):
+        image = load_object(tag, 'diffuse')
+        mask = load_object(tag, 'mask')
+        judgements = load_object(tag, 'judgements')
+
+        width, height = image.shape[0:2]
+        THRESHOLD_CONFIDENCE = 0.9
+        SUPERPIXEL_RADIUS = 3
+        groups = pyzhao2012.findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE, SUPERPIXEL_RADIUS)
+
+        return image, mask, groups
 
     @staticmethod
     def param_choices():

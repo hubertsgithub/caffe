@@ -6,6 +6,11 @@ import globals
 import html
 import intrinsic
 
+sys.path.append('data')
+sys.path.append('data/iiw-dataset')
+import whdr
+import common
+
 globals.init()
 
 SAVEROOTDIR = 'experiments/mitintrinsic/allresults'
@@ -19,15 +24,17 @@ SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', '
 SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 with open('data/iiw-dataset/denseimages.txt') as f:
-    SETIIWDENSE = f.readlines()
-
+    SETIIWDENSE = [s.strip() for s in f.readlines()[0:1]]
 
 if globals.DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
+    ERRORMETRIC = 0  # LMSE
 elif globals.DATASETCHOICE == 1:
     ALL_TAGS = SETINDOOR
+    ERRORMETRIC = 0  # LMSE
 elif globals.DATASETCHOICE == 2:
     ALL_TAGS = SETIIWDENSE
+    ERRORMETRIC = 1  # WHDR
 else:
     raise ValueError('Unknown dataset choice: {0}'.format(globals.DATASETCHOICE))
 
@@ -55,20 +62,26 @@ def print_dot(i, num):
         sys.stdout.write('\n')
     sys.stdout.flush()
 
+
 def save_estimates(gen, image, est_shading, est_refl, mask):
     """Outputs the estimated shading and reflectance images to an HTML
     file. Does nothing if Python Imaging Library is not installed."""
     image = image / np.max(image)
     est_shading = est_shading / np.max(est_shading)
     est_refl = est_refl / np.max(est_refl)
+    est_refl = common.compute_color_reflectance(est_refl, image)
 
     # gamma correct
-    image = np.where(mask, image ** (1./2.2), 1.)
-    est_shading = np.where(mask, est_shading ** (1./2.2), 1.)
-    est_refl = np.where(mask, est_refl ** (1./2.2), 1.)
+    image = np.where(mask[:, :, np.newaxis], common.rgb_to_srgb(image), 1.)
+    est_shading = np.where(mask, common.rgb_to_srgb(est_shading), 1.)
+    est_refl = np.where(mask[:, :, np.newaxis], common.rgb_to_srgb(est_refl), 1.)
+
+    # create RGB shading image from grayscale
+    est_shading = est_shading[:, :, np.newaxis].repeat(3, axis=2)
 
     output = np.concatenate([image, est_shading, est_refl], axis=1)
     gen.image(output)
+
 
 def run_experiment():
     """Script for running the algorithmic comparisons from the paper
@@ -96,6 +109,7 @@ def run_experiment():
                   #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                   #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                   ('Zhao2012', intrinsic.Zhao2012Estimator),
+                  ('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
                   ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                   ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
@@ -122,17 +136,29 @@ def run_experiment():
             # Estimators know what input they expect (grayscale image, color image, etc.)
             inp = EstimatorClass.get_input(tag)
 
-            true_shading = intrinsic.load_object(tag, 'shading')
-            true_refl = intrinsic.load_object(tag, 'reflectance')
-            true_refl = np.mean(true_refl, axis=2)
-            mask = intrinsic.load_object(tag, 'mask')
+            if ERRORMETRIC == 0:
+                true_shading = intrinsic.load_object(tag, 'shading')
+                true_refl = intrinsic.load_object(tag, 'reflectance')
+                true_refl = np.mean(true_refl, axis=2)
+                mask = intrinsic.load_object(tag, 'mask')
+            elif ERRORMETRIC == 1:
+                judgements = intrinsic.load_object(tag, 'judgements')
+            else:
+                raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+
             print 'Estimating shading and reflectance for ' + tag
 
             for j, params in enumerate(choices):
                 estimator = EstimatorClass(**params)
                 est_shading, est_refl = estimator.estimate_shading_refl(*inp)
-                scores[i,j] = intrinsic.score_image(true_shading, true_refl,
-                                                    est_shading, est_refl, mask)
+
+                if ERRORMETRIC == 0:
+                    scores[i,j] = intrinsic.score_image(true_shading, true_refl, est_shading, est_refl, mask)
+                elif ERRORMETRIC == 1:
+                    scores[i,j] = whdr.compute_whdr(est_refl, judgements)
+                else:
+                    raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+
                 print 'Params: {0}'.format(params)
                 print 'Score: {0}'.format(scores[i,j])
                 print_dot(count, ntags * nchoices)
@@ -145,12 +171,14 @@ def run_experiment():
             inp = EstimatorClass.get_input(tag)
             inp = inp + (USE_L1,)
 
-            image = intrinsic.load_object(tag, 'diffuse')
-            image = np.mean(image, axis=2)
-            true_shading = intrinsic.load_object(tag, 'shading')
-            true_refl = intrinsic.load_object(tag, 'reflectance')
-            true_refl = np.mean(true_refl, axis=2)
-            mask = intrinsic.load_object(tag, 'mask')
+            if ERRORMETRIC == 0:
+                true_shading = intrinsic.load_object(tag, 'shading')
+                true_refl = intrinsic.load_object(tag, 'reflectance')
+                true_refl = np.mean(true_refl, axis=2)
+            elif ERRORMETRIC == 1:
+                judgements = intrinsic.load_object(tag, 'judgements')
+            else:
+                raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
             other_inds = range(i) + range(i+1, ntags)
             total_scores = np.sum(scores[other_inds, :], axis=0)
@@ -159,12 +187,22 @@ def run_experiment():
             estimator = EstimatorClass(**params)
             est_shading, est_refl = estimator.estimate_shading_refl(*inp)
 
-            results[e, i] = score = intrinsic.score_image(true_shading, true_refl,
-                                                          est_shading, est_refl, mask)
+            if ERRORMETRIC == 0:
+                score = intrinsic.score_image(true_shading, true_refl, est_shading, est_refl, mask)
+            elif ERRORMETRIC == 1:
+                score = whdr.compute_whdr(est_refl, judgements)
+            else:
+                raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+
             gen.text('%s: %1.3f' % (tag, score))
+
+            image = intrinsic.load_object(tag, 'diffuse')
+            mask = intrinsic.load_object(tag, 'mask')
             save_estimates(gen, image, est_shading, est_refl, mask)
 
             print '    %s: %1.3f' % (tag, score)
+
+            results[e, i] = score
         print '    average: %1.3f' % np.mean(results[e,:])
 
         gen.divider()
