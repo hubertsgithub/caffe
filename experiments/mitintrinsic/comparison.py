@@ -24,7 +24,7 @@ SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', '
 SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 with open('data/iiw-dataset/denseimages.txt') as f:
-    SETIIWDENSE = [s.strip() for s in f.readlines()[0:1]]
+    SETIIWDENSE = [s.strip() for s in f.readlines()[0:100]]
 
 if globals.DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
@@ -109,7 +109,7 @@ def run_experiment():
                   #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                   #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                   ('Zhao2012', intrinsic.Zhao2012Estimator),
-                  ('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
+                  #('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
                   ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                   ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
@@ -171,6 +171,9 @@ def run_experiment():
             inp = EstimatorClass.get_input(tag)
             inp = inp + (USE_L1,)
 
+            image = intrinsic.load_object(tag, 'diffuse')
+            mask = intrinsic.load_object(tag, 'mask')
+
             if ERRORMETRIC == 0:
                 true_shading = intrinsic.load_object(tag, 'shading')
                 true_refl = intrinsic.load_object(tag, 'reflectance')
@@ -196,8 +199,6 @@ def run_experiment():
 
             gen.text('%s: %1.3f' % (tag, score))
 
-            image = intrinsic.load_object(tag, 'diffuse')
-            mask = intrinsic.load_object(tag, 'mask')
             save_estimates(gen, image, est_shading, est_refl, mask)
 
             print '    %s: %1.3f' % (tag, score)

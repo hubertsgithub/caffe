@@ -4,4 +4,4 @@ def init():
     # 1 Sean's synthetic dataset
     # 2 IIW dense
     global DATASETCHOICE
-    DATASETCHOICE = 2
+    DATASETCHOICE = 0

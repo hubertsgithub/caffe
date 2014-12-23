@@ -47,7 +47,7 @@ def load_object_helper(tag, condition):
 
     if globals.DATASETCHOICE == 0:  # MIT
         obj_dir = os.path.join(LOADROOTDIRMIT, 'data', tag)
-        convert_str = '-converted'
+        convert_str = ''  # '-converted'
 
         if condition == 'mask':
             filename = os.path.join(obj_dir, 'mask{0}.png'.format(convert_str))
@@ -578,6 +578,7 @@ class Zhao2012Estimator:
     @staticmethod
     def param_choices():
         return [{}]  # 'threshold': t} for t in np.logspace(-3., 1., 15)]
+
 
 class Zhao2012GroundTruthGroupsEstimator:
     def __init__(self, threshold=0.001, L1=False):
