@@ -475,6 +475,13 @@ void DataTransformer<Dtype>::UpdateState(const int height,
   CHECK_EQ(width, state_.width) << "When persistent width cannot change";
 }
 
+template <typename Dtype>
+void DataTransformer<Dtype>::ResetCropCoords(const int h_off,
+      const int w_off) {
+	state_.h_off = h_off;
+	state_.w_off = w_off;
+}
+
 INSTANTIATE_CLASS(DataTransformer);
 
 }  // namespace caffe

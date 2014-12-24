@@ -51,6 +51,11 @@ class DataTransformer {
   void ResetState(const DataTransformer<Dtype>& dt);
 
   /**
+   * @brief Reset the crop coords to the specified values
+   */
+  void ResetCropCoords(const int h_off, const int w_off);
+
+  /**
    * @brief Tells if the Transformation is persistent or not
    */
   inline bool IsPersistent() { return state_.persistent; }

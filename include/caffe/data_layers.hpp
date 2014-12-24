@@ -363,7 +363,7 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
   virtual void InternalThreadEntry();
   virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
-      const bool crop_first);
+      const bool crop_first, const int crop_size);
 
   vector<vector<std::string> > lines_;
   int lines_id_;
@@ -398,7 +398,7 @@ class MultiImagePatchDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
   virtual void InternalThreadEntry();
   virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
-      const bool crop_first);
+      const bool crop_first, const int crop_size);
 
   vector<vector<std::string> > lines_;
   int lines_id_;

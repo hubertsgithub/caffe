@@ -26,7 +26,7 @@ MultiImageDataLayer<Dtype>::~MultiImageDataLayer<Dtype>() {
 template <typename Dtype>
 void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
-      const bool crop_first) {
+      const bool crop_first, const int crop_size) {
   Blob<Dtype>* blob;
   if (isTop) {
   	  blob = top[index];
@@ -34,12 +34,10 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
   	  blob = bottom[index];
   }
 
-  int crop_size;
   Blob<Dtype>* prefetch_d;
   Blob<Dtype>* trafo_d;
   prefetch_d = this->prefetch_data_[index].get();
   trafo_d = this->transformed_data_[index].get();
-  crop_size = this->layer_param_.multi_prefetch_data_param().data_transformations(index).crop_size();
 
   DLOG(INFO) << "blob: " << blob;
   DLOG(INFO) << "prefetch_d: " << prefetch_d;
@@ -169,12 +167,13 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
 	  const int new_width  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_width();
 	  const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
 	  const bool crop_first  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_first();
+	  const int crop_size = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_size();
 	  CHECK((new_height == 0 && new_width == 0) ||
 		  (new_height > 0 && new_width > 0)) << "Current implementation requires "
 		  "new_height and new_width to be set at the same time.";
 
 	  string imgPath = root_folder + lines_[lines_id_][i];
-	  this->LoadImageToSlot(bottom, top, true, i, imgPath, new_height, new_width, is_color, crop_first);
+	  this->LoadImageToSlot(bottom, top, true, i, imgPath, new_height, new_width, is_color, crop_first, crop_size);
   }
 }
 

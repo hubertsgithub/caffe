@@ -9,11 +9,8 @@ layers {
   	  share_random_trafos: true
       # data - loaded as grayscale image
 	  data_transformations {
-		new_height: 190
-		new_width: 190
-		random_crop: false
-		crop_size: 190
-		crop_first: false
+		random_crop: true
+		crop_size: 224
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
