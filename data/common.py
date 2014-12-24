@@ -105,28 +105,30 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
         raise ValueError('The provided image array should be two dimensional! Provided array dimensions: {0}'.format(ch_arr.shape))
 
     image = Image.fromarray(ch_arr)
-    if keep_aspect_ratio:
-        w, h = image.size
-        if w > h:
-            r = float(resize) / w
-            dim = (resize, int(h * r))
-            image = image.resize(dim, Image.BILINEAR)
+    if resize != None:
+        if keep_aspect_ratio:
+            w, h = image.size
+            if w > h:
+                r = float(resize) / w
+                dim = (resize, int(h * r))
+                image = image.resize(dim, Image.BILINEAR)
+            else:
+                r = float(resize) / h
+                dim = (int(w * r), resize)
+                image = image.resize(dim, Image.BILINEAR)
         else:
-            r = float(resize) / h
-            dim = (int(w * r), resize)
-            image = image.resize(dim, Image.BILINEAR)
-    else:
-        image = image.resize((resize, resize), Image.BILINEAR)
+            image = image.resize((resize, resize), Image.BILINEAR)
 
-    w, h = image.size
-    middle = [x / 2 for x in image.size]
-    fromw = max(0, middle[0] - crop / 2)
-    tow = min(w, middle[0] + crop / 2)
-    fromh = max(0, middle[1] - crop / 2)
-    toh = min(h, middle[1] + crop / 2)
-    tup = (fromw, fromh, tow, toh)
-    print tup
-    image = image.crop(tup)
+    if crop != None:
+        w, h = image.size
+        middle = [x / 2 for x in image.size]
+        fromw = max(0, middle[0] - crop / 2)
+        tow = min(w, middle[0] + crop / 2)
+        fromh = max(0, middle[1] - crop / 2)
+        toh = min(h, middle[1] + crop / 2)
+        tup = (fromw, fromh, tow, toh)
+        print tup
+        image = image.crop(tup)
 
     ret = np.array(image)
     return ret
