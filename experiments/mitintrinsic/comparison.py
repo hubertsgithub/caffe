@@ -12,6 +12,8 @@ sys.path.append('data/iiw-dataset')
 import whdr
 import common
 
+from celery import Celery
+
 globals.init()
 
 SAVEROOTDIR = 'experiments/mitintrinsic/allresults'
@@ -70,6 +72,7 @@ estimators = [
                 #('Weiss + Retinex (W+RET)', intrinsic.WeissRetinexEstimator),
                 ]
 
+app = Celery('comparison', broker='amqp://guest@localhost//')
 
 def print_dot(i, num):
     NEWLINE_EVERY = 50
@@ -313,6 +316,7 @@ def run_parallel_experiment():
         gen.text('%s: %1.3f' % (name, avg))
 
 
+@app.task
 def computeScoreJob(name, EstimatorClass, params, tag, i, j):
     """
     Input paramsDict:
