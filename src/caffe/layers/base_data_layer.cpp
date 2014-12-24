@@ -93,12 +93,12 @@ BasePrefetchingMultiDataLayer<Dtype>::BasePrefetchingMultiDataLayer(const LayerP
 	MultiPrefetchDataParameter* mpdp = this->layer_param_.mutable_multi_prefetch_data_param();
     int size = mpdp->data_transformations_size();
 
-    // Backward compatibility, if the prefetched_data_count is not set (0), we set it to the number of data transformations
-    if (mpdp->prefetched_data_count() == 0) {
-    	LOG(WARNING) << "Setting prefetched_data_count to the number of data transformations (=" << size << "), because it wasn't set!";
-    	mpdp->set_prefetched_data_count(size);
+    // Backward compatibility, if the input_data_count is not set (0), we set it to the number of data transformations
+    if (mpdp->input_data_count() == 0) {
+    	LOG(WARNING) << "Setting input_data_count to the number of data transformations (=" << size << "), because it wasn't set!";
+    	mpdp->set_input_data_count(size);
 	}
-    CHECK_EQ(mpdp->prefetched_data_count(), size) << "You have to specify the same number of data transformers as prefetched_data_count";
+    CHECK_EQ(mpdp->input_data_count(), size) << "You have to specify the same number of data transformers as input_data_count";
     for (int i = 0; i < size; ++i) {
     	TransformationParameter tp = mpdp->data_transformations(i);
     	this->transform_params_.push_back(tp);
@@ -110,8 +110,8 @@ template <typename Dtype>
 void BasePrefetchingMultiDataLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   MultiPrefetchDataParameter mpdp = this->layer_param_.multi_prefetch_data_param();
-  int prefetched_data_count = mpdp.prefetched_data_count();
-  CHECK_EQ(prefetched_data_count, this->transformers_.size()) << "You have to specify the same number of data transformers as prefetched_data_count";
+  int input_data_count = mpdp.input_data_count();
+  CHECK_EQ(input_data_count, this->transformers_.size()) << "You have to specify the same number of data transformers as input_data_count";
 
   for (int i = 0; i < this->transformers_.size(); ++i) {
 	  this->transformers_[i]->InitRand();
@@ -119,8 +119,8 @@ void BasePrefetchingMultiDataLayer<Dtype>::LayerSetUp(
 
   DLOG(INFO) << "Initializing prefetch and transformed data...";
   // Create the desired number of blobs for prefetch and transformed data
-  this->prefetch_data_.resize(prefetched_data_count);
   // It is sure that we have to have one transformed data blob for each top blob
+  this->prefetch_data_.resize(top.size());
   this->transformed_data_.resize(top.size());
   for (int i = 0; i < this->prefetch_data_.size(); ++i) {
 	this->prefetch_data_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());

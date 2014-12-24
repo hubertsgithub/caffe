@@ -572,7 +572,7 @@ message HingeLossParameter {
 message MultiPrefetchDataParameter {
   repeated TransformationParameter data_transformations = 1; 
   optional bool share_random_trafos = 2 [default = false];
-  optional uint32 prefetched_data_count = 3;
+  optional uint32 input_data_count = 3;
 }
 
 

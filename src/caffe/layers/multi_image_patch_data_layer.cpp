@@ -123,9 +123,7 @@ void MultiImagePatchDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>&
       const vector<Blob<Dtype>*>& top) {
   string root_folder = this->layer_param_.image_data_param().root_folder();
   // The BasePrefetchingMultiDataLayer took care of allocating the right number of data blobs
-  MultiPrefetchDataParameter mpdp = this->layer_param_.multi_prefetch_data_param();
-  int prefetched_data_count = mpdp.prefetched_data_count();
-  CHECK_EQ(prefetched_data_count, this->prefetch_data_.size()) << "The prefetched_data_count should match the prefetch data count.";
+  CHECK_EQ(top.size(), this->prefetch_data_.size()) << "The top count should match the prefetch data count.";
 
   // Read the file with filenames and labels
   const string& source = this->layer_param_.image_data_param().source();
@@ -134,7 +132,9 @@ void MultiImagePatchDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>&
   ///////////
   // A file looks like this: imagepath0 imagepath1 [...] imagepathn patch0x patch0y patch1x patch1y [...] patchmx patchmy
   ///////////
-  const int image_count = prefetched_data_count;
+  MultiPrefetchDataParameter mpdp = this->layer_param_.multi_prefetch_data_param();
+  int input_data_count = mpdp.input_data_count();
+  const int image_count = input_data_count;
   const int patch_count = this->layer_param_.multi_image_patch_data_param().patch_count();
 
   string line;
