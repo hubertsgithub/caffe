@@ -5,16 +5,17 @@ from os.path import exists
 import cv2
 
 from lib.utils.data import common
+from lib.utils.misc.pathresolver import acrp
 
-origpath = 'data/mitintrinsic/data'
+origpath = acrp('data/mitintrinsic/data')
 
 origdirnames = listdir(origpath)
 origdirnames.sort()
 
 VALSET = ['box', 'paper1']
 
-f_train = open('data/mitintrinsic/train_with_gradient.txt', 'w')
-f_val = open('data/mitintrinsic/val_with_gradient.txt', 'w')
+f_train = open(acrp('data/mitintrinsic/train_with_gradient.txt'), 'w')
+f_val = open(acrp('data/mitintrinsic/val_with_gradient.txt'), 'w')
 
 for dir in origdirnames:
     origparentdirpath = os.path.join(origpath, dir)

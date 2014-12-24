@@ -1,13 +1,15 @@
 from os import listdir
 from os.path import exists
+from lib.utils.misc.pathresolver import acrp
 
-origpath = 'data/mpisintel/data/clean_noshadingtextures'
-shadingpath = 'data/mpisintel/data/shading'
+origpath = acrp('data/mpisintel/data/clean_noshadingtextures')
+albedopath = acrp('data/mpisintel/data/albedo_noshadingtextures')
+shadingpath = acrp('data/mpisintel/data/gen_shading')
 
 origdirnames = listdir(origpath)
 origdirnames.sort()
 
-f = open('data/mpisintel/val.txt', 'w')
+f = open(acrp('data/mpisintel/val.txt'), 'w')
 
 first = True
 for dir in origdirnames:
@@ -42,7 +44,7 @@ for dir in origdirnames:
         f.write(origfilepath + ' ' + shadingfilepath + '\n')
 
     if first:
-        f = open('data/mpisintel/train.txt', 'w')
+        f = open(acrp('data/mpisintel/train.txt'), 'w')
         first = False
 
 f.close()

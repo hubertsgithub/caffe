@@ -10,8 +10,9 @@ import pyamg
 import random
 
 from lib.utils.data import common
+from lib.utils.misc.pathresolver import acrp
 
-ROOTPATH = 'experiments/pyzhao2012/input'
+ROOTPATH = acrp('experiments/pyzhao2012/input')
 
 #def main():
 #    if MITINTRINSIC:

@@ -2,7 +2,8 @@ import sys
 import os
 
 import numpy as np
-import scipy as sp
+
+from lib.utils.misc.pathresolver import acrp
 
 # Make sure that caffe is on the python path:
 sys.path.append('python')
@@ -16,7 +17,7 @@ def predict_thresholds(model_file, pretrained_weights, input_images):
 
     net.set_phase_test()
     net.set_mode_cpu()
-    dirpath = os.path.join('experiments/cnn-input-output', net.name)
+    dirpath = acrp(os.path.join('experiments/cnn-input-output', net.name))
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
 

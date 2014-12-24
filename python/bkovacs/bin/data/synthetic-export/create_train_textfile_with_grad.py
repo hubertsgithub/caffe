@@ -7,6 +7,7 @@ import numpy as np
 
 from lib.utils.data import common
 from lib.utils.data import multilayer_exr
+from lib.utils.misc.pathresolver import acrp
 
 resize_to_percent = 50
 resize = 800
@@ -19,7 +20,7 @@ def scale_then_to_srgb(image):
     image = multilayer_exr.rgb_to_srgb(image)
     return 255.0 * image
 
-rootpath = 'data/synthetic-export'
+rootpath = acrp('data/synthetic-export')
 datapath = os.path.join(rootpath, 'data')
 
 datafilenames = listdir(datapath)

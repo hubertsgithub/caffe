@@ -3,10 +3,11 @@ from os.path import exists
 import os
 import cv2
 import shutil
+from lib.utils.misc.pathresolver import acrp
 
-origpath = 'data/mpisintel/data/clean_noshadingtextures'
-albedopath = 'data/mpisintel/data/albedo_noshadingtextures'
-shadingpath = 'data/mpisintel/data/gen_shading'
+origpath = acrp('data/mpisintel/data/clean_noshadingtextures')
+albedopath = acrp('data/mpisintel/data/albedo_noshadingtextures')
+shadingpath = acrp('data/mpisintel/data/gen_shading')
 
 # remove shadingpath, we will regenerate it
 if exists(shadingpath):

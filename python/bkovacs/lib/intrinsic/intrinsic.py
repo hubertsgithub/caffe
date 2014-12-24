@@ -7,10 +7,11 @@ from lib.utils.data import common
 from lib.intrinsic import poisson
 from lib.intrinsic import runcnn
 from lib.intrinsic import pyzhao2012
+from lib.utils.misc.pathresolver import acrp
 
-LOADROOTDIRMIT = 'data/mitintrinsic/'
-LOADROOTDIRINDOOR = 'data/synthetic-export/'
-LOADROOTDIRIIW = 'data/iiw-dataset/'
+LOADROOTDIRMIT = acrp('data/mitintrinsic/')
+LOADROOTDIRINDOOR = acrp('data/synthetic-export/')
+LOADROOTDIRIIW = acrp('data/iiw-dataset/')
 
 ############################### Data ###########################################
 

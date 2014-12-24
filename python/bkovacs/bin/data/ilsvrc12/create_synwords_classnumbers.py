@@ -1,16 +1,17 @@
 from os import listdir
 from os.path import exists
+from lib.utils.misc.pathresolver import acrp
 
-origpath = 'data/ilsvrc12/one_per_class'
+origpath = acrp('data/ilsvrc12/one_per_class')
 resize = 190
 crop = 190
 
 origdirnames = listdir(origpath)
 origdirnames.sort()
 
-f = open('data/ilsvrc12/test_vis.txt', 'w')
+f = open(acrp('data/ilsvrc12/test_vis.txt'), 'w')
 
-fallfiles = open('data/ilsvrc12/train.txt')
+fallfiles = open(acrp('data/ilsvrc12/train.txt'))
 allfiles = fallfiles.readlines()
 fallfiles.close()
 

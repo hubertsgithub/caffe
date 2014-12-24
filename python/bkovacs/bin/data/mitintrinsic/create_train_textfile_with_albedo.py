@@ -4,8 +4,10 @@ import os
 import numpy as np
 
 from lib.utils.data import common
+from lib.utils.misc.pathresolver import acrp
 
-origpath = 'data/mitintrinsic/data'
+origpath = acrp('data/mitintrinsic/data')
+
 resize = 190
 crop = 190
 gamma = 2.2
@@ -15,8 +17,8 @@ origdirnames.sort()
 
 VALSET = ['box', 'paper1']
 
-f_train = open('data/mitintrinsic/train_with_albedo.txt', 'w')
-f_val = open('data/mitintrinsic/val_with_albedo.txt', 'w')
+f_train = open(acrp('data/mitintrinsic/train_with_albedo.txt'), 'w')
+f_val = open(acrp('data/mitintrinsic/val_with_albedo.txt'), 'w')
 
 for dir in origdirnames:
     origparentdirpath = origpath + '/' + dir

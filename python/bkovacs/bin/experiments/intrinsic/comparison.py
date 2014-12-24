@@ -8,6 +8,7 @@ from lib.intrinsic import intrinsic
 
 from lib.utils.data import whdr
 from lib.utils.data import common
+from lib.utils.misc.pathresolver import acrp
 
 from celery import Celery
 
@@ -16,7 +17,8 @@ from celery import Celery
 # 2 IIW dense
 DATASETCHOICE = 2
 
-SAVEROOTDIR = 'experiments/mitintrinsic/allresults'
+SAVEROOTDIR = acrp('experiments/mitintrinsic/allresults')
+IIWTAGPATH = acrp('data/iiw-dataset/denseimages.txt')
 
 # The following objects were used in the evaluation. For the learning algorithms
 # (not included here), we used two-fold cross-validation with the following
@@ -27,7 +29,7 @@ SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', '
 SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 random.seed(10)
-with open('data/iiw-dataset/denseimages.txt') as f:
+with open(IIWTAGPATH) as f:
     SETIIWDENSE = random.sample([s.strip() for s in f.readlines()], 10)
 
 if DATASETCHOICE == 0:
