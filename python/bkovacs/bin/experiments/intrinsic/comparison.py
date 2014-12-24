@@ -3,18 +3,18 @@ import os
 import sys
 import random
 
-import globals
-import html
-import intrinsic
+from lib.intrinsic import html
+from lib.intrinsic import intrinsic
 
-sys.path.append('data')
-sys.path.append('data/iiw-dataset')
-import whdr
-import common
+from lib.utils.data import whdr
+from lib.utils.data import common
 
 from celery import Celery
 
-globals.init()
+# 0 mitintrinsic
+# 1 Sean's synthetic dataset
+# 2 IIW dense
+DATASETCHOICE = 2
 
 SAVEROOTDIR = 'experiments/mitintrinsic/allresults'
 
@@ -30,17 +30,17 @@ random.seed(10)
 with open('data/iiw-dataset/denseimages.txt') as f:
     SETIIWDENSE = random.sample([s.strip() for s in f.readlines()], 10)
 
-if globals.DATASETCHOICE == 0:
+if DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
     ERRORMETRIC = 0  # LMSE
-elif globals.DATASETCHOICE == 1:
+elif DATASETCHOICE == 1:
     ALL_TAGS = SETINDOOR
     ERRORMETRIC = 0  # LMSE
-elif globals.DATASETCHOICE == 2:
+elif DATASETCHOICE == 2:
     ALL_TAGS = SETIIWDENSE
     ERRORMETRIC = 1  # WHDR
 else:
-    raise ValueError('Unknown dataset choice: {0}'.format(globals.DATASETCHOICE))
+    raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))
 
 # The following four objects weren't used in the evaluation because they have
 # slight problems, but you may still find them useful.
@@ -140,15 +140,15 @@ def run_experiment():
         count = 0
         for i, tag in enumerate(tags):
             # Estimators know what input they expect (grayscale image, color image, etc.)
-            inp = EstimatorClass.get_input(tag)
+            inp = EstimatorClass.get_input(tag, DATASETCHOICE)
 
             if ERRORMETRIC == 0:
-                true_shading = intrinsic.load_object(tag, 'shading')
-                true_refl = intrinsic.load_object(tag, 'reflectance')
+                true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
+                true_refl = intrinsic.load_object(tag, 'reflectance', DATASETCHOICE)
                 true_refl = np.mean(true_refl, axis=2)
-                mask = intrinsic.load_object(tag, 'mask')
+                mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
             elif ERRORMETRIC == 1:
-                judgements = intrinsic.load_object(tag, 'judgements')
+                judgements = intrinsic.load_object(tag, 'judgements', DATASETCHOICE)
             else:
                 raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
@@ -174,18 +174,18 @@ def run_experiment():
         print '  Final scores:'
         sys.stdout.flush()
         for i, tag in enumerate(tags):
-            inp = EstimatorClass.get_input(tag)
+            inp = EstimatorClass.get_input(tag, DATASETCHOICE)
             inp = inp + (USE_L1,)
 
-            image = intrinsic.load_object(tag, 'diffuse')
-            mask = intrinsic.load_object(tag, 'mask')
+            image = intrinsic.load_object(tag, 'diffuse', DATASETCHOICE)
+            mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
 
             if ERRORMETRIC == 0:
-                true_shading = intrinsic.load_object(tag, 'shading')
-                true_refl = intrinsic.load_object(tag, 'reflectance')
+                true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
+                true_refl = intrinsic.load_object(tag, 'reflectance', DATASETCHOICE)
                 true_refl = np.mean(true_refl, axis=2)
             elif ERRORMETRIC == 1:
-                judgements = intrinsic.load_object(tag, 'judgements')
+                judgements = intrinsic.load_object(tag, 'judgements', DATASETCHOICE)
             else:
                 raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
@@ -270,18 +270,18 @@ def run_parallel_experiment():
         print '  Final scores:'
         sys.stdout.flush()
         for i, tag in enumerate(tags):
-            inp = EstimatorClass.get_input(tag)
+            inp = EstimatorClass.get_input(tag, DATASETCHOICE)
             inp = inp + (USE_L1,)
 
-            image = intrinsic.load_object(tag, 'diffuse')
-            mask = intrinsic.load_object(tag, 'mask')
+            image = intrinsic.load_object(tag, 'diffuse', DATASETCHOICE)
+            mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
 
             if ERRORMETRIC == 0:
-                true_shading = intrinsic.load_object(tag, 'shading')
-                true_refl = intrinsic.load_object(tag, 'reflectance')
+                true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
+                true_refl = intrinsic.load_object(tag, 'reflectance', DATASETCHOICE)
                 true_refl = np.mean(true_refl, axis=2)
             elif ERRORMETRIC == 1:
-                judgements = intrinsic.load_object(tag, 'judgements')
+                judgements = intrinsic.load_object(tag, 'judgements', DATASETCHOICE)
             else:
                 raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
@@ -327,15 +327,15 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j):
     """
 
     # Estimators know what input they expect (grayscale image, color image, etc.)
-    inp = EstimatorClass.get_input(tag)
+    inp = EstimatorClass.get_input(tag, DATASETCHOICE)
 
     if ERRORMETRIC == 0:
-        true_shading = intrinsic.load_object(tag, 'shading')
-        true_refl = intrinsic.load_object(tag, 'reflectance')
+        true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
+        true_refl = intrinsic.load_object(tag, 'reflectance', DATASETCHOICE)
         true_refl = np.mean(true_refl, axis=2)
-        mask = intrinsic.load_object(tag, 'mask')
+        mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
     elif ERRORMETRIC == 1:
-        judgements = intrinsic.load_object(tag, 'judgements')
+        judgements = intrinsic.load_object(tag, 'judgements', DATASETCHOICE)
     else:
         raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 

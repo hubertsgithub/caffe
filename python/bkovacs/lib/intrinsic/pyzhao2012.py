@@ -1,9 +1,5 @@
-import sys
 import os
 
-sys.path.append('experiments')
-sys.path.append('data')
-import common
 import math
 import numpy as np
 import scipy as sp
@@ -12,6 +8,8 @@ from scipy import spatial
 import itertools
 import pyamg
 import random
+
+from lib.utils.data import common
 
 ROOTPATH = 'experiments/pyzhao2012/input'
 

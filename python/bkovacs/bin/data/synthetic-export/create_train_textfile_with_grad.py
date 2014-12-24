@@ -1,18 +1,17 @@
 import os
-import sys
 from os import listdir
 from os.path import exists
 
 import scipy as sp
 import numpy as np
 
-sys.path.append('data')
-import common
-import multilayer_exr
+from lib.utils.data import common
+from lib.utils.data import multilayer_exr
 
 resize_to_percent = 50
 resize = 800
 crop = 190
+
 
 def scale_then_to_srgb(image):
     image = image / np.percentile(image, 99.9)

@@ -1,18 +1,12 @@
 import os
 import sys
-
+import json
 import numpy as np
 
-sys.path.append('experiments')
-sys.path.append('experiments/pyzhao2012')
-sys.path.append('data')
-sys.path.append('data/synthetic-export')
-import globals
-import common
-import poisson
-import runcnn
-import pyzhao2012
-import json
+from lib.utils.data import common
+from lib.intrinsic import poisson
+from lib.intrinsic import runcnn
+from lib.intrinsic import pyzhao2012
 
 LOADROOTDIRMIT = 'data/mitintrinsic/'
 LOADROOTDIRINDOOR = 'data/synthetic-export/'
@@ -21,13 +15,13 @@ LOADROOTDIRIIW = 'data/iiw-dataset/'
 ############################### Data ###########################################
 
 
-def load_png(fname):
+def load_png(fname, DATASETCHOICE):
     # load an image and scale all values to [0.0, 1.0] interval
     # the MITIntrinsic dataset contains 16 bit linear png images
     # the other datasets contain sRGB images (thus gamma correction should be undone)
-    if globals.DATASETCHOICE == 0:
+    if DATASETCHOICE == 0:
         image = common.load_png(fname)
-    elif globals.DATASETCHOICE == 1 or globals.DATASETCHOICE == 2:
+    elif DATASETCHOICE == 1 or DATASETCHOICE == 2:
         image = common.load_image(fname, is_srgb=True)
     else:
         raise ValueError('Unknown dataset choice: {0}'.format(globals.DATASETCHOICE))
@@ -37,7 +31,7 @@ def load_png(fname):
     return image
 
 
-def load_object_helper(tag, condition):
+def load_object_helper(tag, condition, DATASETCHOICE):
     """Load an image of a given object as a NumPy array. The values condition may take are:
 
             'mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular'
@@ -45,77 +39,77 @@ def load_object_helper(tag, condition):
     'shading' returns a grayscale image, and all the other options return color images."""
     assert condition in ['mask', 'original', 'diffuse', 'shading', 'reflectance', 'specular', 'thresholdx', 'thresholdy', 'judgements']
 
-    if globals.DATASETCHOICE == 0:  # MIT
+    if DATASETCHOICE == 0:  # MIT
         obj_dir = os.path.join(LOADROOTDIRMIT, 'data', tag)
         convert_str = ''  # '-converted'
 
         if condition == 'mask':
             filename = os.path.join(obj_dir, 'mask{0}.png'.format(convert_str))
-            mask = load_png(filename)
+            mask = load_png(filename, DATASETCHOICE)
             return (mask > 0)
         if condition == 'original':
             filename = os.path.join(obj_dir, 'original{0}.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'diffuse':
             filename = os.path.join(obj_dir, 'diffuse{0}.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'shading':
             filename = os.path.join(obj_dir, 'shading{0}.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'reflectance':
             filename = os.path.join(obj_dir, 'reflectance{0}.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'specular':
             filename = os.path.join(obj_dir, 'specular{0}.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'thresholdx':
             filename = os.path.join(obj_dir, 'gradbinary-x-converted.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'thresholdy':
             filename = os.path.join(obj_dir, 'gradbinary-y-converted.png'.format(convert_str))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'judgements':
             raise ValueError('Unsupported value for MITIntrinsic dataset')
-    elif globals.DATASETCHOICE == 1:  # Indoor
+    elif DATASETCHOICE == 1:  # Indoor
         obj_dir = os.path.join(LOADROOTDIRINDOOR, 'data')
         if condition == 'mask':
             filename = os.path.join(obj_dir, '{0}-mask.png'.format(tag))
-            mask = load_png(filename)
+            mask = load_png(filename, DATASETCHOICE)
             return (mask > 0)
         if condition == 'original':
             raise ValueError('Unsupported value for indoors dataset')
         if condition == 'diffuse':
             filename = os.path.join(obj_dir, '{0}-combined.png'.format(tag))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'shading':
             filename = os.path.join(obj_dir, '{0}-shading.png'.format(tag))
-            return np.mean(load_png(filename), axis=2)
+            return np.mean(load_png(filename, DATASETCHOICE), axis=2)
         if condition == 'reflectance':
             filename = os.path.join(obj_dir, '{0}-reflectance.png'.format(tag))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'specular':
             raise ValueError('Unsupported value for indoors dataset')
         if condition == 'thresholdx':
             filename = os.path.join(obj_dir, '{0}-gradbinary-x-converted.png'.format(tag))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'thresholdy':
             filename = os.path.join(obj_dir, '{0}-gradbinary-y-converted.png'.format(tag))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'judgements':
             raise ValueError('Unsupported value for Indoors dataset')
-    elif globals.DATASETCHOICE == 2:  # IIW
+    elif DATASETCHOICE == 2:  # IIW
         obj_dir = os.path.join(LOADROOTDIRIIW, 'data')
         if condition == 'mask':
             # load image and return a full true mask (i.e. no mask)
             filename = os.path.join(obj_dir, '{0}.png'.format(tag))
-            img = load_png(filename)
+            img = load_png(filename, DATASETCHOICE)
 
             return np.ones(img.shape[0:2], dtype=np.bool)
         if condition == 'original':
             raise ValueError('Unsupported value for IIW dataset')
         if condition == 'diffuse':
             filename = os.path.join(obj_dir, '{0}.png'.format(tag))
-            return load_png(filename)
+            return load_png(filename, DATASETCHOICE)
         if condition == 'shading':
             raise ValueError('Unsupported value for IIW dataset')
         if condition == 'reflectance':
@@ -136,27 +130,27 @@ def load_object_helper(tag, condition):
 cache = {}
 
 
-def load_object(tag, condition):
+def load_object(tag, condition, DATASETCHOICE):
     if (tag, condition) not in cache:
-        cache[tag, condition] = load_object_helper(tag, condition)
+        cache[tag, condition] = load_object_helper(tag, condition, DATASETCHOICE)
     return cache[tag, condition]
 
 
-def load_multiple(tag):
+def load_multiple(tag, DATASETCHOICE):
     """Load the images of a given object for all lighting conditions. Returns an
     m x n x 3 x 10 NumPy array, where the third dimension is the color channel and
     the fourth dimension is the image number."""
     # this method can be used only with the MITIntrinsic dataset
-    assert globals.DATASETCHOICE == 0
+    assert DATASETCHOICE == 0
 
     obj_dir = os.path.join(LOADROOTDIRMIT, 'data', tag)
     filename = os.path.join(obj_dir, 'light01.png')
-    img0 = load_png(filename)
+    img0 = load_png(filename, DATASETCHOICE)
     result = np.zeros(img0.shape + (10,))
 
     for i in range(10):
         filename = os.path.join(obj_dir, 'light%02d.png' % (i+1))
-        result[:, :, :, i] = load_png(filename)
+        result[:, :, :, i] = load_png(filename, DATASETCHOICE)
 
     return result
 
@@ -359,10 +353,10 @@ class BaselineEstimator:
         return shading, refl
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
         image = np.mean(image, axis=2)
-        mask = load_object(tag, 'mask')
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -378,10 +372,10 @@ class GrayscaleRetinexEstimator:
         return retinex(image, mask, self.threshold, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
         image = np.mean(image, axis=2)
-        mask = load_object(tag, 'mask')
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -407,9 +401,9 @@ class GrayscaleRetinexWithThresholdImageChromSmallNetEstimator:
         return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom', '50000', L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -422,9 +416,9 @@ class GrayscaleRetinexWithThresholdImageChromBigNetEstimator:
         return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom2', '50000', L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -437,9 +431,9 @@ class GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator:
         return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat', '50000', L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -452,9 +446,9 @@ class GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator:
         return run_retinex_with_chrom_cnn_model(image, mask, 'gradient_pad_chrom_concat_maxpool', '50000', L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -474,9 +468,9 @@ class GrayscaleRetinexWithThresholdImageRGBEstimator:
         return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -489,11 +483,11 @@ class GrayscaleRetinexWithThresholdImageGroundTruthEstimator:
         return retinex_with_thresholdimage(image, mask, threshold_image_x, threshold_image_y, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
-        threshold_image_x = load_object(tag, 'thresholdx')
-        threshold_image_y = load_object(tag, 'thresholdy')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
+        threshold_image_x = load_object(tag, 'thresholdx', DATASETCHOICE)
+        threshold_image_y = load_object(tag, 'thresholdy', DATASETCHOICE)
         return image, mask, threshold_image_x, threshold_image_y
 
     @staticmethod
@@ -510,9 +504,9 @@ class ColorRetinexEstimator:
         return color_retinex(image, mask, self.threshold_gray, self.threshold_color, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -527,10 +521,10 @@ class WeissEstimator:
         return weiss(image, multi_images, mask, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
         image = np.mean(image, axis=2)
-        mask = load_object(tag, 'mask')
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         multi_images = load_multiple(tag)
         multi_images = np.mean(multi_images, axis=2)
         return image, multi_images, mask
@@ -548,10 +542,10 @@ class WeissRetinexEstimator:
         return weiss_retinex(image, multi_images, mask, self.threshold, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
         image = np.mean(image, axis=2)
-        mask = load_object(tag, 'mask')
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         multi_images = load_multiple(tag)
         multi_images = np.mean(multi_images, axis=2)
         return image, multi_images, mask
@@ -570,9 +564,9 @@ class Zhao2012Estimator:
         return zhao2012algo(image, mask, self.threshold_chrom, groups, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
         return image, mask
 
     @staticmethod
@@ -589,10 +583,10 @@ class Zhao2012GroundTruthGroupsEstimator:
         return zhao2012algo(image, mask, self.threshold, groups, L1)
 
     @staticmethod
-    def get_input(tag):
-        image = load_object(tag, 'diffuse')
-        mask = load_object(tag, 'mask')
-        judgements = load_object(tag, 'judgements')
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
+        judgements = load_object(tag, 'judgements', DATASETCHOICE)
 
         width, height = image.shape[0:2]
         THRESHOLD_CONFIDENCE = 0.9

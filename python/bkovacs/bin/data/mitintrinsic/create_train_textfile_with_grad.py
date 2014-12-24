@@ -1,14 +1,10 @@
 import os
-import sys
 from os import listdir
 from os.path import exists
 
 import cv2
-import numpy as np
 
-sys.path.append('data')
-import common
-import poisson
+from lib.utils.data import common
 
 origpath = 'data/mitintrinsic/data'
 
