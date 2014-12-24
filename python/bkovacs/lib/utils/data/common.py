@@ -3,7 +3,8 @@ import png
 import itertools
 import numpy as np
 import scipy as sp
-import poisson
+
+from lib.intrinsic import poisson
 
 SCALE16BIT = 65535.
 
@@ -55,24 +56,6 @@ def load_image(filename, is_srgb=True):
         return image
 
 
-def save_image(filename, imagearr, is_srgb=True):
-    """
-    The image values should in [0.0, 1.0]
-    Save an image that is either linear or sRGB-encoded.
-    """
-
-    if not filename:
-        raise ValueError("Empty filename")
-
-    if is_srgb:
-        imagearr = rgb_to_srgb(imagearr)
-
-    imagearr *= 255.0
-    imagearr = np.asarray(imagearr, dtype=np.uint8)
-    image = Image.fromarray(imagearr)
-    image.save(filename)
-
-
 def srgb_to_rgb(srgb):
     """ Convert an sRGB image to a linear RGB image """
 
@@ -105,7 +88,8 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
         raise ValueError('The provided image array should be two dimensional! Provided array dimensions: {0}'.format(ch_arr.shape))
 
     image = Image.fromarray(ch_arr)
-    if resize != None:
+
+    if resize is not None:
         if keep_aspect_ratio:
             w, h = image.size
             if w > h:
@@ -119,7 +103,7 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
         else:
             image = image.resize((resize, resize), Image.BILINEAR)
 
-    if crop != None:
+    if crop is not None:
         w, h = image.size
         middle = [x / 2 for x in image.size]
         fromw = max(0, middle[0] - crop / 2)
