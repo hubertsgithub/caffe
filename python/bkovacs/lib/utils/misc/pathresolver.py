@@ -1,5 +1,6 @@
 import os
 
+
 def get_caffe_root_path():
     curdir = __file__
     upcount = 6
@@ -8,6 +9,7 @@ def get_caffe_root_path():
         curdir = os.path.dirname(curdir)
 
     return curdir
+
 
 # add caffe root path
 def acrp(p):

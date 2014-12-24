@@ -1,80 +1,12 @@
-import numpy as np
 import os
 import sys
-import random
 
-from lib.intrinsic import html
-from lib.intrinsic import intrinsic
+import numpy as np
 
-from lib.utils.data import whdr
-from lib.utils.data import common
-from lib.utils.misc.pathresolver import acrp
+from lib.intrinsic import html, intrinsic
+from lib.intrinsic import html, intrinsic, tasks
+from lib.utils.data import common, whdr
 
-from celery import Celery
-
-# 0 mitintrinsic
-# 1 Sean's synthetic dataset
-# 2 IIW dense
-DATASETCHOICE = 2
-
-SAVEROOTDIR = acrp('experiments/mitintrinsic/allresults')
-IIWTAGPATH = acrp('data/iiw-dataset/denseimages.txt')
-
-# The following objects were used in the evaluation. For the learning algorithms
-# (not included here), we used two-fold cross-validation with the following
-# randomly chosen split.
-SET1MIT = ['box', 'cup1', 'cup2', 'dinosaur', 'panther', 'squirrel', 'sun', 'teabag2']
-SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', 'turtle']
-
-SETINDOOR = map(lambda n: str(n), range(1, 25))
-
-random.seed(10)
-with open(IIWTAGPATH) as f:
-    SETIIWDENSE = random.sample([s.strip() for s in f.readlines()], 10)
-
-if DATASETCHOICE == 0:
-    ALL_TAGS = SET1MIT + SET2MIT
-    ERRORMETRIC = 0  # LMSE
-elif DATASETCHOICE == 1:
-    ALL_TAGS = SETINDOOR
-    ERRORMETRIC = 0  # LMSE
-elif DATASETCHOICE == 2:
-    ALL_TAGS = SETIIWDENSE
-    ERRORMETRIC = 1  # WHDR
-else:
-    raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))
-
-# The following four objects weren't used in the evaluation because they have
-# slight problems, but you may still find them useful.
-EXTRA_TAGS = ['apple', 'pear', 'phone', 'potato']
-
-# Use L1 to compute the final results. (For efficiency, the parameters are still
-# tuned using least squares.)
-USE_L1 = False
-
-# Output of the algorithms will be saved here
-if USE_L1:
-    RESULTS_DIR = os.path.join(SAVEROOTDIR, 'results_L1')
-else:
-    RESULTS_DIR = os.path.join(SAVEROOTDIR, 'results')
-
-estimators = [
-                ('Baseline (BAS)', intrinsic.BaselineEstimator),
-                #('Grayscale Retinex with CNN predicted threshold images using RGB images', intrinsic.GrayscaleRetinexWithThresholdImageRGBEstimator),
-                #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, small network 3 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromSmallNetEstimator),
-                #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetEstimator),
-                #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatEstimator),
-                #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
-                #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
-                ('Zhao2012', intrinsic.Zhao2012Estimator),
-                ('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
-                ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
-                ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
-                #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),
-                #('Weiss + Retinex (W+RET)', intrinsic.WeissRetinexEstimator),
-                ]
-
-app = Celery('comparison', broker='amqp://guest@localhost//')
 
 def print_dot(i, num):
     NEWLINE_EVERY = 50
@@ -106,7 +38,7 @@ def save_estimates(gen, image, est_shading, est_refl, mask):
     gen.image(output)
 
 
-def run_experiment():
+def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
     """Script for running the algorithmic comparisons from the paper
 
         Roger Grosse, Micah Johnson, Edward Adelson, and William Freeman,
@@ -128,8 +60,8 @@ def run_experiment():
 
     gen = html.Generator('Intrinsic image results', RESULTS_DIR)
 
-    results = np.zeros((len(estimators), ntags))
-    for e, (name, EstimatorClass) in enumerate(estimators):
+    results = np.zeros((len(ESTIMATORS), ntags))
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating %s' % name
         sys.stdout.flush()
         gen.heading(name)
@@ -217,12 +149,26 @@ def run_experiment():
         gen.divider()
 
     gen.heading('Mean error')
-    for e, (name, EstimatorClass) in enumerate(estimators):
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         avg = np.mean(results[e, :])
         gen.text('%s: %1.3f' % (name, avg))
 
 
-def run_parallel_experiment():
+def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
+    tags = ALL_TAGS
+
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
+        print 'Evaluating (starting jobs) %s' % name
+        sys.stdout.flush()
+
+        choices = EstimatorClass.param_choices()
+
+        for i, tag in enumerate(tags):
+            for j, params in enumerate(choices):
+                tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR)
+
+
+def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
     """Script for running the algorithmic comparisons from the paper
 
         Roger Grosse, Micah Johnson, Edward Adelson, and William Freeman,
@@ -242,12 +188,13 @@ def run_parallel_experiment():
     tags = ALL_TAGS
     ntags = len(tags)
 
-    results = np.zeros((len(estimators), ntags))
+    results = np.zeros((len(ESTIMATORS), ntags))
     # Generate HTML using the results
     gen = html.Generator('Intrinsic image results', RESULTS_DIR)
 
-    for e, (name, EstimatorClass) in enumerate(estimators):
-        print 'Evaluating (starting jobs) %s' % name
+    print 'Collecting results...'
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
+        print 'Evaluating %s' % name
         sys.stdout.flush()
 
         choices = EstimatorClass.param_choices()
@@ -255,10 +202,6 @@ def run_parallel_experiment():
 
         # Try all parameters on all the objects
         scores = np.zeros((ntags, nchoices))
-
-        for i, tag in enumerate(tags):
-            for j, params in enumerate(choices):
-                computeScoreJob(name, EstimatorClass, params, tag, i, j)
 
         # Collect results from files
         for i, tag in enumerate(tags):
@@ -313,13 +256,12 @@ def run_parallel_experiment():
         gen.divider()
 
     gen.heading('Mean error')
-    for e, (name, EstimatorClass) in enumerate(estimators):
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         avg = np.mean(results[e, :])
         gen.text('%s: %1.3f' % (name, avg))
 
 
-@app.task
-def computeScoreJob(name, EstimatorClass, params, tag, i, j):
+def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR):
     """
     Input paramsDict:
         {'estimator' : (name, EstimatorClass)}
@@ -356,5 +298,3 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j):
         f.write(str(score))
 
 
-if __name__ == '__main__':
-    run_parallel_experiment()

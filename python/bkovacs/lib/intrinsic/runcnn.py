@@ -6,7 +6,7 @@ import numpy as np
 from lib.utils.misc.pathresolver import acrp
 
 # Make sure that caffe is on the python path:
-sys.path.append('python')
+sys.path.append(acrp('python'))
 import caffe
 
 def predict_thresholds(model_file, pretrained_weights, input_images):
