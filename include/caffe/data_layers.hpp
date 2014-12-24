@@ -369,6 +369,41 @@ class MultiImageDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
   int lines_id_;
 };
 
+/**
+ * @brief Provides data to the Net from multiple image patches from multiple image files.
+ * It is useful for training where we want feed the network with multiple patches from one image
+ * For example it is used to train a siamese network which learn a representation for reflectance of pixels which can be compared to each other
+ * Each patch defines the crop coordinates (x, y in [0.0, 1.0], will be multiplied with width, height) for all input images
+ * We have "n" (prefetch_data_count in multi_prefetch_data_param) input images and "m" (patch_count in multi_image_patch_data_param) patches for each input image
+ * An input source file looks like this: imagepath0 imagepath1 [...] imagepathn patch0x patch0y patch1x patch1y [...] patchmx patchmy
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class MultiImagePatchDataLayer : public BasePrefetchingMultiDataLayer<Dtype> {
+ public:
+  explicit MultiImagePatchDataLayer(const LayerParameter& param);
+  virtual ~MultiImagePatchDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_MULTI_IMAGE_PATCH_DATA;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return -1; }
+ protected:
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleImages();
+  virtual void InternalThreadEntry();
+  virtual void LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
+      const bool crop_first);
+
+  vector<vector<std::string> > lines_;
+  int lines_id_;
+};
+
 
 
 /**

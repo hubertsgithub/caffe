@@ -257,6 +257,7 @@ message LayerParameter {
     IM2COL = 11;
     IMAGE_DATA = 12;
     MULTI_IMAGE_DATA = 122309427;
+    MULTI_IMAGE_PATCH_DATA = 122309428;
     INFOGAIN_LOSS = 13;
     INNER_PRODUCT = 14;
     LRN = 15;
@@ -319,6 +320,7 @@ message LayerParameter {
   optional ImageOutputParameter image_output_param = 78239872;
   optional HingeLossParameter hinge_loss_param = 29;
   optional MultiPrefetchDataParameter multi_prefetch_data_param = 98342374;
+  optional MultiImagePatchDataParameter multi_image_patch_data_param = 98342375;
   optional ImageDataParameter image_data_param = 15;
   optional InfogainLossParameter infogain_loss_param = 16;
   optional InnerProductParameter inner_product_param = 17;
@@ -570,6 +572,13 @@ message HingeLossParameter {
 message MultiPrefetchDataParameter {
   repeated TransformationParameter data_transformations = 1; 
   optional bool share_random_trafos = 2 [default = false];
+  optional uint32 prefetched_data_count = 3;
+}
+
+
+//Message that stores parameters used by MultiImagePatchDataLayer
+message MultiImagePatchDataParameter {
+	optional uint32 patch_count = 1;
 }
 
 // Message that stores parameters used by ImageDataLayer
@@ -604,7 +613,7 @@ message ImageDataParameter {
   optional string root_folder = 12 [default = ""];
 }
 
-// Message that stores parameters used by ImageDataLayer
+// Message that stores parameters used by MultiImageDataLayer
 message MultiImageDataParameter {
   // Specify the data source.
   optional string source = 1;

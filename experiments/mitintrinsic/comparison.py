@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import random
 
 import globals
 import html
@@ -24,7 +25,7 @@ SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', '
 SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 with open('data/iiw-dataset/denseimages.txt') as f:
-    SETIIWDENSE = [s.strip() for s in f.readlines()[0:100]]
+    SETIIWDENSE = random.sample([s.strip() for s in f.readlines()], 10)
 
 if globals.DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
@@ -109,7 +110,7 @@ def run_experiment():
                   #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                   #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                   ('Zhao2012', intrinsic.Zhao2012Estimator),
-                  #('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
+                  ('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
                   ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                   ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                   #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),

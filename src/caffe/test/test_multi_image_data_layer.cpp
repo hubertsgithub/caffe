@@ -70,6 +70,7 @@ TYPED_TEST(MultiImageDataLayerTest, TestRead) {
   tp = multi_prefetch_data_param->add_data_transformations();
   tp = multi_prefetch_data_param->add_data_transformations();
   tp = multi_prefetch_data_param->add_data_transformations();
+  multi_prefetch_data_param->set_prefetched_data_count(3);
 
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -114,6 +115,7 @@ TYPED_TEST(MultiImageDataLayerTest, TestResize) {
   tp = multi_prefetch_data_param->add_data_transformations();
   tp->set_new_height(128);
   tp->set_new_width(100);
+  multi_prefetch_data_param->set_prefetched_data_count(3);
 
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -163,6 +165,7 @@ TYPED_TEST(MultiImageDataLayerTest, TestCropFirst) {
   tp->set_new_width(100);
   tp->set_crop_first(false);
   tp->set_crop_size(50);
+  multi_prefetch_data_param->set_prefetched_data_count(3);
 
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -204,6 +207,7 @@ TYPED_TEST(MultiImageDataLayerTest, TestShuffle) {
   tp = multi_prefetch_data_param->add_data_transformations();
   tp = multi_prefetch_data_param->add_data_transformations();
   tp = multi_prefetch_data_param->add_data_transformations();
+  multi_prefetch_data_param->set_prefetched_data_count(3);
 
   MultiImageDataLayer<Dtype> layer(param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);

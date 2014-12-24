@@ -14,17 +14,17 @@
 namespace caffe {
 
 template <typename Dtype>
-MultiImageDataLayer<Dtype>::MultiImageDataLayer(const LayerParameter& param)
+MultiImagePatchDataLayer<Dtype>::MultiImagePatchDataLayer(const LayerParameter& param)
       : BasePrefetchingMultiDataLayer<Dtype>(param) {
 }
 
 template <typename Dtype>
-MultiImageDataLayer<Dtype>::~MultiImageDataLayer<Dtype>() {
+MultiImagePatchDataLayer<Dtype>::~MultiImagePatchDataLayer<Dtype>() {
   this->JoinPrefetchThread();
 }
 
 template <typename Dtype>
-void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
+void MultiImagePatchDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top, bool isTop, int index, const std::string& imgPath, const int new_height, const int new_width, const bool is_color,
       const bool crop_first) {
   Blob<Dtype>* blob;
@@ -119,7 +119,7 @@ void MultiImageDataLayer<Dtype>::LoadImageToSlot(const vector<Blob<Dtype>*>& bot
 }
 
 template <typename Dtype>
-void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+void MultiImagePatchDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   string root_folder = this->layer_param_.image_data_param().root_folder();
   // The BasePrefetchingMultiDataLayer took care of allocating the right number of data blobs
@@ -131,16 +131,21 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   const string& source = this->layer_param_.image_data_param().source();
   LOG(INFO) << "Opening file " << source;
   std::ifstream infile(source.c_str());
-  // The file and the label are both images
+  ///////////
+  // A file looks like this: imagepath0 imagepath1 [...] imagepathn patch0x patch0y patch1x patch1y [...] patchmx patchmy
+  ///////////
+  const int image_count = prefetched_data_count;
+  const int patch_count = this->layer_param_.multi_image_patch_data_param().patch_count();
+
   string line;
   while (getline(infile, line)) {
   	stringstream ss(line);
 
     vector<string> data_img_names;
-  	for (int i = 0; i < this->prefetch_data_.size(); ++i) {
+  	for (int i = 0; i < image_count + patch_count; ++i) {
   		string img_name;
   		ss >> img_name;
-		CHECK(img_name.size() > 0) << "The number of elements in a row of the data file should be equal to the number of top!";
+		CHECK(img_name.size() > 0) << "The number of elements in a row of the data file should be equal to image_count + patch_count";
   		data_img_names.push_back(img_name);
   		DLOG(INFO) << "Image data #" << i << ": " << img_name;
   	}
@@ -181,7 +186,7 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
 }
 
 template <typename Dtype>
-void MultiImageDataLayer<Dtype>::ShuffleImages() {
+void MultiImagePatchDataLayer<Dtype>::ShuffleImages() {
   caffe::rng_t* prefetch_rng =
       static_cast<caffe::rng_t*>(prefetch_rng_->generator());
   shuffle(lines_.begin(), lines_.end(), prefetch_rng);
@@ -189,7 +194,7 @@ void MultiImageDataLayer<Dtype>::ShuffleImages() {
 
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
-void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
+void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
   DLOG(INFO) << "Prefetch thread started";
 
   CPUTimer batch_timer;
@@ -281,6 +286,6 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
   DLOG(INFO) << "Transform time: " << trans_time / 1000 << " ms.";
 }
 
-INSTANTIATE_CLASS(MultiImageDataLayer);
-REGISTER_LAYER_CLASS(MULTI_IMAGE_DATA, MultiImageDataLayer);
+INSTANTIATE_CLASS(MultiImagePatchDataLayer);
+REGISTER_LAYER_CLASS(MULTI_IMAGE_PATCH_DATA, MultiImagePatchDataLayer);
 }  // namespace caffe
