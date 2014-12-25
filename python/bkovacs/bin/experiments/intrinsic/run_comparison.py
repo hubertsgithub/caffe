@@ -10,7 +10,7 @@ from lib.utils.misc.pathresolver import acrp
 # 0 mitintrinsic
 # 1 Sean's synthetic dataset
 # 2 IIW dense
-DATASETCHOICE = 0
+DATASETCHOICE = 2
 
 SAVEROOTDIR = acrp('experiments/mitintrinsic/allresults')
 IIWTAGPATH = acrp('data/iiw-dataset/denseimages.txt')
@@ -62,7 +62,7 @@ ESTIMATORS = [
                 #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                 #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                 ('Zhao2012', intrinsic.Zhao2012Estimator),
-                #('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
+                ('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
                 ('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                 ('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
                 #("Weiss's Algorithm (W)", intrinsic.WeissEstimator),

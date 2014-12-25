@@ -577,11 +577,11 @@ class Zhao2012Estimator:
 
 
 class Zhao2012GroundTruthGroupsEstimator:
-    def __init__(self, threshold=0.001, L1=False):
-        self.threshold = threshold
+    def __init__(self, threshold_chrom=0.001, L1=False):
+        self.threshold_chrom = threshold_chrom
 
     def estimate_shading_refl(self, image, mask, groups, L1=False):
-        return zhao2012algo(image, mask, self.threshold, groups, L1)
+        return zhao2012algo(image, mask, self.threshold_chrom, groups, L1)
 
     @staticmethod
     def get_input(tag, DATASETCHOICE):
@@ -597,4 +597,5 @@ class Zhao2012GroundTruthGroupsEstimator:
 
     @staticmethod
     def param_choices():
-        return [{}]  # 'threshold': t} for t in np.logspace(-3., 1., 15)]
+        return [{'threshold_chrom': t} for t in np.logspace(-3., 1., 15)]
+        #return [{}]
