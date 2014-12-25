@@ -572,8 +572,8 @@ class Zhao2012Estimator:
 
     @staticmethod
     def param_choices():
-        #return [{'threshold_chrom': t} for t in np.logspace(-3., 1., 15)]
-        return [{}]
+        return [{'threshold_chrom': t} for t in np.logspace(-3., 1., 15)]
+        #return [{}]
 
 
 class Zhao2012GroundTruthGroupsEstimator:

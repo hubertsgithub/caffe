@@ -7,6 +7,7 @@ import redis
 from lib.intrinsic import html, intrinsic
 from lib.intrinsic import html, intrinsic, tasks, resulthandler
 from lib.utils.data import common, whdr
+from lib.utils.misc import packer
 
 
 def print_dot(i, num):
@@ -166,7 +167,7 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
 
         for i, tag in enumerate(tags):
             for j, params in enumerate(choices):
-                tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR)
+                tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=False)
 
 
 def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
@@ -190,10 +191,8 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     ntags = len(tags)
 
     results = np.zeros((len(ESTIMATORS), ntags))
-    # Generate HTML using the results
-    gen = html.Generator('Intrinsic image results', RESULTS_DIR)
 
-    print 'Collecting results...'
+    print 'Collecting scores for all parameter configurations...'
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating %s' % name
         sys.stdout.flush()
@@ -201,51 +200,47 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         choices = EstimatorClass.param_choices()
         nchoices = len(choices)
 
-        # Collect results from workers
-        scores = resulthandler.gatherresults(EstimatorClass, ntags, nchoices)
+        # Collect intermediary results from workers
+        scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
+
+        # Start jobs again to determine the final scores...
+        for i, tag in enumerate(tags):
+            # Get the best parameter configuration
+            other_inds = range(i) + range(i+1, ntags)
+            total_scores = np.sum(scores[other_inds, :], axis=0)
+            best_choice = np.argmin(total_scores)
+            params = choices[best_choice]
+
+            tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, best_choice, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=True)
+
+    print 'Collecting final scores from hold-one-out cross-validation...'
+    # Generate HTML using the results
+    gen = html.Generator('Intrinsic image results', RESULTS_DIR)
+
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
+        print 'Evaluating %s' % name
+        sys.stdout.flush()
 
         gen.heading(name)
+
+        # Collect final results from workers
+        res = resulthandler.gather_final_results(EstimatorClass, ntags)
 
         # Hold-one-out cross-validation
         print '  Final scores:'
         sys.stdout.flush()
         for i, tag in enumerate(tags):
-            inp = EstimatorClass.get_input(tag, DATASETCHOICE)
-            inp = inp + (USE_L1,)
-
             image = intrinsic.load_object(tag, 'diffuse', DATASETCHOICE)
             mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
 
-            if ERRORMETRIC == 0:
-                true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
-                true_refl = intrinsic.load_object(tag, 'reflectance', DATASETCHOICE)
-                true_refl = np.mean(true_refl, axis=2)
-            elif ERRORMETRIC == 1:
-                judgements = intrinsic.load_object(tag, 'judgements', DATASETCHOICE)
-            else:
-                raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
-
-            other_inds = range(i) + range(i+1, ntags)
-            total_scores = np.sum(scores[other_inds, :], axis=0)
-            best_choice = np.argmin(total_scores)
-            params = choices[best_choice]
-            estimator = EstimatorClass(**params)
-            est_shading, est_refl = estimator.estimate_shading_refl(*inp)
-
-            if ERRORMETRIC == 0:
-                score = intrinsic.score_image(true_shading, true_refl, est_shading, est_refl, mask)
-            elif ERRORMETRIC == 1:
-                score = whdr.compute_whdr(est_refl, judgements)
-            else:
-                raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+            score, est_shading, est_refl = res[i]
+            results[e, i] = score
 
             gen.text('%s: %1.3f' % (tag, score))
+            print '    %s: %1.3f' % (tag, score)
 
             save_estimates(gen, image, est_shading, est_refl, mask)
 
-            print '    %s: %1.3f' % (tag, score)
-
-            results[e, i] = score
         print '    average: %1.3f' % np.mean(results[e, :])
 
         gen.divider()
@@ -256,7 +251,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         gen.text('%s: %1.3f' % (name, avg))
 
 
-def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR):
+def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore):
     """
     Input paramsDict:
         {'estimator' : (name, EstimatorClass)}
@@ -267,6 +262,8 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRO
 
     # Estimators know what input they expect (grayscale image, color image, etc.)
     inp = EstimatorClass.get_input(tag, DATASETCHOICE)
+    if isFinalScore:
+        inp = inp + (USE_L1,)
 
     if ERRORMETRIC == 0:
         true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
@@ -292,7 +289,16 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRO
     with open(os.path.join(RESULTS_DIR, '{0}_{1}.txt'.format(i, j)), 'w') as f:
         f.write(str(score))
 
-    key = 'intrinsicresults-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
-    return key, score
+    if isFinalScore:
+        key = 'intrinsicresults-final-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+        value = (score, est_shading, est_refl)
+    else:
+        key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+        value = score
+
+    packed = packer.packb(value, version='1.0')
+
+    return key, packed
+
 
 
