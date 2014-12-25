@@ -2,9 +2,10 @@ import os
 import sys
 
 import numpy as np
+import redis
 
 from lib.intrinsic import html, intrinsic
-from lib.intrinsic import html, intrinsic, tasks
+from lib.intrinsic import html, intrinsic, tasks, resulthandler
 from lib.utils.data import common, whdr
 
 
@@ -200,14 +201,8 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         choices = EstimatorClass.param_choices()
         nchoices = len(choices)
 
-        # Try all parameters on all the objects
-        scores = np.zeros((ntags, nchoices))
-
-        # Collect results from files
-        for i, tag in enumerate(tags):
-            for j, params in enumerate(choices):
-                with open(os.path.join(RESULTS_DIR, '{0}_{1}.txt'.format(i, j)), 'r') as f:
-                    scores[i, j] = float(f.read())
+        # Collect results from workers
+        scores = resulthandler.gatherresults(EstimatorClass, ntags, nchoices)
 
         gen.heading(name)
 
@@ -296,5 +291,8 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRO
     # Write results to file
     with open(os.path.join(RESULTS_DIR, '{0}_{1}.txt'.format(i, j)), 'w') as f:
         f.write(str(score))
+
+    key = 'intrinsicresults-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+    return key, score
 
 
