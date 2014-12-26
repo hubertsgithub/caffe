@@ -25,7 +25,7 @@ SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 random.seed(10)
 with open(IIWTAGPATH) as f:
-    SETIIWDENSE = random.sample([s.strip() for s in f.readlines()], 500)
+    SETIIWDENSE = [s.strip() for s in f.readlines()]
 
 if DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
