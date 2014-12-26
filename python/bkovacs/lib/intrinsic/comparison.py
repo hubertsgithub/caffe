@@ -191,6 +191,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     ntags = len(tags)
 
     results = np.zeros((len(ESTIMATORS), ntags))
+    best_choices = np.zeros((len(ESTIMATORS), ntags), np.int32)
 
     print 'Collecting scores for all parameter configurations...'
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
@@ -209,6 +210,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             other_inds = range(i) + range(i+1, ntags)
             total_scores = np.sum(scores[other_inds, :], axis=0)
             best_choice = np.argmin(total_scores)
+            best_choices[e, i] = best_choice
             params = choices[best_choice]
 
             tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, best_choice, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=True)
@@ -223,6 +225,8 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
 
         gen.heading(name)
 
+        choices = EstimatorClass.param_choices()
+
         # Collect final results from workers
         res = resulthandler.gather_final_results(EstimatorClass, ntags)
 
@@ -235,8 +239,10 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
 
             score, est_shading, est_refl = res[i]
             results[e, i] = score
+            bestparam = choices[best_choices[e, i]]
 
             gen.text('%s: %1.3f' % (tag, score))
+            gen.text('Best parameters %s' % (bestparam))
             print '    %s: %1.3f' % (tag, score)
 
             save_estimates(gen, image, est_shading, est_refl, mask)
