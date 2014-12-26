@@ -2,9 +2,11 @@ import os
 from os import listdir
 import json
 
+from lib.utils.misc.pathresolver import acrp
+
 # this script finds all the dense images and writes their name to a file
-origpath = 'data/iiw-dataset/data'
-outputfilepath = 'data/iiw-dataset/denseimages.txt'
+origpath = acrp('data/iiw-dataset/data')
+outputfilepath = acrp('data/iiw-dataset/denseimages.txt')
 
 origdirnames = listdir(origpath)
 # filter for only json files

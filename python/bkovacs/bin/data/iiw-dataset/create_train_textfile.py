@@ -5,14 +5,18 @@ import json
 import random
 import numpy as np
 
-sys.path.append('data')
-import common
+from lib.utils.data import common
+from lib.utils.misc.pathresolver import acrp
 
 BIGGERDIMSIZE = 1100
+NETINPUTSIZE = 224
 USESIMPLEGAMMAFORSAVE = True
 
+MINDIST = NETINPUTSIZE / 2 + 1
+
 # this script finds all the dense images and writes their name to a file
-origpath = 'data/iiw-dataset/data'
+origpath = acrp('data/iiw-dataset/data')
+highresrootpath = acrp('../OpenSurfaces/photos')
 
 origdirnames = listdir(origpath)
 # filter for only json files
@@ -32,6 +36,11 @@ equal_cmp_train = []
 notequal_cmp_train = []
 equal_cmp_test = []
 notequal_cmp_test = []
+skipped_count = 0
+
+
+def is_closeto_border(width, height, pw, ph, mindist):
+    return pw - mindist < 0 or pw + mindist >= width or ph - mindist < 0 or ph + mindist >= height
 
 for filename in origdirnames:
     print 'Processing file {0}...'.format(filename)
@@ -39,10 +48,12 @@ for filename in origdirnames:
     filepath = os.path.join(origpath, filename)
     trunc_filename, ext = os.path.splitext(filename)
     trunc_filepath, _ = os.path.splitext(filepath)
+    highresimgfilepath = os.path.realpath(os.path.join(highresrootpath, trunc_filename + '.jpg'))
 
     # load image, compute grayscale + chromaticity images
-    linimg = common.load_image(trunc_filepath + '.png', is_srgb=True)
+    linimg = common.load_image(highresimgfilepath, is_srgb=True)
     linimg = common.resize_and_crop_image(linimg, resize=BIGGERDIMSIZE, crop=None, keep_aspect_ratio=True)
+    width, height = linimg.shape[0:2]
     grayimg = np.mean(linimg, axis=2)
     chromimg = common.compute_chromaticity_image(linimg)
 
@@ -90,11 +101,29 @@ for filename in origdirnames:
         if not point1['opaque'] or not point2['opaque']:
             continue
 
-        if darker == 'E':
-            equal_cmp.append((trunc_filename, point1['x'], point1['y'], point2['x'], point2['y']))
-        else:
-            notequal_cmp.append((trunc_filename, point1['x'], point1['y'], point2['x'], point2['y']))
+        p1x = point1['x']
+        p1y = point1['y']
+        p2x = point2['x']
+        p2y = point2['y']
 
+        p1w = p1x * width
+        p1h = p1y * height
+        p2w = p2x * width
+        p2h = p2y * height
+
+        # skip points which are close to the border of the image (so we can't crop)
+        if is_closeto_border(width, height, p1w, p1h, MINDIST) or is_closeto_border(width, height, p2w, p2h, MINDIST):
+            skipped_count += 1
+            continue
+
+        tup = (trunc_filepath, p1x, p1y, p2x, p2y)
+
+        if darker == 'E':
+            equal_cmp.append(tup)
+        else:
+            notequal_cmp.append(tup)
+
+print 'Skipped {0} comparisons because they were close to the border'.format(skipped_count)
 print 'Saving gathered info to training and testing files...'
 
 for f, equal_cmp, notequal_cmp in [(f_test, equal_cmp_test, notequal_cmp_test), (f_train, equal_cmp_train, notequal_cmp_train)]:

@@ -56,6 +56,24 @@ def load_image(filename, is_srgb=True):
         return image
 
 
+def save_image(filename, imagearr, is_srgb=True):
+    """
+    The image values should in [0.0, 1.0]
+    Save an image that is either linear or sRGB-encoded.
+    """
+
+    if not filename:
+        raise ValueError("Empty filename")
+
+    if is_srgb:
+        imagearr = rgb_to_srgb(imagearr)
+
+    imagearr *= 255.0
+    imagearr = np.asarray(imagearr, dtype=np.uint8)
+    image = Image.fromarray(imagearr)
+    image.save(filename)
+
+
 def srgb_to_rgb(srgb):
     """ Convert an sRGB image to a linear RGB image """
 
