@@ -2,6 +2,7 @@ import os
 import sys
 
 import numpy as np
+import scipy as sp
 import redis
 import cPickle as pickle
 import datetime
@@ -257,9 +258,13 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         gen.divider()
 
     gen.heading('Mean error')
+    ranks = [sp.stats.rankdata(results[:, i]) for i in range(ntags)]
+    fullrankarr = np.transpose(np.vstack(ranks))
+
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         avg = np.mean(results[e, :])
-        gen.text('%s: %1.3f' % (name, avg))
+        avgrank = np.mean(fullrankarr[e, :])
+        gen.text('%s: mean error %1.3f; mean rank %1.2f' % (name, avg, avgrank))
 
     # Save valuable data to file
     with open(os.path.join(RESULTS_DIR, 'ALLDATA.dat'), 'w') as f:
