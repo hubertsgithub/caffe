@@ -1,10 +1,8 @@
 from celery import Celery
 from lib.intrinsic.resulthandler import computeScoreJob_sendresults
 
-password = 'xxx'
-app = Celery('comparison', backend='redis://:' + password + '@10.37.154.210:6379', broker='amqp://rabbitmqroot:' + password + '@10.187.16.216:5672')
 #app = Celery('comparison', backend='redis://localhost', broker='amqp://')
-
+app.config_from_object('lib.intrinsic.celeryconfig')
 
 @app.task
 def computeScoreJob_task(*args, **kwargs):
