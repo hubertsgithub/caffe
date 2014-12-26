@@ -438,6 +438,7 @@ void DataTransformer<Dtype>::ResetState() {
   state_.persistent = param_.persistent();
   state_.reset = true;
   state_.do_mirror = false;
+  state_.keep_crop = false;
   state_.h_off = 0;
   state_.w_off = 0;
   state_.height = 0;
@@ -461,7 +462,7 @@ void DataTransformer<Dtype>::UpdateState(const int height,
       state_.reset = false;
     }
     state_.do_mirror = param_.mirror() && Rand(2);
-    if (crop_size) {
+    if (crop_size && !state_.keep_crop) {
       if (phase_ == Caffe::TRAIN && do_random_crop) {
         state_.h_off = Rand(height - crop_size + 1) + crop_size / 2;
         state_.w_off = Rand(width - crop_size + 1) + crop_size / 2;
@@ -480,6 +481,11 @@ void DataTransformer<Dtype>::ResetCropCoords(const int h_off,
       const int w_off) {
 	state_.h_off = h_off;
 	state_.w_off = w_off;
+}
+
+template <typename Dtype>
+void DataTransformer<Dtype>::SetKeepCrop(const bool keep_crop) {
+	state_.keep_crop = keep_crop;
 }
 
 INSTANTIATE_CLASS(DataTransformer);

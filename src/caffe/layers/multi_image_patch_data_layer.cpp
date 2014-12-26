@@ -295,6 +295,8 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 				int h_off = int(img_height * ph);
 				int w_off = int(img_width * pw);
 
+				// Prevent overwriting crop values in UpdateState
+				this->transformers_[iImage]->SetKeepCrop(true);
 				this->transformers_[iImage]->ResetCropCoords(h_off, w_off);
 				DLOG(INFO) << "Transforming bottom " << iImage << "...";
 				this->transformers_[iImage]->Transform(cv_imgs[iImage], &(*this->transformed_data_[i]));

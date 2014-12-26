@@ -41,7 +41,7 @@ class MultiImagePatchDataLayerTest : public MultiDeviceTest<TypeParam> {
     std::ofstream outfile(filename_.c_str(), std::ofstream::out);
     LOG(INFO) << "Using temporary file " << filename_;
     for (int i = 0; i < 5; ++i) {
-      outfile << EXAMPLES_SOURCE_DIR "images/cat.jpg " << EXAMPLES_SOURCE_DIR "images/fish-bike.jpg " << EXAMPLES_SOURCE_DIR "images/fish.jpg " << "0.5 0.5 " << 0.15*i << " " << 1 - 0.1*i << endl;
+      outfile << EXAMPLES_SOURCE_DIR "images/cat.jpg " << EXAMPLES_SOURCE_DIR "images/fish-bike.jpg " << EXAMPLES_SOURCE_DIR "images/fish.jpg " << "0.5 0.5 " << 0.3 + 0.05*i << " " << 0.7 - 0.05*i << endl;
     }
     outfile.close();
   }

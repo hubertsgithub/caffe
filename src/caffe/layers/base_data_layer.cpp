@@ -170,7 +170,7 @@ void BasePrefetchingMultiDataLayer<Dtype>::Forward_cpu(
   CHECK_EQ(top.size(), this->prefetch_data_.size()) << "Mismatch in number of top/prefetch_label layers";
   for (int i = 0; i < this->prefetch_data_.size(); ++i) {
   	DLOG(INFO) << "Copying prefetched data #" << i;
-  	caffe_copy(this->transformed_data_[i]->count(), this->transformed_data_[i]->cpu_data(),
+  	caffe_copy(this->prefetch_data_[i]->count(), this->prefetch_data_[i]->cpu_data(),
   		top[i]->mutable_cpu_data());
   }
   DLOG(INFO) << "Prefetch copied";

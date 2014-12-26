@@ -33,6 +33,7 @@ class DataTransformer {
     bool persistent;
     bool reset;
     bool do_mirror;
+    bool keep_crop;
     int h_off;
     int w_off;
     int height;
@@ -54,6 +55,12 @@ class DataTransformer {
    * @brief Reset the crop coords to the specified values
    */
   void ResetCropCoords(const int h_off, const int w_off);
+
+  /**
+   * @brief Set if we want to keep the crop values
+   * They will be reset only if we use the @ref ResetCropCoords function
+   */
+  void SetKeepCrop(const bool keep_crop);
 
   /**
    * @brief Tells if the Transformation is persistent or not
