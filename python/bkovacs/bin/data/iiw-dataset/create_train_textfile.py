@@ -4,6 +4,7 @@ import sys
 import json
 import random
 import numpy as np
+import cPickle as pickle
 
 from lib.utils.data import common
 from lib.utils.misc.pathresolver import acrp
@@ -15,7 +16,8 @@ USESIMPLEGAMMAFORSAVE = True
 MINDIST = NETINPUTSIZE / 2 + 1
 
 # this script finds all the dense images and writes their name to a file
-origpath = acrp('data/iiw-dataset/data')
+rootpath = acrp('data/iiw-dataset')
+origpath = os.path.join(rootpath, 'data')
 highresrootpath = acrp('../OpenSurfaces/photos')
 
 origdirnames = listdir(origpath)
@@ -29,29 +31,46 @@ testset_size = int(len(origdirnames) * 0.2)
 trainset_size = len(origdirnames) - testset_size
 testset = random.sample(origdirnames, testset_size)
 
-f_train = open('data/iiw-dataset/train.txt', 'w')
-f_test = open('data/iiw-dataset/test.txt', 'w')
+f_train = open(os.path.join(rootpath, 'train.txt'), 'w')
+f_test = open(os.path.join(rootpath, 'test.txt'), 'w')
 
 equal_cmp_train = []
 notequal_cmp_train = []
 equal_cmp_test = []
 notequal_cmp_test = []
 skipped_count = 0
+nofile_count = 0
+processedfiles = set()
 
 
 def is_closeto_border(width, height, pw, ph, mindist):
     return pw - mindist < 0 or pw + mindist >= width or ph - mindist < 0 or ph + mindist >= height
 
+
+procfilepath = os.path.join(rootpath, 'processedfiles.dat')
+if os.path.exists(procfilepath):
+    processedfiles = pickle.load(open(procfilepath, 'r'))
+
 for filename in origdirnames:
     print 'Processing file {0}...'.format(filename)
+
+    if filename in processedfiles:
+        print 'File already processed, skipping'
+        continue
 
     filepath = os.path.join(origpath, filename)
     trunc_filename, ext = os.path.splitext(filename)
     trunc_filepath, _ = os.path.splitext(filepath)
     highresimgfilepath = os.path.realpath(os.path.join(highresrootpath, trunc_filename + '.jpg'))
 
+    if not os.path.exists(highresimgfilepath):
+        nofile_count += 1
+        processedfiles.add(filename)
+        continue
+
     # load image, compute grayscale + chromaticity images
     linimg = common.load_image(highresimgfilepath, is_srgb=True)
+
     linimg = common.resize_and_crop_image(linimg, resize=BIGGERDIMSIZE, crop=None, keep_aspect_ratio=True)
     width, height = linimg.shape[0:2]
     grayimg = np.mean(linimg, axis=2)
@@ -76,6 +95,7 @@ for filename in origdirnames:
     id_to_points = {p['id']: p for p in points}
 
     if not points:
+        processedfiles.add(filename)
         continue
 
     if filename in testset:
@@ -89,16 +109,19 @@ for filename in origdirnames:
         # "darker" is "J_i" in our paper
         darker = c['darker']
         if darker not in ('1', '2', 'E'):
+            processedfiles.add(filename)
             continue
 
         # "darker_score" is "w_i" in our paper
         weight = c['darker_score']
         if weight <= 0 or weight is None:
+            processedfiles.add(filename)
             continue
 
         point1 = id_to_points[c['point1']]
         point2 = id_to_points[c['point2']]
         if not point1['opaque'] or not point2['opaque']:
+            processedfiles.add(filename)
             continue
 
         p1x = point1['x']
@@ -114,6 +137,7 @@ for filename in origdirnames:
         # skip points which are close to the border of the image (so we can't crop)
         if is_closeto_border(width, height, p1w, p1h, MINDIST) or is_closeto_border(width, height, p2w, p2h, MINDIST):
             skipped_count += 1
+            processedfiles.add(filename)
             continue
 
         tup = (trunc_filepath, p1x, p1y, p2x, p2y)
@@ -123,7 +147,12 @@ for filename in origdirnames:
         else:
             notequal_cmp.append(tup)
 
+        processedfiles.add(filename)
+
+        pickle.dump(processedfiles, open(procfilepath, 'w'))
+
 print 'Skipped {0} comparisons because they were close to the border'.format(skipped_count)
+print 'No highres file found for {0} images'.format(nofile_count)
 print 'Saving gathered info to training and testing files...'
 
 for f, equal_cmp, notequal_cmp in [(f_test, equal_cmp_test, notequal_cmp_test), (f_train, equal_cmp_train, notequal_cmp_train)]:
