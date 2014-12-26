@@ -52,10 +52,7 @@ def run(img, mask, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_group_
     '''
 
     chromimg = common.compute_chromaticity_image(img)
-    common.save_png(chromimg, os.path.join(ROOTPATH, 'chromimg.png'))
-
     grayimg = np.mean(img, axis=2)
-    common.save_png(grayimg, os.path.join(ROOTPATH, 'grayimg.png'))
 
     approx_max = np.percentile(grayimg, 99.9)
     max_inds = np.transpose(np.nonzero(grayimg >= approx_max))
@@ -124,7 +121,7 @@ def computeRetinexContour(log_grayimg, chromimg, mask, threshold_chrom, max_inds
                     contourimg[w, h] = 0.
 
     contourimg = contourimg * mask
-    common.save_png(contourimg, os.path.join(ROOTPATH, 'contourimg.png'))
+    #common.save_png(contourimg, os.path.join(ROOTPATH, 'contourimg.png'))
 
 
 def findGroups(chromimg, used_indlist, window_size, threshold_group_sim):
