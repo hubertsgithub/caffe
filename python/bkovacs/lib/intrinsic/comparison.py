@@ -3,6 +3,8 @@ import sys
 
 import numpy as np
 import redis
+import cPickle as pickle
+import datetime
 
 from lib.intrinsic import html, intrinsic
 from lib.intrinsic import html, intrinsic, tasks, resulthandler
@@ -192,6 +194,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
 
     results = np.zeros((len(ESTIMATORS), ntags))
     best_choices = np.zeros((len(ESTIMATORS), ntags), np.int32)
+    best_params = [[{} for x in range(ntags)] for x in range(len(ESTIMATORS))]
 
     print 'Collecting scores for all parameter configurations...'
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
@@ -210,8 +213,10 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             other_inds = range(i) + range(i+1, ntags)
             total_scores = np.sum(scores[other_inds, :], axis=0)
             best_choice = np.argmin(total_scores)
-            best_choices[e, i] = best_choice
             params = choices[best_choice]
+
+            best_choices[e, i] = best_choice
+            best_params[e][i] = params
 
             tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, best_choice, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=True)
 
@@ -255,6 +260,10 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         avg = np.mean(results[e, :])
         gen.text('%s: %1.3f' % (name, avg))
+
+    # Save valuable data to file
+    with open(os.path.join(RESULTS_DIR, 'ALLDATA.dat'), 'w') as f:
+        pickle.dump({'version': '1.0', 'results': results, 'best_params': best_params, 'date': datetime.datetime.now()}, f, protocol=2)
 
 
 def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore):
