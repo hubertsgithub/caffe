@@ -4,7 +4,8 @@ import numpy as np
 
 from lib.utils.misc import packer
 
-REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
+REDIS_CONFIG = {'host': '10.37.154.210', 'port': 6379, 'password': None, 'db': 0}
+#REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
 
 
 def computeScoreJob_sendresults(*args, **kwargs):
