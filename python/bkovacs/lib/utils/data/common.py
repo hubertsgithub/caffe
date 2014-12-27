@@ -98,7 +98,7 @@ def rgb_to_srgb(rgb):
     return ret
 
 
-def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
+def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False, use_greater_side=True):
     '''
     Resizes and crops the middle of the provided image channel array
     '''
@@ -110,7 +110,7 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
     if resize is not None:
         if keep_aspect_ratio:
             w, h = image.size
-            if w > h:
+            if (w > h and use_greater_side) or (w < h and not use_greater_side):
                 r = float(resize) / w
                 dim = (resize, int(h * r))
                 image = image.resize(dim, Image.BILINEAR)
@@ -136,14 +136,14 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False):
     return ret
 
 
-def resize_and_crop_image(arr, resize, crop, keep_aspect_ratio=False):
+def resize_and_crop_image(arr, resize, crop, keep_aspect_ratio=False, use_greater_side=True):
     if len(arr.shape) == 3:
         rets = []
         for c in range(3):
-            rets.append(resize_and_crop_channel(arr[:, :, c], resize, crop, keep_aspect_ratio))
+            rets.append(resize_and_crop_channel(arr[:, :, c], resize, crop, keep_aspect_ratio, use_greater_side))
         res_arr = np.dstack(rets)
     elif len(arr.shape) == 2:
-        res_arr = resize_and_crop_channel(arr, resize, crop, keep_aspect_ratio)
+        res_arr = resize_and_crop_channel(arr, resize, crop, keep_aspect_ratio, use_greater_side)
     else:
         raise ValueError('The provided image array should have either 1 or 3 channels!')
 
