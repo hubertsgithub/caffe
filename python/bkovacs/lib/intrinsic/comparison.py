@@ -161,6 +161,7 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
 
 def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
     tags = ALL_TAGS
+    all_processed = resulthandler.get_all_processed()
 
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating (starting jobs) %s' % name
@@ -170,7 +171,12 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
 
         for i, tag in enumerate(tags):
             for j, params in enumerate(choices):
-                tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=False)
+                key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+                # Start jobs for which we don't have a result already
+                if key not in all_processed:
+                    tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=False)
+                else:
+                    print 'Skipped (already processed): {0}'.format(key)
 
 
 def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
@@ -197,6 +203,17 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     best_choices = np.zeros((len(ESTIMATORS), ntags), np.int32)
     best_params = [[{} for x in range(ntags)] for x in range(len(ESTIMATORS))]
 
+    print 'Waiting for all results to be computed...'
+    nchoices_forclass = {}
+
+    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
+        choices = EstimatorClass.param_choices()
+        nchoices = len(choices)
+
+        nchoices_forclass[EstimatorClass] = nchoices
+
+    resulthandler.wait_all_results(nchoices_forclass, ntags)
+
     print 'Collecting scores for all parameter configurations...'
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating %s' % name
@@ -219,7 +236,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             best_choices[e, i] = best_choice
             best_params[e][i] = params
 
-            tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, best_choice, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=True)
+            #tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, best_choice, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=True)
 
     print 'Collecting final scores from hold-one-out cross-validation...'
     # Generate HTML using the results
@@ -232,9 +249,10 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         gen.heading(name)
 
         choices = EstimatorClass.param_choices()
+        scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
 
         # Collect final results from workers
-        res = resulthandler.gather_final_results(EstimatorClass, ntags)
+        #res = resulthandler.gather_final_results(EstimatorClass, ntags)
 
         # Hold-one-out cross-validation
         print '  Final scores:'
@@ -243,7 +261,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             image = intrinsic.load_object(tag, 'diffuse', DATASETCHOICE)
             mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
 
-            score, est_shading, est_refl = res[i]
+            score = scores[best_choices[e, i]] #res[i]
             results[e, i] = score
             bestparam = choices[best_choices[e, i]]
 
@@ -251,7 +269,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             gen.text('Best parameters %s' % (bestparam))
             print '    %s: %1.3f' % (tag, score)
 
-            save_estimates(gen, image, est_shading, est_refl, mask)
+            #save_estimates(gen, image, est_shading, est_refl, mask)
 
         print '    average: %1.3f' % np.mean(results[e, :])
 
