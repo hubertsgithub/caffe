@@ -19,6 +19,7 @@ g_MINDIST = g_NETINPUTSIZE / 2 + 1
 # this script finds all the dense images and writes their name to a file
 g_rootpath = acrp('data/iiw-dataset')
 g_origpath = os.path.join(g_rootpath, 'data')
+g_relative_origpath = 'data/iiw-dataset/data'
 g_highresrootpath = acrp('../OpenSurfaces/photos')
 
 g_equal_cmp_train = []
@@ -159,7 +160,7 @@ def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLE
             skipped_count += 1
             continue
 
-        tup = (trunc_filepath, p1x, p1y, p2x, p2y)
+        tup = (trunc_filename, p1x, p1y, p2x, p2y)
 
         if darker == 'E':
             equal_cmp.append(tup)
@@ -197,8 +198,8 @@ if __name__ == "__main__":
 
         g_processedfiles = dic['processedfiles']
         print '{0} files have already been processed'.format(len(g_processedfiles))
-        skipped_count = dic['skipped_count']
-        nofile_count = dic['nofile_count']
+        g_skipped_count = dic['skipped_count']
+        g_nofile_count = dic['nofile_count']
         g_equal_cmp_train = dic['g_equal_cmp_train']
         g_notequal_cmp_train = dic['g_notequal_cmp_train']
         g_equal_cmp_test = dic['g_equal_cmp_test']
@@ -216,15 +217,15 @@ if __name__ == "__main__":
         print 'Number of notequal comparisons found: {0}'.format(len(notequal_cmp))
         for i, c in enumerate(equal_cmp):
             # for every positive example, we put a negative example too
-            trunc_filepath, p1x, p1y, p2x, p2y = c
-            grayimg_path = trunc_filepath + '-gray.png'
-            chromimg_path = trunc_filepath + '-chrom.png'
+            trunc_filename, p1x, p1y, p2x, p2y = c
+            grayimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-gray.png'
+            chromimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-chrom.png'
             f.write('{0} {1} {2} {3} {4} {5}\n'.format(grayimg_path, chromimg_path, p1x, p1y, p2x, p2y))
 
             c = notequal_cmp[i % len(notequal_cmp)]
-            trunc_filepath, p1x, p1y, p2x, p2y = c
-            grayimg_path = trunc_filepath + '-gray.png'
-            chromimg_path = trunc_filepath + '-chrom.png'
+            trunc_filename, p1x, p1y, p2x, p2y = c
+            grayimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-gray.png'
+            chromimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-chrom.png'
             f.write('{0} {1} {2} {3} {4} {5}\n'.format(grayimg_path, chromimg_path, p1x, p1y, p2x, p2y))
 
     f_train.close()
