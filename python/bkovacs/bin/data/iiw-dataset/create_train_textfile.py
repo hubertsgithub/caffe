@@ -54,7 +54,7 @@ def aggregator_func(ret):
                 notequal_cmp = g_notequal_cmp_train
 
             equal_cmp.extend(ret['equal_cmp'])
-            notequal_cmp.append(ret['notequal_cmp'])
+            notequal_cmp.extend(ret['notequal_cmp'])
 
         if 'nofile_count' in ret:
             g_nofile_count += 1
@@ -62,7 +62,12 @@ def aggregator_func(ret):
         if 'skipped_count' in ret:
             g_skipped_count += ret['skipped_count']
 
-        dic = {'VERSION': 1.0, 'processedfiles': g_processedfiles, 'skipped_count': g_skipped_count, 'nofile_count': g_nofile_count}
+        dic = {'VERSION': 1.0, 'processedfiles': g_processedfiles, 'skipped_count': g_skipped_count, 'nofile_count': g_nofile_count, \
+               'g_equal_cmp_train' : g_equal_cmp_train, \
+               'g_equal_cmp_test' : g_equal_cmp_test, \
+               'g_notequal_cmp_train' : g_notequal_cmp_train, \
+               'g_notequal_cmp_test' : g_notequal_cmp_test}
+
         pickle.dump(dic, open(procfilepath, 'w'))
 
     g_lock.release()
@@ -183,15 +188,21 @@ if __name__ == "__main__":
 
     procfilepath = os.path.join(g_rootpath, 'processedfiles.dat')
     if os.path.exists(procfilepath):
+        print 'Found processedfiles.dat, loading processed file information...'
         dic = pickle.load(open(procfilepath, 'r'))
 
         VERSION = dic['VERSION']
         if VERSION != 1.0:
             raise ValueError('Wrong verison, please delete processedfiles.dat')
 
-        processedfiles = dic['processedfiles']
+        g_processedfiles = dic['processedfiles']
+        print '{0} files have already been processed'.format(len(g_processedfiles))
         skipped_count = dic['skipped_count']
         nofile_count = dic['nofile_count']
+        g_equal_cmp_train = dic['g_equal_cmp_train']
+        g_notequal_cmp_train = dic['g_notequal_cmp_train']
+        g_equal_cmp_test = dic['g_equal_cmp_test']
+        g_notequal_cmp_test = dic['g_notequal_cmp_test']
 
     call_with_multiprocessing_pool(process_photos, origdirnames, g_processedfiles, g_origpath, g_highresrootpath, g_SMALLERDIMSIZE, g_USESIMPLEGAMMAFORSAVE, g_MINDIST)
 
@@ -205,15 +216,15 @@ if __name__ == "__main__":
         print 'Number of notequal comparisons found: {0}'.format(len(notequal_cmp))
         for i, c in enumerate(equal_cmp):
             # for every positive example, we put a negative example too
-            trunc_filename, p1x, p1y, p2x, p2y = c
-            grayimg_path = os.path.join(g_origpath, trunc_filename) + '-gray.png'
-            chromimg_path = os.path.join(g_origpath, trunc_filename) + '-chrom.png'
+            trunc_filepath, p1x, p1y, p2x, p2y = c
+            grayimg_path = trunc_filepath + '-gray.png'
+            chromimg_path = trunc_filepath + '-chrom.png'
             f.write('{0} {1} {2} {3} {4} {5}\n'.format(grayimg_path, chromimg_path, p1x, p1y, p2x, p2y))
 
             c = notequal_cmp[i % len(notequal_cmp)]
-            trunc_filename, p1x, p1y, p2x, p2y = c
-            grayimg_path = os.path.join(g_origpath, trunc_filename) + '-gray.png'
-            chromimg_path = os.path.join(g_origpath, trunc_filename) + '-chrom.png'
+            trunc_filepath, p1x, p1y, p2x, p2y = c
+            grayimg_path = trunc_filepath + '-gray.png'
+            chromimg_path = trunc_filepath + '-chrom.png'
             f.write('{0} {1} {2} {3} {4} {5}\n'.format(grayimg_path, chromimg_path, p1x, p1y, p2x, p2y))
 
     f_train.close()
