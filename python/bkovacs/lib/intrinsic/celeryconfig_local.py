@@ -1,0 +1,4 @@
+PASSWORD = 'wrongpass'
+RABBITMQIP = '54.237.201.19'
+REDISIP = '54.145.153.202'
+

@@ -4,8 +4,9 @@ import numpy as np
 import time
 
 from lib.utils.misc import packer
+from celeryconfig_local import PASSWORD, REDISIP
 
-REDIS_CONFIG = {'host': '54.145.153.202', 'port': 6379, 'password': None, 'db': 0}
+REDIS_CONFIG = {'host': REDISIP, 'port': 6379, 'password': PASSWORD, 'db': 0}
 #REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
 
 
@@ -32,7 +33,7 @@ def get_all_processed():
 def wait_all_results(nchoices_forclass, ntags):
     pattern = 'intrinsicresults-intermediary-class=([^-]*)-tag=([^-]*)-i=([^-]*)-j=([^-]*)'
     client = redis.StrictRedis(**REDIS_CONFIG)
-    readydict = {EstimatorClass : False for EstimatorClass, _ in nchoices_forclass}
+    readydict = {EstimatorClass : False for EstimatorClass in nchoices_forclass}
     allready = False
     while not allready:
         allready = True
