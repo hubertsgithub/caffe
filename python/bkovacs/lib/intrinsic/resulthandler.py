@@ -5,7 +5,7 @@ import time
 
 from lib.utils.misc import packer
 
-REDIS_CONFIG = {'host': '10.37.154.210', 'port': 6379, 'password': None, 'db': 0}
+REDIS_CONFIG = {'host': '10.149.66.209', 'port': 6379, 'password': None, 'db': 0}
 #REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
 
 
