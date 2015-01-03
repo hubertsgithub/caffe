@@ -100,7 +100,8 @@ def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLE
 
     # the minimum resolution should be SMALLERDIMSIZE
     linimg = common.resize_and_crop_image(linimg, resize=SMALLERDIMSIZE, crop=None, keep_aspect_ratio=True, use_greater_side=False)
-    width, height = linimg.shape[0:2]
+    height, width = linimg.shape[0:2]
+    print 'Width: {0}, Height: {1}'.format(width, height)
     grayimg = np.mean(linimg, axis=2)
     chromimg = common.compute_chromaticity_image(linimg)
 

@@ -73,7 +73,7 @@ def gather_intermediary_results(EstimatorClass, ntags, nchoices):
                 continue
 
             match = re.search(pattern, key)
-            print 'IntermedResGather, parsed key: {0}, results: {1}'.format(key, match.groups())
+            #print 'IntermedResGather, parsed key: {0}, results: {1}'.format(key, match.groups())
             estclass, tag, i, j = match.groups()
             i = int(i)
             j = int(j)

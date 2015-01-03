@@ -589,7 +589,7 @@ class Zhao2012GroundTruthGroupsEstimator:
         mask = load_object(tag, 'mask', DATASETCHOICE)
         judgements = load_object(tag, 'judgements', DATASETCHOICE)
 
-        width, height = image.shape[0:2]
+        height, width = image.shape[0:2]
         THRESHOLD_CONFIDENCE = 0.9
         groups = pyzhao2012.findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE)
 

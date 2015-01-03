@@ -215,9 +215,12 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     resulthandler.wait_all_results(nchoices_forclass, ntags)
 
     print 'Collecting scores for all parameter configurations...'
+    # Generate HTML using the results
+    gen = html.Generator('Intrinsic image results', RESULTS_DIR)
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating %s' % name
         sys.stdout.flush()
+        gen.heading(name)
 
         choices = EstimatorClass.param_choices()
         nchoices = len(choices)
@@ -225,51 +228,22 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         # Collect intermediary results from workers
         scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
 
-        # Start jobs again to determine the final scores...
+        # Hold-one-out cross-validation
+        print '  Final scores:'
+        sys.stdout.flush()
         for i, tag in enumerate(tags):
             # Get the best parameter configuration
             other_inds = range(i) + range(i+1, ntags)
             total_scores = np.sum(scores[other_inds, :], axis=0)
             best_choice = np.argmin(total_scores)
-            params = choices[best_choice]
+            bestparam = choices[best_choice]
 
-            best_choices[e, i] = best_choice
-            best_params[e][i] = params
-
-            #tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, best_choice, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=True)
-
-    print 'Collecting final scores from hold-one-out cross-validation...'
-    # Generate HTML using the results
-    gen = html.Generator('Intrinsic image results', RESULTS_DIR)
-
-    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
-        print 'Evaluating %s' % name
-        sys.stdout.flush()
-
-        gen.heading(name)
-
-        choices = EstimatorClass.param_choices()
-        scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
-
-        # Collect final results from workers
-        #res = resulthandler.gather_final_results(EstimatorClass, ntags)
-
-        # Hold-one-out cross-validation
-        print '  Final scores:'
-        sys.stdout.flush()
-        for i, tag in enumerate(tags):
-            image = intrinsic.load_object(tag, 'diffuse', DATASETCHOICE)
-            mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
-
-            score = scores[best_choices[e, i]] #res[i]
+            score = scores[i, best_choice]
             results[e, i] = score
-            bestparam = choices[best_choices[e, i]]
 
             gen.text('%s: %1.3f' % (tag, score))
             gen.text('Best parameters %s' % (bestparam))
             print '    %s: %1.3f' % (tag, score)
-
-            #save_estimates(gen, image, est_shading, est_refl, mask)
 
         print '    average: %1.3f' % np.mean(results[e, :])
 

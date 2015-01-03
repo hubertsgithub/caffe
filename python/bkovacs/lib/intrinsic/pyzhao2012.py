@@ -1,5 +1,3 @@
-import os
-
 import math
 import numpy as np
 import scipy as sp
@@ -13,32 +11,6 @@ from lib.utils.data import common
 from lib.utils.misc.pathresolver import acrp
 
 ROOTPATH = acrp('experiments/pyzhao2012/input')
-
-#def main():
-#    if MITINTRINSIC:
-#        smalladd = ''  # '-converted'
-#        img = common.load_png(os.path.join(ROOTPATH, 'diffuse{0}.png'.format(smalladd)))
-#        mask = common.load_png(os.path.join(ROOTPATH, 'mask{0}.png'.format(smalladd))) > 0
-#        groups = None
-#    else:
-#        img = common.load_image(os.path.join(ROOTPATH, '662.png'), is_srgb=True)
-#        width, height = img.shape[0:2]
-#        mask = np.ones((width, height))
-#        judgements = json.load(open(os.path.join(ROOTPATH, '662.json')))
-#        groups = findIIWGroups(judgements, width, height, THRESHOLD_CONFIDENCE, GROUP_WEIGHT)
-#        #groups = []
-#
-#    shading, reflectance = run(img, mask, groups)
-#    reflectance = common.compute_color_reflectance(reflectance, img)
-#    common.print_array_info(shading, 'final shading')
-#    common.print_array_info(reflectance, 'final reflectance')
-#
-#    # gamma correction
-#    shading = common.rgb_to_srgb(shading)
-#    reflectance = common.rgb_to_srgb(reflectance)
-#
-#    common.save_png(shading, os.path.join(ROOTPATH, 'shading.png'))
-#    common.save_png(reflectance, os.path.join(ROOTPATH, 'reflectance.png'))
 
 
 def run(img, mask, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_group_sim, threshold_chrom, groups=None):
@@ -101,13 +73,13 @@ def run(img, mask, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_group_
 
 
 def computeRetinexContour(log_grayimg, chromimg, mask, threshold_chrom, max_inds):
-    (width, height) = log_grayimg.shape
+    height, width = log_grayimg.shape
     contourimg = np.ones_like(log_grayimg)
 
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            if not mask[w, h]:
+            if not mask[h, w]:
                 continue
 
             # go through all neighbors
@@ -118,7 +90,7 @@ def computeRetinexContour(log_grayimg, chromimg, mask, threshold_chrom, max_inds
 
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold_chrom)
                 if weight == 0.:
-                    contourimg[w, h] = 0.
+                    contourimg[h, w] = 0.
 
     contourimg = contourimg * mask
     #common.save_png(contourimg, os.path.join(ROOTPATH, 'contourimg.png'))
@@ -126,17 +98,17 @@ def computeRetinexContour(log_grayimg, chromimg, mask, threshold_chrom, max_inds
 
 def findGroups(chromimg, used_indlist, window_size, threshold_group_sim):
     # TODO: add group confidence and choose the group with the highest confidence for each pixel
-    (width, height, _) = chromimg.shape
+    height, width = chromimg.shape[0:2]
     # True if matched, initially none of them are matched (all False)
     matched_px = np.zeros(len(used_indlist), dtype=bool)
     groups = []
 
     # N * K array, N = number of used pixels, K = feature dimension, it's 3x3=9 here
-    features = [getWindow(chromimg, w, h, window_size).flatten() for w, h in used_indlist]
+    features = [getWindow(chromimg, w, h, window_size).flatten() for h, w in used_indlist]
 
     tree = spatial.cKDTree(features)
 
-    for i, (w, h) in enumerate(used_indlist):
+    for i, (h, w) in enumerate(used_indlist):
         if matched_px[i]:
             continue
 
@@ -159,7 +131,7 @@ def findGroups(chromimg, used_indlist, window_size, threshold_group_sim):
 def getWindow(chromimg, w, h, window_size):
     window_shift = (window_size-1)/2
 
-    return chromimg[(w-window_shift):(w+window_shift), (h-window_shift):(h+window_shift)]
+    return chromimg[(h-window_shift):(h+window_shift), (w-window_shift):(w+window_shift)]
 
 
 def findIIWGroups(judgements, width, height, threshold_confidence):
@@ -221,7 +193,7 @@ def findIIWGroups(judgements, width, height, threshold_confidence):
             w = int(point['x'] * width)
             h = int(point['y'] * height)
 
-            g.append([w, h])
+            g.append([h, w])
 
         groups.append(g)
 
@@ -229,7 +201,7 @@ def findIIWGroups(judgements, width, height, threshold_confidence):
 
 
 def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_chrom, max_inds):
-    (width, height) = log_grayimg.shape
+    height, width = log_grayimg.shape
     A = sp.sparse.lil_matrix((used_pxcount, used_pxcount))
     b = np.zeros(used_pxcount)
     c = 0.0
@@ -238,20 +210,20 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            if (w, h) not in used_inddic:
+            if (h, w) not in used_inddic:
                 continue
 
-            p = used_inddic[(w, h)]
+            p = used_inddic[(h, w)]
 
             # go through all neighbors
             neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
             for ch, cw in neighbors:
-                if (cw, ch) not in used_inddic:
+                if (ch, cw) not in used_inddic:
                     continue
 
-                dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+                dI = log_grayimg[h, w] - log_grayimg[ch, cw]
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold_chrom)
-                q = used_inddic[(cw, ch)]
+                q = used_inddic[(ch, cw)]
 
                 A[p, p] += (1 + weight) * lambda_l
                 A[p, q] += (-(1 + weight)) * lambda_l
@@ -275,11 +247,11 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
             g = random.sample(g, sample_count)
 
         for p_coord, q_coord in itertools.combinations(g, 2):
-            w, h = p_coord
-            cw, ch = q_coord
-            p = used_inddic[(w, h)]
-            q = used_inddic[(cw, ch)]
-            dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+            h, w = p_coord
+            ch, cw = q_coord
+            p = used_inddic[(h, w)]
+            q = used_inddic[(ch, cw)]
+            dI = log_grayimg[h, w] - log_grayimg[ch, cw]
 
             A[p, p] += 1 * lambda_r * sampling_weight
             A[p, q] += -1 * lambda_r * sampling_weight
@@ -306,7 +278,7 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
 
 
 def computeWeight(chromimg, w, h, cw, ch, threshold_chrom):
-    dRhat = chromimg[w][h] - chromimg[cw][ch]
+    dRhat = chromimg[h, w] - chromimg[ch, cw]
     dist = math.sqrt(np.sum(np.power(dRhat, 2.)))
 
     if dist > threshold_chrom:
@@ -316,26 +288,26 @@ def computeWeight(chromimg, w, h, cw, ch, threshold_chrom):
 
 
 def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_val, threshold_chrom, max_inds):
-    (width, height) = log_grayimg.shape
+    height, width = log_grayimg.shape
     sum = 0.0
 
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            if (w, h) not in used_inddic:
+            if (h, w) not in used_inddic:
                 continue
 
-            p = used_inddic[(w, h)]
+            p = used_inddic[(h, w)]
 
             # go through all neighbors
             neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
             for ch, cw in neighbors:
-                if (cw, ch) not in used_inddic:
+                if (ch, cw) not in used_inddic:
                     continue
 
-                dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+                dI = log_grayimg[h, w] - log_grayimg[ch, cw]
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold_chrom)
-                q = used_inddic[(cw, ch)]
+                q = used_inddic[(ch, cw)]
 
                 dS = s[p] - s[q]
                 sum += (dS ** 2 + weight * (dI - dS) ** 2) * lambda_l
@@ -349,28 +321,28 @@ def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_va
 
 
 def func_deriv(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_val, threshold_chrom, max_inds):
-    (width, height) = log_grayimg.shape
+    height, width = log_grayimg.shape
     grad = np.zeros_like(s)
 
     # Retinex constraint
     for h in range(height):
         for w in range(width):
-            if (w, h) not in used_inddic:
+            if (h, w) not in used_inddic:
                 continue
 
-            p = used_inddic[(w, h)]
+            p = used_inddic[(h, w)]
 
             sum = 0.0
 
             # go through all neighbors
             neighbors = [[h-1, w], [h+1, w], [h, w-1], [h, w+1]]
             for ch, cw in neighbors:
-                if (cw, ch) not in used_inddic:
+                if (ch, cw) not in used_inddic:
                     continue
 
-                dI = log_grayimg[w][h] - log_grayimg[cw][ch]
+                dI = log_grayimg[h, w] - log_grayimg[ch, cw]
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold_chrom)
-                q = used_inddic[(cw, ch)]
+                q = used_inddic[(ch, cw)]
 
                 # * 2 at the end, because we compute the same for all neighbors and (a - b)^2 and (b - a)^2 are the same
                 sum += (2 * (1 + weight) * s[p] + s[q] * (-2 * (1 + weight)) - 2 * weight * dI) * lambda_l * 2
