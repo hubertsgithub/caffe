@@ -323,10 +323,6 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRO
     else:
         raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
-    # Write results to file
-    with open(os.path.join(RESULTS_DIR, '{0}_{1}.txt'.format(i, j)), 'w') as f:
-        f.write(str(score))
-
     if isFinalScore:
         key = 'intrinsicresults-final-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
         value = (score, est_shading, est_refl)
