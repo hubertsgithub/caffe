@@ -10,6 +10,11 @@ REDIS_CONFIG = {'host': REDISIP, 'port': 6379, 'password': PASSWORD, 'db': 0}
 #REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
 
 
+def delete_results(keys):
+    client = redis.StrictRedis(**REDIS_CONFIG)
+    client.delete(keys)
+
+
 def computeScoreJob_sendresults(*args, **kwargs):
     from lib.intrinsic.comparison import computeScoreJob
     key, value = computeScoreJob(*args, **kwargs)

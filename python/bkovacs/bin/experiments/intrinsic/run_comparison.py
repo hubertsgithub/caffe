@@ -71,13 +71,18 @@ ESTIMATORS = [
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2 or sys.argv[1] not in ['dispatch', 'aggregate']:
-        print 'Usage: run_comparison.py dispatch|aggregate'
+    if len(sys.argv) < 2 or sys.argv[1] not in ['dispatch', 'aggregate']:
+        print 'Usage: run_comparison.py dispatch|aggregate RERUNALLTASKS=True|False?'
         sys.exit(1)
 
     option = sys.argv[1]
+    if len(sys.argv) >= 3:
+        RERUNALLTASKS = bool(sys.argv[2])
+    else:
+        RERUNALLTASKS = False
+
     if option == 'dispatch':
-        comparison.dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS)
+        comparison.dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, RERUNALLTASKS)
     else:
         comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS)
 

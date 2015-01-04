@@ -159,9 +159,23 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
         gen.text('%s: %1.3f' % (name, avg))
 
 
-def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
+def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, RERUNALLTASKS):
     tags = ALL_TAGS
-    all_processed = resulthandler.get_all_processed()
+    if not RERUNALLTASKS:
+        all_processed = resulthandler.get_all_processed()
+
+    if RERUNALLTASKS:
+        keys_to_delete = []
+        for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
+            choices = EstimatorClass.param_choices()
+
+            for i, tag in enumerate(tags):
+                for j, params in enumerate(choices):
+                    key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+                    keys_to_delete.append(key)
+
+        print 'Deleting {0} results before starting new jobs'.format(len(keys_to_delete))
+        resulthandler.delete_results(keys_to_delete)
 
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating (starting jobs) %s' % name
@@ -171,13 +185,18 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
 
         for i, tag in enumerate(tags):
             for j, params in enumerate(choices):
-                key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
-                # Start jobs for which we don't have a result already
-                if key not in all_processed:
+                runtask = False
+                if RERUNALLTASKS:
+                    runtask = True
+                else:
+                    # Start jobs for which we don't have a result already
+                    key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+                    runtask = key not in all_processed
+
+                if runtask:
                     tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=False)
                 else:
                     print 'Skipped (already processed): {0}'.format(key)
-
 
 def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
     """Script for running the algorithmic comparisons from the paper
