@@ -221,13 +221,13 @@ if __name__ == "__main__":
             trunc_filename, p1x, p1y, p2x, p2y = c
             grayimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-gray.png'
             chromimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-chrom.png'
-            f.write('{0} {1} {2} {3} {4} {5}\n'.format(grayimg_path, chromimg_path, p1x, p1y, p2x, p2y))
+            f.write('{0} {1} {2} {3} {4} {5} {6}\n'.format(grayimg_path, chromimg_path, 1, p1x, p1y, p2x, p2y))
 
             c = notequal_cmp[i % len(notequal_cmp)]
             trunc_filename, p1x, p1y, p2x, p2y = c
             grayimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-gray.png'
             chromimg_path = os.path.join(g_relative_origpath, trunc_filename) + '-chrom.png'
-            f.write('{0} {1} {2} {3} {4} {5}\n'.format(grayimg_path, chromimg_path, p1x, p1y, p2x, p2y))
+            f.write('{0} {1} {2} {3} {4} {5} {6}\n'.format(grayimg_path, chromimg_path, 0, p1x, p1y, p2x, p2y))
 
     f_train.close()
     f_test.close()

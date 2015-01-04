@@ -27,7 +27,8 @@ class MultiImagePatchDataLayerTest : public MultiDeviceTest<TypeParam> {
         blob_top_patch0_label2_(new Blob<Dtype>()),
         blob_top_patch1_data_(new Blob<Dtype>()),
         blob_top_patch1_label_(new Blob<Dtype>()),
-        blob_top_patch1_label2_(new Blob<Dtype>()) {}
+        blob_top_patch1_label2_(new Blob<Dtype>()),
+        blob_top_simlabel_(new Blob<Dtype>()) {}
   virtual void SetUp() {
     MakeTempFilename(&filename_);
     blob_top_vec_.push_back(blob_top_patch0_data_);
@@ -36,12 +37,13 @@ class MultiImagePatchDataLayerTest : public MultiDeviceTest<TypeParam> {
     blob_top_vec_.push_back(blob_top_patch1_data_);
     blob_top_vec_.push_back(blob_top_patch1_label_);
     blob_top_vec_.push_back(blob_top_patch1_label2_);
+    blob_top_vec_.push_back(blob_top_simlabel_);
     Caffe::set_random_seed(seed_);
     // Create a Vector of files with label images
     std::ofstream outfile(filename_.c_str(), std::ofstream::out);
     LOG(INFO) << "Using temporary file " << filename_;
     for (int i = 0; i < 5; ++i) {
-      outfile << EXAMPLES_SOURCE_DIR "images/cat.jpg " << EXAMPLES_SOURCE_DIR "images/fish-bike.jpg " << EXAMPLES_SOURCE_DIR "images/fish.jpg " << "0.5 0.5 " << 0.3 + 0.05*i << " " << 0.7 - 0.05*i << endl;
+      outfile << EXAMPLES_SOURCE_DIR "images/cat.jpg " << EXAMPLES_SOURCE_DIR "images/fish-bike.jpg " << EXAMPLES_SOURCE_DIR "images/fish.jpg " << (i%2) << " 0.5 0.5 " << 0.3 + 0.05*i << " " << 0.7 - 0.05*i << endl;
     }
     outfile.close();
   }
@@ -53,6 +55,7 @@ class MultiImagePatchDataLayerTest : public MultiDeviceTest<TypeParam> {
     delete blob_top_patch1_data_;
     delete blob_top_patch1_label_;
     delete blob_top_patch1_label2_;
+    delete blob_top_simlabel_;
   }
 
   int seed_;
@@ -63,6 +66,7 @@ class MultiImagePatchDataLayerTest : public MultiDeviceTest<TypeParam> {
   Blob<Dtype>* const blob_top_patch1_data_;
   Blob<Dtype>* const blob_top_patch1_label_;
   Blob<Dtype>* const blob_top_patch1_label2_;
+  Blob<Dtype>* const blob_top_simlabel_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
   vector<Blob<Dtype>*> blob_top_vec_;
 };

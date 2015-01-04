@@ -129,29 +129,31 @@ void MultiImagePatchDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>&
 	LOG(INFO) << "Opening file " << source;
 	std::ifstream infile(source.c_str());
 	///////////
-	// A file looks like this: imagepath0 imagepath1 [...] imagepathn patch0x patch0y patch1x patch1y [...] patchmx patchmy
+	// A file looks like this: imagepath0 imagepath1 [...] imagepathn sim(0 or 1) patch0x patch0y patch1x patch1y [...] patchmx patchmy
 	///////////
 	MultiPrefetchDataParameter mpdp = this->layer_param_.multi_prefetch_data_param();
 	int input_data_count = mpdp.input_data_count();
 	const int image_count = input_data_count;
 	const int patch_count = this->layer_param_.multi_image_patch_data_param().patch_count();
 	CHECK_EQ(mpdp.data_transformations_size(), image_count) << "The data transformation count should match the number of input images.";
-	CHECK_EQ(this->prefetch_data_.size(), image_count * patch_count) << "The prefetch data size should match the number of input images times the number of patches.";
+	CHECK_EQ(this->prefetch_data_.size(), image_count * patch_count + 1) << "The prefetch data size should match the number of input images times the number of patches + 1 (label).";
 
 	string line;
 	while (getline(infile, line)) {
 		stringstream ss(line);
 
 		vector<string> data_img_names;
-		for (int i = 0; i < image_count + 2 * patch_count; ++i) {
+		for (int i = 0; i < image_count + 1 + 2 * patch_count; ++i) {
 			string img_name;
 			ss >> img_name;
-			CHECK(img_name.size() > 0) << "The number of elements in a row of the data file should be equal to image_count + 2 * patch_count";
+			CHECK(img_name.size() > 0) << "The number of elements in a row of the data file should be equal to image_count + 1 + 2 * patch_count";
 			data_img_names.push_back(img_name);
 			if (i < image_count) {
 				DLOG(INFO) << "Image data #" << i << ": " << img_name;
+			} else if (i == image_count) {
+				DLOG(INFO) << "Sim: " << img_name;
 			} else {
-				DLOG(INFO) << "Patch data #" << (i - image_count) / 2 << ((i - image_count) % 2 == 0 ? "w" : "h") << ": " << img_name;
+				DLOG(INFO) << "Patch data #" << (i - image_count - 1) / 2 << ((i - image_count - 1) % 2 == 0 ? "w" : "h") << ": " << img_name;
 			}
 
 		}
@@ -177,6 +179,7 @@ void MultiImagePatchDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>&
 		lines_id_ = skip;
 	}
 
+	// Allocate memory for all tops
 	for (int iPatch = 0; iPatch < patch_count; ++iPatch) {
 		for (int iImage = 0; iImage < image_count; ++iImage) {
 			int i = iPatch * image_count + iImage;
@@ -197,6 +200,26 @@ void MultiImagePatchDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>&
 			this->LoadImageToSlot(bottom, top, true, i, imgPath, new_height, new_width, is_color, crop_first, crop_size);
 		}
 	}
+	// The last top contains the label
+	const int batch_size = this->layer_param_.image_data_param().batch_size();
+	int index = patch_count * image_count;
+	Blob<Dtype>* blob;
+	Blob<Dtype>* prefetch_d;
+	Blob<Dtype>* trafo_d;
+	blob = top[index];
+	prefetch_d = this->prefetch_data_[index].get();
+	trafo_d = this->transformed_data_[index].get();
+
+	DLOG(INFO) << "blob: " << blob;
+	DLOG(INFO) << "prefetch_d: " << prefetch_d;
+	DLOG(INFO) << "trafo_d: " << trafo_d;
+	blob->Reshape(batch_size, 1, 1, 1);
+	prefetch_d->Reshape(batch_size, 1, 1, 1);
+	trafo_d->Reshape(1, 1, 1, 1);
+
+	LOG(INFO) << "output data size: " << blob->num() << ","
+	          << blob->channels() << "," << blob->height() << ","
+	          << blob->width();
 }
 
 template <typename Dtype>
@@ -237,7 +260,7 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 	const int image_count = input_data_count;
 	const int patch_count = this->layer_param_.multi_image_patch_data_param().patch_count();
 	CHECK_EQ(mpdp.data_transformations_size(), image_count) << "The data transformation count should match the number of input images.";
-	CHECK_EQ(this->prefetch_data_.size(), image_count * patch_count) << "The prefetch data size should match the number of input images times the number of patches.";
+	CHECK_EQ(this->prefetch_data_.size(), image_count * patch_count + 1) << "The prefetch data size should match the number of input images times the number of patches + 1 (label).";
 
 	// datum scales
 	const int lines_size = lines_.size();
@@ -273,13 +296,14 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 
 		timer.Start();
 		// Apply transformations (mirror, crop...) to the image
+		// For each patch for each image
 		for (int iPatch = 0; iPatch < patch_count; ++iPatch) {
 			float pw, ph;
 			stringstream ssw;
-			ssw << lines_[lines_id_][image_count + 2*iPatch];
+			ssw << lines_[lines_id_][image_count + 1 + 2*iPatch];
 			ssw >> pw;
 			stringstream ssh;
-			ssh << lines_[lines_id_][image_count + 2*iPatch + 1];
+			ssh << lines_[lines_id_][image_count + 1 + 2*iPatch + 1];
 			ssh >> ph;
 
 			for (int iImage = 0; iImage < image_count; ++iImage) {
@@ -303,6 +327,18 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 			}
 		}
 
+		// Finally put the similarity to the last top...
+		bool sim;
+		stringstream sssim;
+		sssim << lines_[lines_id_][image_count];
+		sssim >> sim;
+
+		int i = patch_count * image_count;
+		int offset = this->prefetch_data_[i]->offset(item_id);
+		this->transformed_data_[i]->set_cpu_data(top_data[i] + offset);
+		this->transformed_data_[i]->mutable_cpu_data()[0] = int(sim);
+
+		// Reset state if all layers share the random transformations
 		if (share_random_trafos) {
 			this->transformers_[0]->ResetState();
 		}

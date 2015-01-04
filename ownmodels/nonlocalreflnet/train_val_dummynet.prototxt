@@ -1,0 +1,73 @@
+name: "NonlocalreflSiameseNet"
+layers {
+  name: "data"
+  type: MULTI_IMAGE_PATCH_DATA
+  top: "data"
+  top: "chrom"
+  top: "data_p"
+  top: "chrom_p"
+  top: "sim"
+  multi_image_patch_data_param {
+  	patch_count: 2
+  }
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  input_data_count: 2
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		crop_size: 224
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2 
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		random_crop: false
+		crop_size: 224
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/train.txt"
+    batch_size: 128
+  }
+}
+layers {
+	name: "imgsave"
+	type: IMAGE_OUTPUT
+	bottom: "data"
+	bottom: "chrom"
+	bottom: "data_p"
+	bottom: "chrom_p"
+	image_output_param {
+		file_name: "debugimgs/fun/img"
+		display: 1
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
+	}
+}
