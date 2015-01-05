@@ -12,6 +12,7 @@ from lib.intrinsic import html, intrinsic, tasks, resulthandler
 from lib.utils.data import common, whdr
 from lib.utils.misc import packer
 
+SCORE_FILENAME = 'ALLDATA.dat'
 
 def print_dot(i, num):
     NEWLINE_EVERY = 50
@@ -198,7 +199,7 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
                 else:
                     print 'Skipped (already processed): {0}'.format(key)
 
-def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
+def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE):
     """Script for running the algorithmic comparisons from the paper
 
         Roger Grosse, Micah Johnson, Edward Adelson, and William Freeman,
@@ -222,16 +223,29 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     best_choices = np.zeros((len(ESTIMATORS), ntags), np.int32)
     best_params = [[{} for x in range(ntags)] for x in range(len(ESTIMATORS))]
 
-    print 'Waiting for all results to be computed...'
-    nchoices_forclass = {}
+    ioerr = False
+    if USESAVEDSCORES:
+        try:
+            dic = packer.funpackb_version(1.1, os.path.join(RESULTS_DIR, SCORE_FILENAME))
+            allscores = dic['allscores']
+        except IOError:
+            print 'IOError happened when reading scores file, falling back to using Redis server to retrieve data...'
+            ioerr = True
 
-    for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
-        choices = EstimatorClass.param_choices()
-        nchoices = len(choices)
+    if ioerr:
+        USESAVEDSCORES = False
 
-        nchoices_forclass[EstimatorClass] = nchoices
+    if not USESAVEDSCORES:
+        print 'Waiting for all results to be computed...'
+        nchoices_forclass = {}
+        for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
+            choices = EstimatorClass.param_choices()
+            nchoices = len(choices)
 
-    resulthandler.wait_all_results(nchoices_forclass, ntags)
+            nchoices_forclass[EstimatorClass] = nchoices
+
+        resulthandler.wait_all_results(nchoices_forclass, ntags)
+        allscores = {}
 
     print 'Collecting scores for all parameter configurations...'
     # Generate HTML using the results
@@ -244,20 +258,28 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         choices = EstimatorClass.param_choices()
         nchoices = len(choices)
 
-        # Collect intermediary results from workers
-        scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
+        if USESAVEDSCORES:
+            scores = allscores[str(EstimatorClass)]
+        else:
+            # Collect intermediary results from workers
+            scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
+            allscores[str(EstimatorClass)] = scores
 
         # Hold-one-out cross-validation
         print '  Final scores:'
         sys.stdout.flush()
         for i, tag in enumerate(tags):
             # Get the best parameter configuration
-            other_inds = range(i) + range(i+1, ntags)
-            total_scores = np.sum(scores[other_inds, :], axis=0)
-            best_choice = np.argmin(total_scores)
-            bestparam = choices[best_choice]
+            if ORACLEEACHIMAGE:
+                best_choice = np.argmin(scores[i, :])
+            else:
+                other_inds = range(i) + range(i+1, ntags)
+                total_scores = np.sum(scores[other_inds, :], axis=0)
+                best_choice = np.argmin(total_scores)
 
+            bestparam = choices[best_choice]
             score = scores[i, best_choice]
+            print 'bestparam: {0}, score: {1}'.format(bestparam, score)
             results[e, i] = score
 
             gen.text('%s: %1.3f' % (tag, score))
@@ -278,8 +300,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         gen.text('%s: mean error %1.3f; mean rank %1.2f' % (name, avg, avgrank))
 
     # Save valuable data to file
-    with open(os.path.join(RESULTS_DIR, 'ALLDATA.dat'), 'w') as f:
-        pickle.dump({'version': '1.0', 'results': results, 'best_params': best_params, 'date': datetime.datetime.now()}, f, protocol=2)
+    packer.fpackb({'results': results, 'allscores': allscores, 'best_params': best_params}, 1.1, os.path.join(RESULTS_DIR, SCORE_FILENAME))
 
 
 def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore):

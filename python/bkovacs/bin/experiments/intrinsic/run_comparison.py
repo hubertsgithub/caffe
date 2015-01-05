@@ -75,6 +75,8 @@ if __name__ == '__main__':
         print 'Usage: run_comparison.py dispatch|aggregate RERUNALLTASKS=True|False?'
         sys.exit(1)
 
+    ORACLEEACHIMAGE = True
+    USESAVEDSCORES = True
     option = sys.argv[1]
     if len(sys.argv) >= 3:
         RERUNALLTASKS = bool(sys.argv[2])
@@ -84,5 +86,5 @@ if __name__ == '__main__':
     if option == 'dispatch':
         comparison.dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, RERUNALLTASKS)
     else:
-        comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS)
+        comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE)
 
