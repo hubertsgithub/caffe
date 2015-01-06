@@ -19,6 +19,7 @@ layers {
 		is_color: false
 		gamma: 2.2
 		mean_value: 128
+		persistent: true
 	  }
       # chromaticity image
 	  data_transformations {
@@ -32,6 +33,7 @@ layers {
 		mean_value: 128
 		mean_value: 128
 		mean_value: 128
+		persistent: true
 	  }
       # label - x gradients
 	  data_transformations {
@@ -42,6 +44,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
+		persistent: true
 	  }
       # label - y gradients
 	  data_transformations {
@@ -52,6 +55,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
+		persistent: true
 	  }
       # mask 
 	  data_transformations {
@@ -62,6 +66,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
+		persistent: true
 	  }
   }
   image_data_param {
@@ -90,6 +95,7 @@ layers {
 		is_color: false
 		gamma: 2.2
 		mean_value: 128
+		persistent: true
 	  }
       # chromaticity image
 	  data_transformations {
@@ -103,6 +109,7 @@ layers {
 		mean_value: 128
 		mean_value: 128
 		mean_value: 128
+		persistent: true
 	  }
       # label - x gradients
 	  data_transformations {
@@ -113,6 +120,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
+		persistent: true
 	  }
       # label - y gradients
 	  data_transformations {
@@ -123,6 +131,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
+		persistent: true
 	  }
       # mask 
 	  data_transformations {
@@ -133,6 +142,7 @@ layers {
 		mirror: false
 		scale: 0.00392156862
 		is_color: false
+		persistent: true
 	  }
   }
   image_data_param {
@@ -161,7 +171,7 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 64
+    num_output: 32
     kernel_size: 5
     pad: 2
     weight_filler {
@@ -201,7 +211,7 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 96
+    num_output: 64
     kernel_size: 5
     pad: 2
     weight_filler {
@@ -370,6 +380,7 @@ layers {
 	name: "imgsave"
 	type: IMAGE_OUTPUT
 	bottom: "data"
+	bottom: "chrom"
 	bottom: "gradx"
 	bottom: "slice-gradx-0"
 	bottom: "slice-gradx-1"
@@ -379,6 +390,10 @@ layers {
 	image_output_param {
 		file_name: "debugimgs/iiw_retinex/img"
 		display: 5000
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
 		transformation {
 			upscale: 255.0
 			mean_to_add: 128.0
@@ -414,6 +429,7 @@ layers {
 	name: "imgsave"
 	type: IMAGE_OUTPUT
 	bottom: "data"
+	bottom: "chrom"
 	bottom: "gradx"
 	bottom: "slice-gradx-0"
 	bottom: "slice-gradx-1"
@@ -423,6 +439,10 @@ layers {
 	image_output_param {
 		file_name: "debugimgs/iiw_retinex/testimg"
 		display: 1
+		transformation {
+			upscale: 255.0
+			mean_to_add: 128.0
+		}
 		transformation {
 			upscale: 255.0
 			mean_to_add: 128.0
