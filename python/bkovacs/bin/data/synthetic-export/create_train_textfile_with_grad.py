@@ -9,78 +9,78 @@ from lib.utils.data import common
 from lib.utils.data import multilayer_exr
 from lib.utils.misc.pathresolver import acrp
 
-resize_to_percent = 50
 resize = 800
-crop = 190
 
 
 def scale_then_to_srgb(image):
     image = image / np.percentile(image, 99.9)
     image = np.clip(image, 0.0, 1.0)
-    image = multilayer_exr.rgb_to_srgb(image)
+    image = image ** (1 / 2.2)
     return 255.0 * image
 
-rootpath = acrp('data/synthetic-export')
-datapath = os.path.join(rootpath, 'data')
 
-datafilenames = listdir(datapath)
-datafilenames.sort()
+if __name__ == '__main__':
+    rootpath = acrp('data/synthetic-export')
+    datapath = os.path.join(rootpath, 'data')
 
-f = open(os.path.join(rootpath, 'val_with_gradient.txt'), 'w')
+    datafilenames = listdir(datapath)
+    datafilenames.sort()
 
-first = True
-for filename in datafilenames:
-    filepath = os.path.join(datapath, filename)
+    f = open(os.path.join(rootpath, 'test_with_gradient.txt'), 'w')
 
-    if not exists(filepath):
-        print filepath + " doesn't exist, moving on..."
-        continue
+    first = True
+    for filename in datafilenames:
+        filepath = os.path.join(datapath, filename)
 
-    name, ext = os.path.splitext(filename)
+        if not exists(filepath):
+            print filepath + " doesn't exist, moving on..."
+            continue
 
-    if not ext == '.exr':
-        continue
+        name, ext = os.path.splitext(filename)
 
-    layers = multilayer_exr.open_multilayer_exr(filepath)
+        if not ext == '.exr':
+            continue
 
-    shading = layers['diff_dir'] + layers['diff_ind']
-    reflectance = layers['diff_col']
-    combined = shading * reflectance
+        layers = multilayer_exr.open_multilayer_exr(filepath)
 
-    shading = common.resize_and_crop_image(shading, resize, crop, keep_aspect_ratio=True)
-    reflectance = common.resize_and_crop_image(reflectance, resize, crop, keep_aspect_ratio=True)
-    combined = common.resize_and_crop_image(combined, resize, crop, keep_aspect_ratio=True)
+        shading = layers['diff_dir'] + layers['diff_ind']
+        reflectance = layers['diff_col']
+        combined = shading * reflectance
 
-    gray_combined = np.mean(combined, axis=2)
-    p = np.percentile(gray_combined, 0.01)
-    mask = (gray_combined > p).astype(np.float32)
+        shading = common.resize_and_crop_image(shading, resize, crop=None, keep_aspect_ratio=True)
+        reflectance = common.resize_and_crop_image(reflectance, resize, crop=None, keep_aspect_ratio=True)
+        combined = common.resize_and_crop_image(combined, resize, crop=None, keep_aspect_ratio=True)
 
-    b_x, b_y = common.computegradimgs(np.mean(shading, axis=2), np.mean(reflectance, axis=2), mask)
+        gray_combined = np.mean(combined, axis=2)
+        p = np.percentile(gray_combined, 0.01)
+        mask = (gray_combined > p).astype(np.float32)
 
-    convertedfilepathx = os.path.join(datapath, name + '-gradbinary-x-converted.png')
-    convertedfilepathy = os.path.join(datapath, name + '-gradbinary-y-converted.png')
-    shadingpath = os.path.join(datapath, name + '-shading.png')
-    reflectancepath = os.path.join(datapath, name + '-reflectance.png')
-    maskpath = os.path.join(datapath, name + '-mask.png')
-    combinedpath = os.path.join(datapath, name + '-combined.png')
+        b_x, b_y = common.computegradimgs(np.mean(shading, axis=2), np.mean(reflectance, axis=2), mask)
 
-    print 'shading max: {0} min: {1}'.format(np.max(shading), np.min(shading))
-    print 'reflectance max: {0} min: {1}'.format(np.max(reflectance), np.min(reflectance))
-    print 'combined max: {0} min: {1}'.format(np.max(combined), np.min(combined))
+        convertedfilepathx = os.path.join(datapath, name + '-gradbinary-x-converted.png')
+        convertedfilepathy = os.path.join(datapath, name + '-gradbinary-y-converted.png')
+        shadingpath = os.path.join(datapath, name + '-shading.png')
+        reflectancepath = os.path.join(datapath, name + '-reflectance.png')
+        maskpath = os.path.join(datapath, name + '-mask.png')
+        combinedpath = os.path.join(datapath, name + '-combined.png')
 
-    sp.misc.imsave(convertedfilepathx, b_x)
-    sp.misc.imsave(convertedfilepathy, b_y)
-    sp.misc.imsave(shadingpath, scale_then_to_srgb(shading))
-    sp.misc.imsave(reflectancepath, scale_then_to_srgb(reflectance))
-    sp.misc.imsave(maskpath, scale_then_to_srgb(mask))
-    sp.misc.imsave(combinedpath, scale_then_to_srgb(combined))
+        common.print_array_info(shading)
+        common.print_array_info(reflectance)
+        common.print_array_info(combined)
 
-    f.write('{0} {1} {2} {3}\n'.format(combinedpath, convertedfilepathx, convertedfilepathy, maskpath))
+        sp.misc.imsave(convertedfilepathx, b_x)
+        sp.misc.imsave(convertedfilepathy, b_y)
+        sp.misc.imsave(shadingpath, scale_then_to_srgb(shading))
+        sp.misc.imsave(reflectancepath, scale_then_to_srgb(reflectance))
+        sp.misc.imsave(maskpath, scale_then_to_srgb(mask))
+        sp.misc.imsave(combinedpath, scale_then_to_srgb(combined))
 
-    if first:
-        f = open(os.path.join(rootpath, 'train_with_gradient.txt'), 'w')
-        first = False
+        f.write('{0} {1} {2} {3}\n'.format(combinedpath, convertedfilepathx, convertedfilepathy, maskpath))
 
-f.close()
+        if first:
+            f = open(os.path.join(rootpath, 'train_with_gradient.txt'), 'w')
+            first = False
 
-print "Done!"
+    f.close()
+
+    print "Done!"

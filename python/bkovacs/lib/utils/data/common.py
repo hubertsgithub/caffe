@@ -98,11 +98,21 @@ def rgb_to_srgb(rgb):
     return ret
 
 
+def compute_crop_tuple(width, height, cropw, croph, croplen):
+    fromw = int(max(0, cropw - croplen / 2))
+    tow = int(min(width, cropw + croplen / 2))
+    fromh = int(max(0, croph - croplen / 2))
+    toh = int(min(height, croph + croplen / 2))
+    tup = (fromw, fromh, tow, toh)
+
+    return tup
+
+
 def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False, use_greater_side=True):
     '''
     Resizes and crops the middle of the provided image channel array
     '''
-    if len(ch_arr.shape) != 2:
+    if ch_arr.ndim != 2:
         raise ValueError('The provided image array should be two dimensional! Provided array dimensions: {0}'.format(ch_arr.shape))
 
     image = Image.fromarray(ch_arr)
@@ -124,12 +134,7 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False, use_g
     if crop is not None:
         w, h = image.size
         middle = [x / 2 for x in image.size]
-        fromw = max(0, middle[0] - crop / 2)
-        tow = min(w, middle[0] + crop / 2)
-        fromh = max(0, middle[1] - crop / 2)
-        toh = min(h, middle[1] + crop / 2)
-        tup = (fromw, fromh, tow, toh)
-        print tup
+        tup = compute_crop_tuple(w, h, middle[0], middle[1], crop)
         image = image.crop(tup)
 
     ret = np.array(image)
@@ -144,6 +149,34 @@ def resize_and_crop_image(arr, resize, crop, keep_aspect_ratio=False, use_greate
         res_arr = np.dstack(rets)
     elif len(arr.shape) == 2:
         res_arr = resize_and_crop_channel(arr, resize, crop, keep_aspect_ratio, use_greater_side)
+    else:
+        raise ValueError('The provided image array should have either 1 or 3 channels!')
+
+    return res_arr
+
+
+def crop_image_channel(ch_arr, cropw, croph, croplen):
+    if ch_arr.ndim != 2:
+        raise ValueError('The provided image array should be two dimensional! Provided array dimensions: {0}'.format(ch_arr.shape))
+
+    image = Image.fromarray(ch_arr)
+
+    w, h = image.size
+    tup = compute_crop_tuple(w, h, cropw, croph, croplen)
+    image = image.crop(tup)
+
+    ret = np.array(image)
+    return ret
+
+
+def crop_image(arr, cropw, croph, croplen):
+    if arr.ndim == 3:
+        rets = []
+        for c in range(3):
+            rets.append(crop_image_channel(arr[:, :, c], cropw, croph, croplen))
+        res_arr = np.dstack(rets)
+    elif arr.ndim == 2:
+        res_arr = crop_image_channel(arr, cropw, croph, croplen)
     else:
         raise ValueError('The provided image array should have either 1 or 3 channels!')
 
