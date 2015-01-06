@@ -107,14 +107,19 @@ def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLE
 
     # gamma correction
     if USESIMPLEGAMMAFORSAVE:
+        resizedimg = linimg ** (1. / 2.2)
         grayimg = grayimg ** (1. / 2.2)
         chromimg = chromimg ** (1. / 2.2)
     else:
+        resizedimg = common.rgb_to_srgb(linimg)
         grayimg = common.rgb_to_srgb(grayimg)
         chromimg = common.rgb_to_srgb(chromimg)
 
+    resizedimg_path = trunc_filepath + '-resized.png'
     grayimg_path = trunc_filepath + '-gray.png'
     chromimg_path = trunc_filepath + '-chrom.png'
+
+    common.save_image(resizedimg_path, resizedimg, is_srgb=False)
     common.save_image(grayimg_path, grayimg, is_srgb=False)
     common.save_image(chromimg_path, chromimg, is_srgb=False)
 
