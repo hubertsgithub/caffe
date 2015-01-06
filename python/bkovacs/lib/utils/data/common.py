@@ -3,6 +3,7 @@ import png
 import itertools
 import numpy as np
 import scipy as sp
+import math
 
 from lib.intrinsic import poisson
 
@@ -99,10 +100,12 @@ def rgb_to_srgb(rgb):
 
 
 def compute_crop_tuple(width, height, cropw, croph, croplen):
-    fromw = int(max(0, cropw - croplen / 2))
-    tow = int(min(width, cropw + croplen / 2))
-    fromh = int(max(0, croph - croplen / 2))
-    toh = int(min(height, croph + croplen / 2))
+    cropminus = math.floor(croplen / 2.)
+    cropplus = math.ceil(croplen / 2.)
+    fromw = int(max(0, cropw - cropminus))
+    tow = int(min(width, cropw + cropplus))
+    fromh = int(max(0, croph - cropminus))
+    toh = int(min(height, croph + cropplus))
     tup = (fromw, fromh, tow, toh)
 
     return tup
