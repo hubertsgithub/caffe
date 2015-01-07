@@ -4,7 +4,9 @@ import numpy as np
 import time
 
 from lib.utils.misc import packer
+from lib.utils.misc.progressbaraux import progress_bar_widgets
 from celeryconfig_local import PASSWORD, REDISIP
+from progressbar import ProgressBar
 
 REDIS_CONFIG = {'host': REDISIP, 'port': 6379, 'password': PASSWORD, 'db': 0}
 #REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
@@ -26,7 +28,6 @@ def computeScoreJob_sendresults(*args, **kwargs):
 
 
 def get_all_processed():
-    pattern = 'intrinsicresults-intermediary-class=([^-]*)-tag=([^-]*)-i=([^-]*)-j=([^-]*)'
     client = redis.StrictRedis(**REDIS_CONFIG)
     all_processed = set()
     for key in client.scan_iter('intrinsicresults-intermediary-class=*'):
@@ -38,8 +39,22 @@ def get_all_processed():
 def wait_all_results(nchoices_forclass, ntags):
     pattern = 'intrinsicresults-intermediary-class=([^-]*)-tag=([^-]*)-i=([^-]*)-j=([^-]*)'
     client = redis.StrictRedis(**REDIS_CONFIG)
-    readydict = {EstimatorClass : False for EstimatorClass in nchoices_forclass}
+    readydict = {EstimatorClass: False for EstimatorClass in nchoices_forclass}
     allready = False
+
+    allcount = 0
+    for nchoices in nchoices_forclass.itervalues():
+        allcount += nchoices
+
+    allcount *= ntags
+    print 'Waiting for {0} jobs to complete'.format(allcount)
+
+    pbar = ProgressBar(widgets=progress_bar_widgets(), maxval=allcount)
+    pbar_counter = 0
+    count_per_class = {}
+    for EstimatorClass in nchoices_forclass.iterkeys():
+        count_per_class[EstimatorClass] = 0
+
     while not allready:
         allready = True
         for EstimatorClass, nchoices in nchoices_forclass.iteritems():
@@ -56,11 +71,18 @@ def wait_all_results(nchoices_forclass, ntags):
                 count += 1
 
             print '{0} progress: {1}/{2}'.format(EstimatorClass, count, nchoices * ntags)
+            if count > count_per_class[EstimatorClass]:
+                pbar_counter += count - count_per_class[EstimatorClass]
+                pbar.update(pbar_counter)
+                count_per_class[EstimatorClass] = count
+
             if count == nchoices * ntags:
                 readydict[EstimatorClass] = True
                 print '{0} READY'.format(EstimatorClass)
 
         time.sleep(5)
+
+    pbar.finish()
 
     print 'ALL READY!'
 

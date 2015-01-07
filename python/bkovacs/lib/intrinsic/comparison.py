@@ -3,16 +3,13 @@ import sys
 
 import numpy as np
 import scipy as sp
-import redis
-import cPickle as pickle
-import datetime
 
-from lib.intrinsic import html, intrinsic
 from lib.intrinsic import html, intrinsic, tasks, resulthandler
 from lib.utils.data import common, whdr
 from lib.utils.misc import packer
 
 SCORE_FILENAME = 'ALLDATA.dat'
+
 
 def print_dot(i, num):
     NEWLINE_EVERY = 50
