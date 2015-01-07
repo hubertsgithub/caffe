@@ -5,12 +5,13 @@ from progressbar import (Bar, ETA, FileTransferSpeed, ProgressBar,
 
 
 def progress_bar(l, show_progress=True):
-	""" Returns an iterator for a list or queryset that renders a progress bar
-	with a countdown timer """
-	if show_progress:
+    """ Returns an iterator for a list or queryset that renders a progress bar
+    with a countdown timer """
+
+    if show_progress:
         return iterator_progress_bar(l)
-	else:
-		return l
+    else:
+        return l
 
 
 def progress_bar_widgets():
