@@ -5,11 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pylab
 import random
-import scipy as sp
 
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc.progressbaraux import progress_bar
 from lib.utils.data import common
+from lib.utils.misc import packer
 
 # Make sure that caffe is on the python path:
 sys.path.append(acrp('python'))
@@ -192,7 +192,7 @@ def compute_precision(confmx):
 
 
 def analyze_distance_metric(distmetricname, dists_equal, dists_notequal, stepcount, req_prec):
-    print '{0} distance metric'.format(distmetricname)
+    print '** {0} distance metric **'.format(distmetricname)
     avg_equal = np.mean(dists_equal)
     avg_notequal = np.mean(dists_notequal)
     print 'Average distance between patches with equal reflectance: {0}'.format(avg_equal)
@@ -241,6 +241,8 @@ if __name__ == '__main__':
         distances_equal.append([])
         distances_notequal.append([])
 
+    features = {}
+
     for l_idx, l in enumerate(progress_bar(sampled_lines)):
         #  f.write('{0} {1} {2} {3} {4} {5} {6}\n'.format(grayimg_path, chromimg_path, 1, p1x, p1y, p2x, p2y))
         tokens = l.split(' ')
@@ -267,6 +269,8 @@ if __name__ == '__main__':
         f1 = np.squeeze(f1)
         f2 = np.squeeze(f2)
 
+        features[l] = [f1, f2]
+
         for dm_idx, dm in enumerate(distmetrics):
             dist = dm['func'](f1, f2)
             if sim:
@@ -274,6 +278,7 @@ if __name__ == '__main__':
             else:
                 distances_notequal[dm_idx].append(dist)
 
+    packer.fpackb(features, 1.0, os.path.join(EXPROOTPATH, 'featuredata.dat'))
 
     for dm_idx, dm in enumerate(distmetrics):
         analyze_distance_metric(dm['name'], distances_equal[dm_idx], distances_notequal[dm_idx], STEPCOUNT, REQUIREDPRECISION)
