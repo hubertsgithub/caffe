@@ -50,6 +50,7 @@ def wait_all_results(nchoices_forclass, ntags):
     print 'Waiting for {0} jobs to complete'.format(allcount)
 
     pbar = ProgressBar(widgets=progress_bar_widgets(), maxval=allcount)
+    pbar.start()
     pbar_counter = 0
     count_per_class = {}
     for EstimatorClass in nchoices_forclass.iterkeys():
