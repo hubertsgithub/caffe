@@ -6,7 +6,8 @@ from lib.utils.misc.pathresolver import acrp
 
 # this script finds all the dense images and writes their name to a file
 origpath = acrp('data/iiw-dataset/data')
-outputfilepath = acrp('data/iiw-dataset/denseimages.txt')
+outputfilepath_dense = acrp('data/iiw-dataset/denseimages.txt')
+outputfilepath_others = acrp('data/iiw-dataset/all-except-denseimages.txt')
 
 origdirnames = listdir(origpath)
 # filter for only json files
@@ -14,8 +15,9 @@ origdirnames = [x for x in origdirnames if os.path.splitext(x)[1] == '.json']
 origdirnames.sort()
 
 denseimgcount = 0
+othersimgcount = 0
 
-with open(outputfilepath, 'w') as text_file:
+with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 'w') as others_file:
     for filename in origdirnames:
         print 'Processing file {0}...'.format(filename)
 
@@ -34,14 +36,16 @@ with open(outputfilepath, 'w') as text_file:
                 found = True
                 break
 
-        if not found:
-            continue
-
-        text_file.write(trunc_filename + '\n')
-        denseimgcount += 1
+        if found:
+            dense_file.write(trunc_filename + '\n')
+            denseimgcount += 1
+        else:
+            others_file.write(trunc_filename + '\n')
+            othersimgcount += 1
 
 
 print 'Found {0} dense images'.format(denseimgcount)
+print 'Found {0} other images'.format(othersimgcount)
 
 
 print 'Done.'

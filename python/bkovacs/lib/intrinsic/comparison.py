@@ -199,6 +199,7 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
                 else:
                     print 'Skipped (already processed): {0}'.format(key)
 
+
 def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE):
     """Script for running the algorithmic comparisons from the paper
 
