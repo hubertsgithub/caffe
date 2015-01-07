@@ -1,6 +1,5 @@
 """ Utilies related to performing batch processing  """
 
-from django.db.models.query import QuerySet
 from progressbar import (Bar, ETA, FileTransferSpeed, ProgressBar,
                          SimpleProgress)
 
@@ -9,10 +8,7 @@ def progress_bar(l, show_progress=True):
 	""" Returns an iterator for a list or queryset that renders a progress bar
 	with a countdown timer """
 	if show_progress:
-		if isinstance(l, QuerySet):
-			return queryset_progress_bar(l)
-		else:
-			return iterator_progress_bar(l)
+        return iterator_progress_bar(l)
 	else:
 		return l
 

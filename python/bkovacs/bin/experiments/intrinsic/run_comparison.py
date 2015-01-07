@@ -81,7 +81,9 @@ if __name__ == '__main__':
     PARTIALRESULTS = True
     option = sys.argv[1]
     if len(sys.argv) >= 3:
-        RERUNALLTASKS = bool(sys.argv[2])
+        RERUNALLTASKS = {'True': True, 'False': False}.get(sys.argv[2])
+        if RERUNALLTASKS is None:
+            raise ValueError('Invalid input argument for RERUNALLTASKS: {0}'.format(sys.argv[2]))
     else:
         RERUNALLTASKS = False
 
