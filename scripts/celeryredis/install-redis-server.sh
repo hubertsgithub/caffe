@@ -16,5 +16,7 @@ sudo chown redis:redis /data0/redisdata
 sudo service redis-server stop
 
 echo "Now go and edit /etc/redis/redis.conf"
-echo "Modify the working directory to \"/data0/redisdata\"!"
+echo "1. Modify the working directory to \"/data0/redisdata\"!"
+echo "2. Comment out binding, so the server will listen to all incoming requests!"
+echo "3. Set requirepass to the desired password"
 echo "Restart redis by \"redis-server /etc/redis/redis.conf\"!"
