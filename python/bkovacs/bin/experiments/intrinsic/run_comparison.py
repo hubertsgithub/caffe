@@ -72,12 +72,13 @@ ESTIMATORS = [
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2 or sys.argv[1] not in ['dispatch', 'aggregate']:
-        print 'Usage: run_comparison.py dispatch|aggregate RERUNALLTASKS=True|False?'
+    if len(sys.argv) < 2 or sys.argv[1] not in ['dispatch', 'aggregate', 'simple']:
+        print 'Usage: run_comparison.py dispatch|aggregate|simple RERUNALLTASKS=True|False?'
         sys.exit(1)
 
     ORACLEEACHIMAGE = True
     USESAVEDSCORES = False
+    PARTIALRESULTS = True
     option = sys.argv[1]
     if len(sys.argv) >= 3:
         RERUNALLTASKS = bool(sys.argv[2])
@@ -86,6 +87,10 @@ if __name__ == '__main__':
 
     if option == 'dispatch':
         comparison.dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, RERUNALLTASKS)
+    elif option == 'aggregate':
+        comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE, PARTIALRESULTS)
+    elif option == 'simple':
+        comparison.run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS)
     else:
-        comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE)
+        raise ValueError('Invalid option: {0}'.format(option))
 

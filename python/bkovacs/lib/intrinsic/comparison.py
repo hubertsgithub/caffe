@@ -7,6 +7,8 @@ import scipy as sp
 from lib.intrinsic import html, intrinsic, tasks, resulthandler
 from lib.utils.data import common, whdr
 from lib.utils.misc import packer
+from lib.utils.misc.progressbaraux import progress_bar
+from lib.utils.misc.mathhelper import nanrankdata
 
 SCORE_FILENAME = 'ALLDATA.dat'
 
@@ -91,7 +93,7 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
 
             print 'Estimating shading and reflectance for ' + tag
 
-            for j, params in enumerate(choices):
+            for j, params in progress_bar(enumerate(choices)):
                 estimator = EstimatorClass(**params)
                 est_shading, est_refl = estimator.estimate_shading_refl(*inp)
 
@@ -110,7 +112,7 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
         # Hold-one-out cross-validation
         print '  Final scores:'
         sys.stdout.flush()
-        for i, tag in enumerate(tags):
+        for i, tag in progress_bar(enumerate(tags)):
             inp = EstimatorClass.get_input(tag, DATASETCHOICE)
             inp = inp + (USE_L1,)
 
@@ -197,7 +199,7 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
                     print 'Skipped (already processed): {0}'.format(key)
 
 
-def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE):
+def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE, PARTIALRESULTS):
     """Script for running the algorithmic comparisons from the paper
 
         Roger Grosse, Micah Johnson, Edward Adelson, and William Freeman,
@@ -233,7 +235,9 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     if ioerr:
         USESAVEDSCORES = False
 
-    if not USESAVEDSCORES:
+    if PARTIALRESULTS:
+        allscores = {}
+    elif not USESAVEDSCORES:
         print 'Waiting for all results to be computed...'
         nchoices_forclass = {}
         for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
@@ -260,7 +264,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             scores = allscores[str(EstimatorClass)]
         else:
             # Collect intermediary results from workers
-            scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices)
+            scores = resulthandler.gather_intermediary_results(EstimatorClass, ntags, nchoices, PARTIALRESULTS)
             allscores[str(EstimatorClass)] = scores
 
         # Hold-one-out cross-validation
@@ -268,12 +272,16 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         sys.stdout.flush()
         for i, tag in enumerate(tags):
             # Get the best parameter configuration
-            if ORACLEEACHIMAGE:
-                best_choice = np.argmin(scores[i, :])
-            else:
-                other_inds = range(i) + range(i+1, ntags)
-                total_scores = np.sum(scores[other_inds, :], axis=0)
-                best_choice = np.argmin(total_scores)
+            try:
+                if ORACLEEACHIMAGE:
+                    best_choice = np.nanargmin(scores[i, :])
+                else:
+                    other_inds = range(i) + range(i+1, ntags)
+                    total_scores = np.sum(scores[other_inds, :], axis=0)
+                    best_choice = np.nanargmin(total_scores)
+            except ValueError:
+                # nanargmin found an all-NaN column, i.e. we don't have any results for a specific tag
+                best_choice = 0
 
             bestparam = choices[best_choice]
             score = scores[i, best_choice]
@@ -284,17 +292,17 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
             gen.text('Best parameters %s' % (bestparam))
             print '    %s: %1.3f' % (tag, score)
 
-        print '    average: %1.3f' % np.mean(results[e, :])
+        print '    average: %1.3f' % np.nanmean(results[e, :])
 
         gen.divider()
 
     gen.heading('Mean error')
-    ranks = [sp.stats.rankdata(results[:, i]) for i in range(ntags)]
+    ranks = [nanrankdata(results[:, i]) for i in range(ntags)]
     fullrankarr = np.transpose(np.vstack(ranks))
 
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
-        avg = np.mean(results[e, :])
-        avgrank = np.mean(fullrankarr[e, :])
+        avg = np.nanmean(results[e, :])
+        avgrank = np.nanmean(fullrankarr[e, :])
         gen.text('%s: mean error %1.3f; mean rank %1.2f' % (name, avg, avgrank))
 
     # Save valuable data to file
