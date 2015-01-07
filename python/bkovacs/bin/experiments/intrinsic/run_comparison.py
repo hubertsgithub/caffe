@@ -77,7 +77,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     ORACLEEACHIMAGE = True
-    USESAVEDSCORES = True
+    USESAVEDSCORES = False
     option = sys.argv[1]
     if len(sys.argv) >= 3:
         RERUNALLTASKS = bool(sys.argv[2])
