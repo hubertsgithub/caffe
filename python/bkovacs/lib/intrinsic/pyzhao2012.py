@@ -38,7 +38,7 @@ def run(img, mask, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_group_
 
     log_grayimg = np.where(mask, np.log(np.clip(grayimg, 0.0001, np.infty)), 0.)
 
-    computeRetinexContour(log_grayimg, chromimg, mask, threshold_chrom, max_inds)
+    #computeRetinexContour(log_grayimg, chromimg, mask, threshold_chrom, max_inds)
 
     #x0 = np.zeros(used_pxcount)
     #x0.fill(0)
@@ -202,10 +202,13 @@ def findIIWGroups(judgements, width, height, threshold_confidence):
 
 def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_chrom, max_inds):
     height, width = log_grayimg.shape
-    A = sp.sparse.lil_matrix((used_pxcount, used_pxcount))
     b = np.zeros(used_pxcount)
     c = 0.0
+    data = []
+    row = []
+    col = []
 
+    # TODO: Consider doing horizontal, vertical "gradients" separately, preallocating space for row, col, data arrays!
     print 'Adding matrix elements for Retinex constraint'
     # Retinex constraint
     for h in range(height):
@@ -225,13 +228,23 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
                 weight = computeWeight(chromimg, w, h, cw, ch, threshold_chrom)
                 q = used_inddic[(ch, cw)]
 
-                A[p, p] += (1 + weight) * lambda_l
-                A[p, q] += (-(1 + weight)) * lambda_l
-                A[q, p] += (-(1 + weight)) * lambda_l
-                A[q, q] += (1 + weight) * lambda_l
+                curval = (1 + weight) * lambda_l
+                row.append(p)
+                col.append(p)
+                data.append(curval)
+                row.append(p)
+                col.append(q)
+                data.append(-curval)
+                row.append(q)
+                col.append(p)
+                data.append(-curval)
+                row.append(q)
+                col.append(q)
+                data.append(curval)
 
-                b[p] += (-2 * weight * dI) * lambda_l
-                b[q] += (2 * weight * dI) * lambda_l
+                curval = (2 * weight * dI) * lambda_l
+                b[p] += -curval
+                b[q] += curval
 
                 c += (weight * dI * dI) * lambda_l
 
@@ -253,13 +266,23 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
             q = used_inddic[(ch, cw)]
             dI = log_grayimg[h, w] - log_grayimg[ch, cw]
 
-            A[p, p] += 1 * lambda_r * sampling_weight
-            A[p, q] += -1 * lambda_r * sampling_weight
-            A[q, p] += -1 * lambda_r * sampling_weight
-            A[q, q] += 1 * lambda_r * sampling_weight
+            curval = 1 * lambda_r * sampling_weight
+            row.append(p)
+            col.append(p)
+            data.append(curval)
+            row.append(p)
+            col.append(q)
+            data.append(-curval)
+            row.append(q)
+            col.append(p)
+            data.append(-curval)
+            row.append(q)
+            col.append(q)
+            data.append(curval)
 
-            b[p] += (-2 * dI) * lambda_r * sampling_weight
-            b[q] += (2 * dI) * lambda_r * sampling_weight
+            curval = (2 * dI) * lambda_r * sampling_weight
+            b[p] += -curval
+            b[q] += curval
 
             c += (dI * dI) * lambda_r * sampling_weight
 
@@ -267,11 +290,15 @@ def buildMatrices(log_grayimg, chromimg, used_inddic, used_pxcount, groups, lamb
     # absolute scale constraint
     for i in max_inds:
         p = used_inddic[(i[0], i[1])]
-        A[p, p] += 1 * lambda_a
+        row.append(p)
+        col.append(p)
+        data.append(1 * lambda_a)
+
         b[p] += -2 * abs_const_val * lambda_a
         c += abs_const_val ** 2 * lambda_a
 
     b *= -1
+    A = sp.sparse.coo_matrix((data, (row, col)), shape=(used_pxcount, used_pxcount)).tocsr()
     A *= 2
 
     return (A, b, c)
