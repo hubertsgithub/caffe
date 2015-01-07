@@ -298,7 +298,7 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
         gen.text('%s: mean error %1.3f; mean rank %1.2f' % (name, avg, avgrank))
 
     # Save valuable data to file
-    packer.fpackb({'results': results, 'allscores': allscores, 'best_params': best_params}, 1.1, os.path.join(RESULTS_DIR, SCORE_FILENAME))
+    packer.fpackb({'results': results, 'allscores': allscores, 'best_params': best_params, 'tags': tags}, 1.1, os.path.join(RESULTS_DIR, SCORE_FILENAME))
 
 
 def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore):
