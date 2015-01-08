@@ -8,6 +8,7 @@ from lib.utils.misc.pathresolver import acrp
 origpath = acrp('data/iiw-dataset/data')
 outputfilepath_dense = acrp('data/iiw-dataset/denseimages.txt')
 outputfilepath_others = acrp('data/iiw-dataset/all-except-denseimages.txt')
+outputfilepath_all = acrp('data/iiw-dataset/all-images.txt')
 
 origdirnames = listdir(origpath)
 # filter for only json files
@@ -17,7 +18,7 @@ origdirnames.sort()
 denseimgcount = 0
 othersimgcount = 0
 
-with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 'w') as others_file:
+with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 'w') as others_file, open(outputfilepath_all, 'w') as all_file:
     for filename in origdirnames:
         print 'Processing file {0}...'.format(filename)
 
@@ -43,9 +44,12 @@ with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 
             others_file.write(trunc_filename + '\n')
             othersimgcount += 1
 
+        all_file.write(trunc_filename + '\n')
+
 
 print 'Found {0} dense images'.format(denseimgcount)
 print 'Found {0} other images'.format(othersimgcount)
+print '{0} images altogether'.format(denseimgcount + othersimgcount)
 
 
 print 'Done.'
