@@ -52,9 +52,7 @@ def wait_all_results(nchoices_forclass, ntags):
     pbar = ProgressBar(widgets=progress_bar_widgets(), maxval=allcount)
     pbar.start()
     pbar_counter = 0
-    count_per_class = {}
-    for EstimatorClass in nchoices_forclass.iterkeys():
-        count_per_class[EstimatorClass] = 0
+    visited = set()
 
     while not allready:
         allready = True
@@ -65,17 +63,17 @@ def wait_all_results(nchoices_forclass, ntags):
             allready = False
             count = 0
             for key in client.scan_iter('intrinsicresults-intermediary-class={0}*'.format(EstimatorClass)):
-                match = re.search(pattern, key)
-                estclass, tag, i, j = match.groups()
-                i = int(i)
-                j = int(j)
                 count += 1
 
-            print '{0} progress: {1}/{2}'.format(EstimatorClass, count, nchoices * ntags)
-            if count > count_per_class[EstimatorClass]:
-                pbar_counter += count - count_per_class[EstimatorClass]
+                # Don't show the progress for a key twice
+                if key in visited:
+                    continue
+
+                pbar_counter += 1
                 pbar.update(pbar_counter)
-                count_per_class[EstimatorClass] = count
+                visited.add(key)
+
+            print '{0} progress: {1}/{2}'.format(EstimatorClass, count, nchoices * ntags)
 
             if count == nchoices * ntags:
                 readydict[EstimatorClass] = True

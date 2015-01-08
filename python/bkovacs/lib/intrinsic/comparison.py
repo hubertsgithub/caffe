@@ -43,7 +43,7 @@ def save_estimates(gen, image, est_shading, est_refl, mask):
     gen.image(output)
 
 
-def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS):
+def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, ORACLEEACHIMAGE):
     """Script for running the algorithmic comparisons from the paper
 
         Roger Grosse, Micah Johnson, Edward Adelson, and William Freeman,
@@ -128,9 +128,13 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
             else:
                 raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
-            other_inds = range(i) + range(i+1, ntags)
-            total_scores = np.sum(scores[other_inds, :], axis=0)
-            best_choice = np.argmin(total_scores)
+            if ORACLEEACHIMAGE:
+                best_choice = np.argmin(scores[i, :])
+            else:
+                other_inds = range(i) + range(i+1, ntags)
+                total_scores = np.sum(scores[other_inds, :], axis=0)
+                best_choice = np.argmin(total_scores)
+
             params = choices[best_choice]
             estimator = EstimatorClass(**params)
             est_shading, est_refl = estimator.estimate_shading_refl(*inp)

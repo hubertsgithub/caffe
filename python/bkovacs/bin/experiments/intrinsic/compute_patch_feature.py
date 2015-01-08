@@ -10,6 +10,7 @@ from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc.progressbaraux import progress_bar
 from lib.utils.data import common
 from lib.utils.misc import packer
+from lib.utils.net.misc import init_net
 
 # Make sure that caffe is on the python path:
 sys.path.append(acrp('python'))
@@ -65,25 +66,6 @@ def compute_feature(net, input_name, input_image, px, py, croplen):
     prediction = net.forward_all(blobs=['fc7'], **{input_name: caffe_in[np.newaxis, :, :, :]})
 
     return prediction
-
-
-def init_net(model_file, pretrained_weights, mean_file, input_name):
-    net = caffe.Net(model_file, pretrained_weights)
-    net.set_phase_test()
-    net.set_mode_cpu()
-    net.set_channel_swap(input_name, (2, 1, 0))
-    net.set_raw_scale(input_name, 255)
-
-    blob = caffe.proto.caffe_pb2.BlobProto()
-    data = open(mean_file, 'rb').read()
-    blob.ParseFromString(data)
-    meanarr = caffe.io.blobproto_to_array(blob)
-    # Remove the first dimension (batch), which is 1 anyway
-    meanarr = np.squeeze(meanarr, axis=0)
-
-    net.set_mean(input_name, meanarr)
-
-    return net
 
 
 def plot_and_save_2D_array(filename, arr, xlabel='', xinterval=None, ylabel='', yinterval=None):
