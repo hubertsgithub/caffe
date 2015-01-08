@@ -10,7 +10,7 @@ from lib.utils.misc.progressbaraux import progress_bar, progress_bar_widgets
 from lib.utils.data import common, fileproc
 from lib.utils.misc import packer
 from lib.utils.net.misc import init_net
-from lib.utils.train.ml import split_train_test
+from lib.utils.train.ml import split_train_val_test
 
 # Make sure that caffe is on the python path:
 sys.path.append(acrp('python'))
@@ -28,7 +28,7 @@ def build_matrices(data_set, datarootpath, features):
     output_blobs = [f['blobname'] for f in features]
 
     matrices = {}
-    n_samples = len(train_set)
+    n_samples = len(data_set)
     Xs = []
     ys = []
 
@@ -47,7 +47,7 @@ def build_matrices(data_set, datarootpath, features):
     pbar = ProgressBar(widgets=progress_bar_widgets(), maxval=n_samples)
     pbar.start()
 
-    for i, (tag, threshold_chrom) in enumerate(train_set.iteritems()):
+    for i, (tag, threshold_chrom) in enumerate(data_set.iteritems()):
         # TODO: Linearize image??
         img = common.load_image(os.path.join(DATAROOTPATH, '{0}.png'.format(tag)), is_srgb=False)
 
@@ -89,7 +89,10 @@ if __name__ == '__main__':
         best_thresholds[tag] = threshold_chrom
 
     # split into training and testsets
-    train_set, test_set = split_train_test(best_thresholds, 0.2)
+    # 0: train, 1: val, 2: test
+    splits = split_train_val_test(best_thresholds, 0.2, 0.2)
+    s = ' '.join([str(len(split)) for split in splits])
+    print 'Final sizes: {0}'.format(s)
 
     features = []
     features.append({'blobname': 'fc7'})
@@ -97,23 +100,28 @@ if __name__ == '__main__':
 
     #train_set, _ = split_train_test(train_set, 0.9)
     # Build training matrices: X, y
-    Xs_train, ys_train = build_matrices(train_set, DATAROOTPATH, features)
-    Xs_test, ys_test = build_matrices(test_set, DATAROOTPATH, features)
+    Xys = []
+    for s in splits:
+        Xys.append(build_matrices(s, DATAROOTPATH, features))
 
-    packer.fpackb({'Xs_train': Xs_train, 'ys_train': ys_train, 'train_set': train_set, 'Xs_test': Xs_test, 'ys_test': ys_test, 'test_set': test_set}, 1.0, FEATURES_FILEPATH)
+    packer.fpackb({'Xys': Xys, 'splits': splits}, 1.0, FEATURES_FILEPATH)
     model = LinearRegression(fit_intercept=True, normalize=False, copy_X=True)
     #model = LogisticRegression(penalty='l2', dual=False, tol=0.0001, C=1.0, fit_intercept=True, intercept_scaling=1, class_weight=None, random_state=None)
 
     for i in range(len(features)):
-        X = Xs_train[i]
-        y = ys_train[i]
+        # Get matrices for training set
+        Xs, ys = Xys[0]
+        X = Xs[i]
+        y = ys[i]
         model.fit(X, y)
 
         training_score = model.score(X, y)
         print 'Training score: {0}'.format(training_score)
 
-        X = Xs_test[i]
-        y = ys_test[i]
+        # Get matrices for test set
+        Xs, ys = Xys[2]
+        X = Xs[i]
+        y = ys[i]
         test_score = model.score(X, y)
         print 'Test score: {0}'.format(test_score)
 
