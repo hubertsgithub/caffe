@@ -106,6 +106,10 @@ def get_scores_by_keys(scores, keys_to_get, client, pattern, visited):
         version, value = packer.unpackb(packed)
         visited.add(key)
 
+        # if the value is NaN, the task failed with LinAlgError
+        if np.isnan(value):
+            print 'Task {0} failed with LinAlgError (probably SVD did not converge)'.format(key)
+
         scores[i, j] = value
 
 

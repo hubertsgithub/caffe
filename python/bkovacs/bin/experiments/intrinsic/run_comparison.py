@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     ORACLEEACHIMAGE = True
     USESAVEDSCORES = False
-    PARTIALRESULTS = True
+    PARTIALRESULTS = False
     option = sys.argv[1]
     if len(sys.argv) >= 3:
         RERUNALLTASKS = {'True': True, 'False': False}.get(sys.argv[2])

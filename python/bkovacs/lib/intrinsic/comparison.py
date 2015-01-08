@@ -162,6 +162,7 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
 def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, RERUNALLTASKS):
     tags = ALL_TAGS
     if not RERUNALLTASKS:
+        print 'Getting all processed tasks, these won\'t be started again'
         all_processed = resulthandler.get_all_processed()
 
     if RERUNALLTASKS:
@@ -177,6 +178,7 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
         print 'Deleting {0} results before starting new jobs'.format(len(keys_to_delete))
         resulthandler.delete_results(keys_to_delete)
 
+    started_job_count = 0
     for e, (name, EstimatorClass) in enumerate(ESTIMATORS):
         print 'Evaluating (starting jobs) %s' % name
         sys.stdout.flush()
@@ -195,8 +197,11 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
 
                 if runtask:
                     tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=False)
+                    started_job_count += 1
                 else:
                     print 'Skipped (already processed): {0}'.format(key)
+
+    print 'Started {0} jobs'.format(started_job_count)
 
 
 def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE, PARTIALRESULTS):
@@ -334,14 +339,16 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRO
         raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
     estimator = EstimatorClass(**params)
-    est_shading, est_refl = estimator.estimate_shading_refl(*inp)
-
-    if ERRORMETRIC == 0:
-        score = intrinsic.score_image(true_shading, true_refl, est_shading, est_refl, mask)
-    elif ERRORMETRIC == 1:
-        score = whdr.compute_whdr(est_refl, judgements)
-    else:
-        raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+    try:
+        est_shading, est_refl = estimator.estimate_shading_refl(*inp)
+        if ERRORMETRIC == 0:
+            score = intrinsic.score_image(true_shading, true_refl, est_shading, est_refl, mask)
+        elif ERRORMETRIC == 1:
+            score = whdr.compute_whdr(est_refl, judgements)
+        else:
+            raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+    except sp.linalg.LinAlgError:
+        score = np.nan
 
     if isFinalScore:
         key = 'intrinsicresults-final-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
