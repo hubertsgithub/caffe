@@ -126,19 +126,20 @@ if __name__ == '__main__':
 
     n_cpus = multiprocessing.cpu_count() - 1
     models = {}
+    cv_folds = n_cpus
 
     if 'RidgeCV' in usedmodels:
         ridgecv_alphas = np.logspace(-5.0, 1.0, 50)
         print 'Trying alphas for RidgeCV: {0}'.format(ridgecv_alphas)
-        models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=None, gcv_mode=None, store_cv_values=False)
+        models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=cv_folds, gcv_mode=None, store_cv_values=False)
 
     if 'LassoCV' in usedmodels:
-        models['LassoCV'] = LassoCV(eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, copy_X=True, cv=None, verbose=True, n_jobs=n_cpus, positive=False)
+        models['LassoCV'] = LassoCV(eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, copy_X=True, cv=cv_folds, verbose=True, n_jobs=n_cpus, positive=False)
 
-    if 'ElasticNetCV' is usedmodels:
+    if 'ElasticNetCV' in usedmodels:
         elasticnetcv_l1_ratios = np.linspace(0.001, 0.999, 50)
         print 'Trying l1_ratios for ElasticNetCV: {0}'.format(elasticnetcv_l1_ratios)
-        models['ElasticNetCV'] = ElasticNetCV(l1_ratio=elasticnetcv_l1_ratios, eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, cv=None, copy_X=True, verbose=True, n_jobs=n_cpus, positive=False)
+        models['ElasticNetCV'] = ElasticNetCV(l1_ratio=elasticnetcv_l1_ratios, eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, cv=cv_folds, copy_X=True, verbose=True, n_jobs=n_cpus, positive=False)
 
     n_features = len(features)
     n_models = len(models)
@@ -160,8 +161,8 @@ if __name__ == '__main__':
             X = Xs[i]
             y = ys[i]
 
-            X = X[np.random.choice(X.shape[0], size=samplecount), :]
-            y = y[np.random.choice(y.shape[0], size=samplecount)]
+            #X = X[np.random.choice(X.shape[0], size=samplecount), :]
+            #y = y[np.random.choice(y.shape[0], size=samplecount)]
             model.fit(X, y)
 
             params = {}
