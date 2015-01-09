@@ -22,9 +22,9 @@ PRETRAINED_WEIGHTS = acrp('models/vgg_cnn_m/VGG_CNN_M.caffemodel')
 DATAROOTPATH = acrp('data/iiw-dataset/data')
 TRAINING_FILEPATH = acrp('experiments/mitintrinsic/allresults/best-thresholdvalues.txt')
 FEATURES_FILEPATH = acrp('experiments/mitintrinsic/allresults/features.dat')
-SCORES_FILEPATH = acrp('experiments/mitintrinsic/allresults/retinex-threshold-training-scores.dat')
+SCORES_FILEPATHBASE = acrp('experiments/mitintrinsic/allresults/retinex-threshold-training-scores')
 MEAN_FILE = acrp('models/vgg_cnn_m/VGG_mean.binaryproto')
-USE_SAVED_FEATURES = False
+USE_SAVED_FEATURES = True
 
 
 def build_matrices(data_set, datarootpath, features):
@@ -78,7 +78,14 @@ def compute_feature(net, input_name, input_image, output_blobs):
 
 
 if __name__ == '__main__':
-    #test_alexnet()
+    possiblemodels = ['RidgeCV', 'LassoCV', 'ElasticNetCV']
+    usedmodels = sys.argv[1:]
+    if len(usedmodels) == 0 or not np.all([x in possiblemodels for x in usedmodels]):
+        print 'The possible models are: {0}'.format(possiblemodels)
+        sys.exit(1)
+
+    print 'Using models: {0}'.format(usedmodels)
+
     lines = fileproc.freadlines(TRAINING_FILEPATH)
 
     best_thresholds = {}
@@ -120,17 +127,18 @@ if __name__ == '__main__':
     n_cpus = multiprocessing.cpu_count() - 1
     models = {}
 
-    ridgecv_alphas = np.logspace(0.0, 1.0, 5)
-    print 'Trying alphas for RidgeCV: {0}'.format(ridgecv_alphas)
-    models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=None, gcv_mode=None, store_cv_values=False)
+    if 'RidgeCV' in usedmodels:
+        ridgecv_alphas = np.logspace(0.0, 1.0, 5)
+        print 'Trying alphas for RidgeCV: {0}'.format(ridgecv_alphas)
+        models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=None, gcv_mode=None, store_cv_values=False)
 
-    #models['LinearRegression'] = LinearRegression(fit_intercept=True, normalize=False, copy_X=True)
+    if 'LassoCV' in usedmodels:
+        models['LassoCV'] = LassoCV(eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, copy_X=True, cv=None, verbose=True, n_jobs=n_cpus, positive=False)
 
-    models['LassoCV'] = LassoCV(eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, copy_X=True, cv=None, verbose=True, n_jobs=n_cpus, positive=False)
-
-    elasticnetcv_l1_ratios = np.linspace(0.1, 0.9, 5)
-    print 'Trying l1_ratios for ElasticNetCV: {0}'.format(elasticnetcv_l1_ratios)
-    models['ElasticNetCV'] = ElasticNetCV(l1_ratio=elasticnetcv_l1_ratios, eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, cv=None, copy_X=True, verbose=True, n_jobs=n_cpus, positive=False)
+    if 'ElasticNetCV' is usedmodels:
+        elasticnetcv_l1_ratios = np.linspace(0.1, 0.9, 5)
+        print 'Trying l1_ratios for ElasticNetCV: {0}'.format(elasticnetcv_l1_ratios)
+        models['ElasticNetCV'] = ElasticNetCV(l1_ratio=elasticnetcv_l1_ratios, eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, cv=None, copy_X=True, verbose=True, n_jobs=n_cpus, positive=False)
 
     n_features = len(features)
     n_models = len(models)
@@ -138,20 +146,24 @@ if __name__ == '__main__':
     pbar_counter = 0
     pbar.start()
 
-    scores = np.empty((n_features, n_models))
-    best_params = [[] for _ in xrange(n_features)]
+    scores = [{} for _ in xrange(n_features)]
+    best_params = [{} for _ in xrange(n_features)]
+    samplecount = 500
 
     for i in range(n_features):
         print 'Training and testing for feature {0}'.format(features[i]['blobname'])
-        for j, (name, model) in enumerate(models.iteritems()):
-            print 'Using model {0}'.format(name)
+        for j, (modelname, model) in enumerate(models.iteritems()):
+            print 'Using model {0}'.format(modelname)
 
             # Get matrices for training set
             Xs, ys = Xys[0]
             X = Xs[i]
             y = ys[i]
+
+            #X = X[np.random.choice(X.shape[0], size=samplecount), :]
+            #y = y[np.random.choice(y.shape[0], size=samplecount)]
             model.fit(X, y)
-            best_params[i].append(model.get_params())
+            best_params[i][modelname] = model.get_params()
 
             training_score = model.score(X, y)
             print 'Training score: {0}'.format(training_score)
@@ -162,11 +174,13 @@ if __name__ == '__main__':
             y = ys[i]
             test_score = model.score(X, y)
             print 'Test score: {0}'.format(test_score)
+            scores[i][modelname] = test_score
 
             pbar_counter += 1
             pbar.update(pbar_counter)
 
     pbar.finish()
 
-    packer.fpackb({'scores': scores, 'best_params': best_params}, 1.0, SCORES_FILEPATH)
+    packer.fpackb({'scores': scores, 'best_params': best_params}, 1.0, '{0}-{1}.dat'.format(SCORES_FILEPATHBASE, '-'.join(usedmodels)))
+
 

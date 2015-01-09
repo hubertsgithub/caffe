@@ -142,8 +142,8 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
                 total_scores = np.sum(scores[other_inds, :], axis=0)
                 best_choice = np.argmin(total_scores)
 
-            params = choices[best_choice]
-            estimator = EstimatorClass(**params)
+            bestparam = choices[best_choice]
+            estimator = EstimatorClass(**bestparam)
             est_shading, est_refl = estimator.estimate_shading_refl(*inp)
 
             if ERRORMETRIC == 0:
