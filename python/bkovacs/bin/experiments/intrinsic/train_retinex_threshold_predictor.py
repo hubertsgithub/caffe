@@ -1,8 +1,9 @@
 import sys
 import os
+import multiprocessing
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression, RidgeCV, ElasticNetCV, LassoCV
 from progressbar import ProgressBar
 
 from lib.utils.misc.pathresolver import acrp
@@ -10,7 +11,7 @@ from lib.utils.misc.progressbaraux import progress_bar, progress_bar_widgets
 from lib.utils.data import common, fileproc
 from lib.utils.misc import packer
 from lib.utils.net.misc import init_net
-from lib.utils.train.ml import split_train_val_test
+from lib.utils.train.ml import split_train_test
 
 # Make sure that caffe is on the python path:
 sys.path.append(acrp('python'))
@@ -21,7 +22,9 @@ PRETRAINED_WEIGHTS = acrp('models/vgg_cnn_m/VGG_CNN_M.caffemodel')
 DATAROOTPATH = acrp('data/iiw-dataset/data')
 TRAINING_FILEPATH = acrp('experiments/mitintrinsic/allresults/best-thresholdvalues.txt')
 FEATURES_FILEPATH = acrp('experiments/mitintrinsic/allresults/features.dat')
+SCORES_FILEPATH = acrp('experiments/mitintrinsic/allresults/retinex-threshold-training-scores.dat')
 MEAN_FILE = acrp('models/vgg_cnn_m/VGG_mean.binaryproto')
+USE_SAVED_FEATURES = False
 
 
 def build_matrices(data_set, datarootpath, features):
@@ -76,9 +79,6 @@ def compute_feature(net, input_name, input_image, output_blobs):
 
 if __name__ == '__main__':
     #test_alexnet()
-    input_name = 'data'
-    net = init_net(MODEL_FILE, PRETRAINED_WEIGHTS, MEAN_FILE, input_name)
-
     lines = fileproc.freadlines(TRAINING_FILEPATH)
 
     best_thresholds = {}
@@ -88,45 +88,85 @@ if __name__ == '__main__':
 
         best_thresholds[tag] = threshold_chrom
 
-    # split into training and testsets
-    # 0: train, 1: val, 2: test
-    splits = split_train_val_test(best_thresholds, 0.2, 0.2)
-    s = ' '.join([str(len(split)) for split in splits])
-    print 'Final sizes: {0}'.format(s)
+    if USE_SAVED_FEATURES:
+        print 'Reading computed features from {0}'.format(FEATURES_FILEPATH)
+        dic = packer.funpackb_version(1.0, FEATURES_FILEPATH)
+        Xys = dic['Xys']
+        splits = dic['splits']
+        features = dic['features']
+    else:
+        features = []
+        features.append({'blobname': 'fc7'})
+        features.append({'blobname': 'pool5'})
 
-    features = []
-    features.append({'blobname': 'fc7'})
-    features.append({'blobname': 'pool5'})
+        print 'Computing features for {0} images and {1} different feature configurations'.format(len(best_thresholds), len(features))
 
-    #train_set, _ = split_train_test(train_set, 0.9)
-    # Build training matrices: X, y
-    Xys = []
-    for s in splits:
-        Xys.append(build_matrices(s, DATAROOTPATH, features))
+        # split into training and testsets
+        # 0: train, 1: val, 2: test
+        splits = split_train_test(best_thresholds, 0.2, 0.2)
+        s = ' '.join([str(len(split)) for split in splits])
+        print 'Final sizes: {0}'.format(s)
 
-    packer.fpackb({'Xys': Xys, 'splits': splits}, 1.0, FEATURES_FILEPATH)
-    model = LinearRegression(fit_intercept=True, normalize=False, copy_X=True)
-    #model = LogisticRegression(penalty='l2', dual=False, tol=0.0001, C=1.0, fit_intercept=True, intercept_scaling=1, class_weight=None, random_state=None)
+        input_name = 'data'
+        net = init_net(MODEL_FILE, PRETRAINED_WEIGHTS, MEAN_FILE, input_name)
 
-    for i in range(len(features)):
-        # Get matrices for training set
-        Xs, ys = Xys[0]
-        X = Xs[i]
-        y = ys[i]
-        model.fit(X, y)
+        # Build training matrices: X, y
+        Xys = []
+        for s in splits:
+            Xys.append(build_matrices(s, DATAROOTPATH, features))
 
-        training_score = model.score(X, y)
-        print 'Training score: {0}'.format(training_score)
+    packer.fpackb({'Xys': Xys, 'splits': splits, 'features': features}, 1.0, FEATURES_FILEPATH)
 
-        # Get matrices for test set
-        Xs, ys = Xys[2]
-        X = Xs[i]
-        y = ys[i]
-        test_score = model.score(X, y)
-        print 'Test score: {0}'.format(test_score)
+    n_cpus = multiprocessing.cpu_count() - 1
+    models = {}
 
+    ridgecv_alphas = np.logspace(0.0, 1.0, 5)
+    print 'Trying alphas for RidgeCV: {0}'.format(ridgecv_alphas)
+    models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=None, gcv_mode=None, store_cv_values=False)
 
+    #models['LinearRegression'] = LinearRegression(fit_intercept=True, normalize=False, copy_X=True)
 
+    models['LassoCV'] = LassoCV(eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, copy_X=True, cv=None, verbose=True, n_jobs=n_cpus, positive=False)
 
+    elasticnetcv_l1_ratios = np.linspace(0.1, 0.9, 5)
+    print 'Trying l1_ratios for ElasticNetCV: {0}'.format(elasticnetcv_l1_ratios)
+    models['ElasticNetCV'] = ElasticNetCV(l1_ratio=elasticnetcv_l1_ratios, eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, cv=None, copy_X=True, verbose=True, n_jobs=n_cpus, positive=False)
 
+    n_features = len(features)
+    n_models = len(models)
+    pbar = ProgressBar(widgets=progress_bar_widgets(), maxval=n_features * n_models)
+    pbar_counter = 0
+    pbar.start()
+
+    scores = np.empty((n_features, n_models))
+    best_params = [[] for _ in xrange(n_features)]
+
+    for i in range(n_features):
+        print 'Training and testing for feature {0}'.format(features[i]['blobname'])
+        for j, (name, model) in enumerate(models.iteritems()):
+            print 'Using model {0}'.format(name)
+
+            # Get matrices for training set
+            Xs, ys = Xys[0]
+            X = Xs[i]
+            y = ys[i]
+            model.fit(X, y)
+            best_params[i].append(model.get_params())
+
+            training_score = model.score(X, y)
+            print 'Training score: {0}'.format(training_score)
+
+            # Get matrices for test set
+            Xs, ys = Xys[1]
+            X = Xs[i]
+            y = ys[i]
+            test_score = model.score(X, y)
+            print 'Test score: {0}'.format(test_score)
+
+            pbar_counter += 1
+            pbar.update(pbar_counter)
+
+    pbar.finish()
+
+    packer.fpackb({'scores': scores, 'best_params': best_params}, 1.0, SCORES_FILEPATH)
 

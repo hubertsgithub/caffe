@@ -36,7 +36,7 @@ elif DATASETCHOICE == 1:
     ERRORMETRIC = 0  # LMSE
 elif DATASETCHOICE == 2:
     ALL_TAGS = SETIIWDENSE
-    #ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
+    ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
     ERRORMETRIC = 1  # WHDR
 else:
     raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))
@@ -80,6 +80,7 @@ if __name__ == '__main__':
     ORACLEEACHIMAGE = True
     USESAVEDSCORES = False
     PARTIALRESULTS = False
+    IMAGESFORALLPARAMS = True
     option = sys.argv[1]
     if len(sys.argv) >= 3:
         RERUNALLTASKS = {'True': True, 'False': False}.get(sys.argv[2])
@@ -93,7 +94,7 @@ if __name__ == '__main__':
     elif option == 'aggregate':
         comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE, PARTIALRESULTS)
     elif option == 'simple':
-        comparison.run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, ORACLEEACHIMAGE)
+        comparison.run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, ORACLEEACHIMAGE, IMAGESFORALLPARAMS)
     else:
         raise ValueError('Invalid option: {0}'.format(option))
 

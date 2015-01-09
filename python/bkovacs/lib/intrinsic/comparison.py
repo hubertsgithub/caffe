@@ -43,7 +43,7 @@ def save_estimates(gen, image, est_shading, est_refl, mask):
     gen.image(output)
 
 
-def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, ORACLEEACHIMAGE):
+def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, ORACLEEACHIMAGE, IMAGESFORALLPARAMS):
     """Script for running the algorithmic comparisons from the paper
 
         Roger Grosse, Micah Johnson, Edward Adelson, and William Freeman,
@@ -81,11 +81,13 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
             # Estimators know what input they expect (grayscale image, color image, etc.)
             inp = EstimatorClass.get_input(tag, DATASETCHOICE)
 
+            image = intrinsic.load_object(tag, 'diffuse', DATASETCHOICE)
+            mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
+
             if ERRORMETRIC == 0:
                 true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
                 true_refl = intrinsic.load_object(tag, 'reflectance', DATASETCHOICE)
                 true_refl = np.mean(true_refl, axis=2)
-                mask = intrinsic.load_object(tag, 'mask', DATASETCHOICE)
             elif ERRORMETRIC == 1:
                 judgements = intrinsic.load_object(tag, 'judgements', DATASETCHOICE)
             else:
@@ -103,6 +105,11 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
                     scores[i, j] = whdr.compute_whdr(est_refl, judgements)
                 else:
                     raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
+
+                if IMAGESFORALLPARAMS:
+                    gen.text('%s: %1.3f' % (tag, scores[i, j]))
+                    gen.text('Parameters %s' % (params))
+                    save_estimates(gen, image, est_shading, est_refl, mask)
 
                 print 'Params: {0}'.format(params)
                 print 'Score: {0}'.format(scores[i, j])
@@ -147,7 +154,7 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
                 raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
             gen.text('%s: %1.3f' % (tag, score))
-
+            gen.text('Best parameters %s' % (bestparam))
             save_estimates(gen, image, est_shading, est_refl, mask)
 
             print '    %s: %1.3f' % (tag, score)
