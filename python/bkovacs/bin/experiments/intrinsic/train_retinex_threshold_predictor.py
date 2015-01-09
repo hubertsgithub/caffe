@@ -128,7 +128,7 @@ if __name__ == '__main__':
     models = {}
 
     if 'RidgeCV' in usedmodels:
-        ridgecv_alphas = np.logspace(0.0, 1.0, 5)
+        ridgecv_alphas = np.logspace(-5.0, 1.0, 50)
         print 'Trying alphas for RidgeCV: {0}'.format(ridgecv_alphas)
         models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=None, gcv_mode=None, store_cv_values=False)
 
@@ -136,7 +136,7 @@ if __name__ == '__main__':
         models['LassoCV'] = LassoCV(eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, copy_X=True, cv=None, verbose=True, n_jobs=n_cpus, positive=False)
 
     if 'ElasticNetCV' is usedmodels:
-        elasticnetcv_l1_ratios = np.linspace(0.1, 0.9, 5)
+        elasticnetcv_l1_ratios = np.linspace(0.001, 0.999, 50)
         print 'Trying l1_ratios for ElasticNetCV: {0}'.format(elasticnetcv_l1_ratios)
         models['ElasticNetCV'] = ElasticNetCV(l1_ratio=elasticnetcv_l1_ratios, eps=0.001, n_alphas=100, alphas=None, fit_intercept=True, normalize=False, precompute='auto', max_iter=5000, tol=0.0001, cv=None, copy_X=True, verbose=True, n_jobs=n_cpus, positive=False)
 
@@ -163,8 +163,14 @@ if __name__ == '__main__':
             X = X[np.random.choice(X.shape[0], size=samplecount), :]
             y = y[np.random.choice(y.shape[0], size=samplecount)]
             model.fit(X, y)
-            print 'Best parameters: {0}'.format(model.get_params())
-            best_params[i][modelname] = model.get_params()
+
+            params = {}
+            params['alpha'] = model.alpha_
+            if modelname == 'ElasticNetCV':
+                params['l1_ratio'] = model.l1_ratio_
+
+            print 'Best parameters: {0}'.format(params)
+            best_params[i][modelname] = params
 
             training_score = model.score(X, y)
             print 'Training score: {0}'.format(training_score)
