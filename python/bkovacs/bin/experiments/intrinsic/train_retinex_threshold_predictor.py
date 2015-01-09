@@ -160,9 +160,10 @@ if __name__ == '__main__':
             X = Xs[i]
             y = ys[i]
 
-            #X = X[np.random.choice(X.shape[0], size=samplecount), :]
-            #y = y[np.random.choice(y.shape[0], size=samplecount)]
+            X = X[np.random.choice(X.shape[0], size=samplecount), :]
+            y = y[np.random.choice(y.shape[0], size=samplecount)]
             model.fit(X, y)
+            print 'Best parameters: {0}'.format(model.get_params())
             best_params[i][modelname] = model.get_params()
 
             training_score = model.score(X, y)
