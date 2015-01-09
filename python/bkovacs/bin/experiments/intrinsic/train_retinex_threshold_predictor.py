@@ -5,6 +5,7 @@ import multiprocessing
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression, RidgeCV, ElasticNetCV, LassoCV
 from progressbar import ProgressBar
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc.progressbaraux import progress_bar, progress_bar_widgets
@@ -28,7 +29,7 @@ USE_SAVED_FEATURES = True
 
 
 def build_matrices(data_set, datarootpath, features):
-    output_blobs = [f['blobname'] for f in features]
+    output_blobs = features
 
     matrices = {}
     n_samples = len(data_set)
@@ -37,9 +38,9 @@ def build_matrices(data_set, datarootpath, features):
 
     for f in features:
         # Get the size of the feature from the network
-        feature_blob = net.blobs[f['blobname']]
+        feature_blob = net.blobs[f]
         n_features = feature_blob.data.size
-        print '{0} feature size: {1}'.format(f['blobname'], n_features)
+        print '{0} feature size: {1}'.format(f, n_features)
 
         X = np.empty((n_samples, n_features))
         y = np.empty((n_samples))
@@ -57,7 +58,7 @@ def build_matrices(data_set, datarootpath, features):
         prediction = compute_feature(net, input_name, img, output_blobs)
 
         for f_idx, f in enumerate(features):
-            blobdata = prediction[f['blobname']]
+            blobdata = prediction[f]
             blobdata = np.ravel(np.squeeze(blobdata))
 
             Xs[f_idx][i, :] = blobdata
@@ -103,8 +104,8 @@ if __name__ == '__main__':
         features = dic['features']
     else:
         features = []
-        features.append({'blobname': 'fc7'})
-        features.append({'blobname': 'pool5'})
+        features.append('fc7')
+        features.append('pool5')
 
         print 'Computing features for {0} images and {1} different feature configurations'.format(len(best_thresholds), len(features))
 
@@ -122,14 +123,14 @@ if __name__ == '__main__':
         for s in splits:
             Xys.append(build_matrices(s, DATAROOTPATH, features))
 
-    packer.fpackb({'Xys': Xys, 'splits': splits, 'features': features}, 1.0, FEATURES_FILEPATH)
+        packer.fpackb({'Xys': Xys, 'splits': splits, 'features': features}, 1.0, FEATURES_FILEPATH)
 
     n_cpus = multiprocessing.cpu_count() - 1
     models = {}
     cv_folds = n_cpus
 
     if 'RidgeCV' in usedmodels:
-        ridgecv_alphas = np.logspace(-5.0, 1.0, 50)
+        ridgecv_alphas = np.logspace(-5.0, 10.0, 50)
         print 'Trying alphas for RidgeCV: {0}'.format(ridgecv_alphas)
         models['RidgeCV'] = RidgeCV(alphas=ridgecv_alphas, fit_intercept=True, normalize=False, scoring=None, score_func=None, loss_func=None, cv=cv_folds, gcv_mode=None, store_cv_values=False)
 
@@ -147,14 +148,13 @@ if __name__ == '__main__':
     pbar_counter = 0
     pbar.start()
 
-    scores = [{} for _ in xrange(n_features)]
-    best_params = [{} for _ in xrange(n_features)]
-    samplecount = 500
+    result_data = {f: {} for f in features}
+    samplecount = 5000
 
-    for i in range(n_features):
-        print 'Training and testing for feature {0}'.format(features[i]['blobname'])
-        for j, (modelname, model) in enumerate(models.iteritems()):
-            print 'Using model {0}'.format(modelname)
+    for i, feature_name in enumerate(features):
+        print 'Training and testing for feature {0}'.format(feature_name)
+        for j, (model_name, model) in enumerate(models.iteritems()):
+            print 'Using model {0}'.format(model_name)
 
             # Get matrices for training set
             Xs, ys = Xys[0]
@@ -164,14 +164,16 @@ if __name__ == '__main__':
             #X = X[np.random.choice(X.shape[0], size=samplecount), :]
             #y = y[np.random.choice(y.shape[0], size=samplecount)]
             model.fit(X, y)
+            result_data[feature_name][model_name] = {}
+            result_data[feature_name][model_name]['trained_model'] = model
 
             params = {}
             params['alpha'] = model.alpha_
-            if modelname == 'ElasticNetCV':
+            if model_name == 'ElasticNetCV':
                 params['l1_ratio'] = model.l1_ratio_
 
+            result_data[feature_name][model_name]['best_params'] = params
             print 'Best parameters: {0}'.format(params)
-            best_params[i][modelname] = params
 
             training_score = model.score(X, y)
             print 'Training score: {0}'.format(training_score)
@@ -180,15 +182,22 @@ if __name__ == '__main__':
             Xs, ys = Xys[1]
             X = Xs[i]
             y = ys[i]
-            test_score = model.score(X, y)
-            print 'Test score: {0}'.format(test_score)
-            scores[i][modelname] = test_score
+            r2_error = model.score(X, y)
+
+            y_pred = model.predict(X)
+            rmse = mean_squared_error(y, y_pred) ** 0.5
+            mae = mean_absolute_error(y, y_pred)
+            result_data[feature_name][model_name]['r2_error'] = r2_error
+            result_data[feature_name][model_name]['rmse'] = rmse
+            result_data[feature_name][model_name]['mae'] = mae
+
+            print 'Test scores: R2 error {0}, RMSE {1}, mean absolute error {2}'.format(r2_error, rmse, mae)
 
             pbar_counter += 1
             pbar.update(pbar_counter)
 
     pbar.finish()
 
-    packer.fpackb({'scores': scores, 'best_params': best_params}, 1.0, '{0}-{1}.dat'.format(SCORES_FILEPATHBASE, '-'.join(usedmodels)))
+    packer.fpackb({'result_data': result_data}, 1.0, '{0}-{1}.dat'.format(SCORES_FILEPATHBASE, '-'.join(usedmodels)), use_msgpack=False)
 
 

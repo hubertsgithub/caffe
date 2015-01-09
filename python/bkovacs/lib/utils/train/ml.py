@@ -82,3 +82,11 @@ def split_train_val_test(data, val_ratio, test_ratio, seed=42):
     # reverse to get train, val, test order
     return splits[::-1]
 
+
+def est_std(data):
+    if data.ndim != 1:
+        raise ValueError('The provided data should be one dimensional, got {0} dimensions'.format(data.ndim))
+
+    return sqrt(np.var(data, ddof=1) / len(data))
+
+
