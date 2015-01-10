@@ -5,7 +5,7 @@ import multiprocessing
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression, RidgeCV, ElasticNetCV, LassoCV
 from progressbar import ProgressBar
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc.progressbaraux import progress_bar, progress_bar_widgets
@@ -155,6 +155,7 @@ if __name__ == '__main__':
         print 'Training and testing for feature {0}'.format(feature_name)
         for j, (model_name, model) in enumerate(models.iteritems()):
             print 'Using model {0}'.format(model_name)
+            result_data[feature_name][model_name] = {}
 
             # Get matrices for training set
             Xs, ys = Xys[0]
@@ -163,8 +164,8 @@ if __name__ == '__main__':
 
             #X = X[np.random.choice(X.shape[0], size=samplecount), :]
             #y = y[np.random.choice(y.shape[0], size=samplecount)]
+            y_train_mean = np.mean(y)
             model.fit(X, y)
-            result_data[feature_name][model_name] = {}
             result_data[feature_name][model_name]['trained_model'] = model
 
             params = {}
@@ -182,9 +183,9 @@ if __name__ == '__main__':
             Xs, ys = Xys[1]
             X = Xs[i]
             y = ys[i]
-            r2_error = model.score(X, y)
 
             y_pred = model.predict(X)
+            r2_error = r2_score(y, y_pred)
             rmse = mean_squared_error(y, y_pred) ** 0.5
             mae = mean_absolute_error(y, y_pred)
             result_data[feature_name][model_name]['r2_error'] = r2_error
@@ -192,6 +193,13 @@ if __name__ == '__main__':
             result_data[feature_name][model_name]['mae'] = mae
 
             print 'Test scores: R2 error {0}, RMSE {1}, mean absolute error {2}'.format(r2_error, rmse, mae)
+
+            y_pred[:] = y_train_mean
+            r2_error = r2_score(y, y_pred)
+            rmse = mean_squared_error(y, y_pred) ** 0.5
+            mae = mean_absolute_error(y, y_pred)
+
+            print 'Test scores if the prediction is the mean of the training set: R2 error {0}, RMSE {1}, mean absolute error {2}'.format(r2_error, rmse, mae)
 
             pbar_counter += 1
             pbar.update(pbar_counter)
