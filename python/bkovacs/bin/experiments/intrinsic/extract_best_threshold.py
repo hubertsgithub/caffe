@@ -3,6 +3,7 @@ import numpy as np
 
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc import packer
+import lib.utils.data.fileproc as fileproc
 from lib.intrinsic import intrinsic
 from lib.intrinsic.intrinsic import Zhao2012Estimator
 
@@ -18,12 +19,16 @@ OUTPUT_FILENAME = 'best-thresholdvalues.txt'
 
 SCORE_FILENAME = 'ALLDATA-zhao2012-withoutgroups-oraclethreshold.dat'
 IIWTAGPATH = acrp('data/iiw-dataset/all-images.txt')
+IIWTAGFILTERPATH = acrp('data/iiw-dataset/denseimages.txt')
 ESTIMATORCLASS = Zhao2012Estimator
 
 
-def extract_thresholds(tagfile_path, scorefile_path, EstimatorClass):
-    with open(tagfile_path) as f:
-        tags = [s.strip() for s in f.readlines()]
+def extract_thresholds(tagfile_path, tagfilterfile_path, scorefile_path, EstimatorClass):
+    tags = fileproc.freadlines(tagfile_path)
+    if tagfilterfile_path:
+        filtertags = fileproc.freadlines(tagfilterfile_path)
+    else:
+        filtertags = tags
 
     dic = packer.funpackb_version(1.1, scorefile_path)
     allscores = dic['allscores']
@@ -41,6 +46,9 @@ def extract_thresholds(tagfile_path, scorefile_path, EstimatorClass):
 
     ret = []
     for i, tag in enumerate(tags):
+        if tag not in filtertags:
+            continue
+
         # Get the best parameter configuration
         best_choice = np.argmin(scores[i, :])
 
@@ -54,7 +62,7 @@ def extract_thresholds(tagfile_path, scorefile_path, EstimatorClass):
 
 if __name__ == '__main__':
     scorefile_path = os.path.join(ROOTPATH, SCORE_FILENAME)
-    lines = extract_thresholds(IIWTAGPATH, scorefile_path, ESTIMATORCLASS)
+    lines = extract_thresholds(IIWTAGPATH, IIWTAGFILTERPATH, scorefile_path, ESTIMATORCLASS)
 
     #scorefile_path2 = os.path.join(ROOTPATH, SCORE_FILENAME2)
     #lines2 = extract_thresholds(IIWTAGPATH2, scorefile_path2)
@@ -65,4 +73,6 @@ if __name__ == '__main__':
         fout.write(l)
 
     fout.close()
+
+    print 'Saved best threshold values for {0} images'.format(len(lines))
 

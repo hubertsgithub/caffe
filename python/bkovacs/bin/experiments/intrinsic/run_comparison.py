@@ -26,7 +26,7 @@ SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 random.seed(10)
 with open(IIWTAGPATH) as f:
-    SETIIWDENSE = [s.strip() for s in f.readlines()]
+    SETIIW = [s.strip() for s in f.readlines()]
 
 if DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
@@ -35,8 +35,9 @@ elif DATASETCHOICE == 1:
     ALL_TAGS = SETINDOOR
     ERRORMETRIC = 0  # LMSE
 elif DATASETCHOICE == 2:
-    ALL_TAGS = SETIIWDENSE
+    ALL_TAGS = SETIIW
     ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
+    ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
     ERRORMETRIC = 1  # WHDR
 else:
     raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))
