@@ -321,6 +321,7 @@ message LayerParameter {
   optional HingeLossParameter hinge_loss_param = 29;
   optional MultiPrefetchDataParameter multi_prefetch_data_param = 98342374;
   optional MultiImagePatchDataParameter multi_image_patch_data_param = 98342375;
+  optional MultiImageDataParameter multi_image_data_param = 98342376;
   optional ImageDataParameter image_data_param = 15;
   optional InfogainLossParameter infogain_loss_param = 16;
   optional InnerProductParameter inner_product_param = 17;
@@ -627,6 +628,7 @@ message MultiImageDataParameter {
   // Whether or not ImageLayer should shuffle the list of files at every epoch.
   optional bool shuffle = 8 [default = false];
   optional string root_folder = 12 [default = ""];
+  optional bool use_label = 1352 [default = false];
 }
 
 // Message that stores parameters InfogainLossLayer

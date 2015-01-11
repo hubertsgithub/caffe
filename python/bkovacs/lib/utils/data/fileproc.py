@@ -8,3 +8,12 @@ def freadlines(filepath, strip=True):
 
     return lines
 
+
+def fwritelines(filepath, lines, endline=True):
+    with open(filepath, 'w') as f:
+        for l in lines:
+            if endline:
+                l = '{0}\n'.format(l)
+
+            f.write(l)
+

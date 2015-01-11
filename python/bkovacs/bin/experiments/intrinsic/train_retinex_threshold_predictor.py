@@ -18,6 +18,7 @@ from lib.utils.train.ml import split_train_test
 sys.path.append(acrp('python'))
 import caffe
 
+INPUTSIZE = 224
 MODEL_FILE = acrp('models/vgg_cnn_m/VGG_CNN_M_deploy.prototxt')
 PRETRAINED_WEIGHTS = acrp('models/vgg_cnn_m/VGG_CNN_M.caffemodel')
 DATAROOTPATH = acrp('data/iiw-dataset/data')
@@ -25,10 +26,10 @@ TRAINING_FILEPATH = acrp('experiments/mitintrinsic/allresults/best-thresholdvalu
 FEATURES_FILEPATH = acrp('experiments/mitintrinsic/allresults/features.dat')
 SCORES_FILEPATHBASE = acrp('experiments/mitintrinsic/allresults/retinex-threshold-training-scores')
 MEAN_FILE = acrp('models/vgg_cnn_m/VGG_mean.binaryproto')
-USE_SAVED_FEATURES = True
+USE_SAVED_FEATURES = False
 
 
-def build_matrices(data_set, datarootpath, features):
+def build_matrices(data_set, datarootpath, features, input_size):
     output_blobs = features
 
     matrices = {}
@@ -54,6 +55,7 @@ def build_matrices(data_set, datarootpath, features):
     for i, (tag, threshold_chrom) in enumerate(data_set.iteritems()):
         # TODO: Linearize image??
         img = common.load_image(os.path.join(DATAROOTPATH, '{0}.png'.format(tag)), is_srgb=False)
+        img = common.resize_and_crop_image(img, resize=input_size, crop=None, keep_aspect_ratio=False)
 
         prediction = compute_feature(net, input_name, img, output_blobs)
 
@@ -104,8 +106,9 @@ if __name__ == '__main__':
         features = dic['features']
     else:
         features = []
-        features.append('fc7')
-        features.append('pool5')
+        #features.append('fc7')
+        #features.append('pool5')
+        features.append('pool1')
 
         print 'Computing features for {0} images and {1} different feature configurations'.format(len(best_thresholds), len(features))
 
@@ -121,7 +124,7 @@ if __name__ == '__main__':
         # Build training matrices: X, y
         Xys = []
         for s in splits:
-            Xys.append(build_matrices(s, DATAROOTPATH, features))
+            Xys.append(build_matrices(s, DATAROOTPATH, features, INPUTSIZE))
 
         packer.fpackb({'Xys': Xys, 'splits': splits, 'features': features}, 1.0, FEATURES_FILEPATH)
 

@@ -271,10 +271,10 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 
 		vector<cv::Mat> cv_imgs;
 		for (int i = 0; i < image_count; ++i) {
-			const int new_height = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_height();
-			const int new_width  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_width();
-			const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
-			const bool crop_first  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_first();
+			const int new_height = mpdp.data_transformations(i).new_height();
+			const int new_width  = mpdp.data_transformations(i).new_width();
+			const bool is_color  = mpdp.data_transformations(i).is_color();
+			const bool crop_first  = mpdp.data_transformations(i).crop_first();
 
 			string img_path = root_folder + lines_[lines_id_][i];
 			DLOG(INFO) << "Loading image " << img_path << " as data #" << i << " batchID: " << item_id;

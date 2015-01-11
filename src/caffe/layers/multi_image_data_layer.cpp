@@ -162,18 +162,46 @@ void MultiImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
     lines_id_ = skip;
   }
 
-  for (int i = 0; i < this->prefetch_data_.size(); ++i) {
-	  const int new_height = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_height();
-	  const int new_width  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_width();
-	  const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
-	  const bool crop_first  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_first();
-	  const int crop_size = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_size();
+  MultiPrefetchDataParameter mpdp = this->layer_param_.multi_prefetch_data_param();
+  MultiImageDataParameter multi_image_data_param = this->layer_param_.multi_image_data_param();
+  const bool use_label = multi_image_data_param.use_label();
+  const int data_count_shift = use_label ? 1 : 0;
+
+  for (int i = 0; i < this->prefetch_data_.size() - data_count_shift; ++i) {
+	  const int new_height = mpdp.data_transformations(i).new_height();
+	  const int new_width  = mpdp.data_transformations(i).new_width();
+	  const bool is_color  = mpdp.data_transformations(i).is_color();
+	  const bool crop_first  = mpdp.data_transformations(i).crop_first();
+	  const int crop_size = mpdp.data_transformations(i).crop_size();
 	  CHECK((new_height == 0 && new_width == 0) ||
 		  (new_height > 0 && new_width > 0)) << "Current implementation requires "
 		  "new_height and new_width to be set at the same time.";
 
 	  string imgPath = root_folder + lines_[lines_id_][i];
 	  this->LoadImageToSlot(bottom, top, true, i, imgPath, new_height, new_width, is_color, crop_first, crop_size);
+  }
+
+  if (use_label) {
+	// The last top contains the label
+	int i = this->prefetch_data_.size() - 1;
+	const int batch_size = this->layer_param_.image_data_param().batch_size();
+	Blob<Dtype>* blob;
+	Blob<Dtype>* prefetch_d;
+	Blob<Dtype>* trafo_d;
+	blob = top[i];
+	prefetch_d = this->prefetch_data_[i].get();
+	trafo_d = this->transformed_data_[i].get();
+
+	DLOG(INFO) << "blob: " << blob;
+	DLOG(INFO) << "prefetch_d: " << prefetch_d;
+	DLOG(INFO) << "trafo_d: " << trafo_d;
+	blob->Reshape(batch_size, 1, 1, 1);
+	prefetch_d->Reshape(batch_size, 1, 1, 1);
+	trafo_d->Reshape(1, 1, 1, 1);
+
+	LOG(INFO) << "output data size: " << blob->num() << ","
+				<< blob->channels() << "," << blob->height() << ","
+				<< blob->width();
   }
 }
 
@@ -209,7 +237,13 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
   ImageDataParameter image_data_param = this->layer_param_.image_data_param();
   const int batch_size = image_data_param.batch_size();
   string root_folder = image_data_param.root_folder();
-  const bool share_random_trafos = this->layer_param_.multi_prefetch_data_param().share_random_trafos();
+
+  MultiImageDataParameter multi_image_data_param = this->layer_param_.multi_image_data_param();
+  const bool use_label = multi_image_data_param.use_label();
+  const int data_count_shift = use_label ? 1 : 0;
+
+  MultiPrefetchDataParameter mpdp = this->layer_param_.multi_prefetch_data_param();
+  const bool share_random_trafos = mpdp.share_random_trafos();
 
   // datum scales
   const int lines_size = lines_.size();
@@ -219,11 +253,11 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
     CHECK_GT(lines_size, lines_id_);
 
     vector<cv::Mat> cv_imgs;
-    for (int i = 0; i < this->prefetch_data_.size(); ++i) {
-		const int new_height = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_height();
-		const int new_width  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).new_width();
-		const bool is_color  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).is_color();
-	    const bool crop_first  = this->layer_param_.multi_prefetch_data_param().data_transformations(i).crop_first();
+    for (int i = 0; i < this->prefetch_data_.size() - data_count_shift; ++i) {
+		const int new_height = mpdp.data_transformations(i).new_height();
+		const int new_width  = mpdp.data_transformations(i).new_width();
+		const bool is_color  = mpdp.data_transformations(i).is_color();
+	    const bool crop_first  = mpdp.data_transformations(i).crop_first();
 
 		string img_path = root_folder + lines_[lines_id_][i];
 		DLOG(INFO) << "Loading image " << img_path << " as data #" << i << " batchID: " << item_id;
@@ -245,7 +279,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
 
     timer.Start();
     // Apply transformations (mirror, crop...) to the image
-    for (int i = 0; i < this->prefetch_data_.size(); ++i) {
+    for (int i = 0; i < this->prefetch_data_.size() - data_count_shift; ++i) {
 		int offset = this->prefetch_data_[i]->offset(item_id);
 		this->transformed_data_[i]->set_cpu_data(top_data[i] + offset);
 		if (share_random_trafos && i != 0) {
@@ -254,6 +288,19 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
 		}
 		DLOG(INFO) << "Transforming bottom " << i << "...";
 		this->transformers_[i]->Transform(cv_imgs[i], &(*this->transformed_data_[i]));
+	}
+
+	if (use_label) {
+		// Finally put the label to the last top...
+		int i = this->prefetch_data_.size() - 1;
+		float label;
+		stringstream sslabel;
+		sslabel << lines_[lines_id_][i];
+		sslabel >> label;
+
+		int offset = this->prefetch_data_[i]->offset(item_id);
+		this->transformed_data_[i]->set_cpu_data(top_data[i] + offset);
+		this->transformed_data_[i]->mutable_cpu_data()[0] = label;
 	}
 
 	if (share_random_trafos) {
