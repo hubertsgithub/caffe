@@ -146,10 +146,48 @@ layers {
   }
 }
 layers {
-  name: "fc2"
-  type: INNER_PRODUCT
+  name: "conv2"
+  type: CONVOLUTION
   bottom: "pool1"
-  top: "fc2"
+  top: "conv2"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu2"
+  type: RELU
+  bottom: "conv2"
+  top: "conv2"
+}
+layers {
+  name: "pool2"
+  type: POOLING
+  bottom: "conv2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "fc3"
+  type: INNER_PRODUCT
+  bottom: "pool2"
+  top: "fc3"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
@@ -167,16 +205,16 @@ layers {
   }
 }
 layers {
-  name: "relu2"
+  name: "relu3"
   type: RELU
-  bottom: "fc2"
-  top: "fc2"
+  bottom: "fc3"
+  top: "fc3"
 }
 layers {
-  name: "fc3"
+  name: "fc4"
   type: INNER_PRODUCT
-  bottom: "fc2"
-  top: "fc3"
+  bottom: "fc3"
+  top: "fc4"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
@@ -196,7 +234,7 @@ layers {
 layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
-  bottom: "fc3"
+  bottom: "fc4"
   bottom: "label"
   top: "loss"
 }
