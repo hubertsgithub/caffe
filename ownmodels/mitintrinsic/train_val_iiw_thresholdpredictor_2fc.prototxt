@@ -155,6 +155,33 @@ layers {
   weight_decay: 1
   weight_decay: 0
   inner_product_param {
+    num_output: 1000
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu2"
+  type: RELU
+  bottom: "fc2"
+  top: "fc2"
+}
+layers {
+  name: "fc3"
+  type: INNER_PRODUCT
+  bottom: "fc2"
+  top: "fc3"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
     num_output: 1
     weight_filler {
       type: "gaussian"
@@ -169,7 +196,7 @@ layers {
 layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
-  bottom: "fc2"
+  bottom: "fc3"
   bottom: "label"
   top: "loss"
 }
