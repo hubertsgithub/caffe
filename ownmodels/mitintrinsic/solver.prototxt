@@ -1,5 +1,5 @@
 net: "ownmodels/mitintrinsic/train_val.prototxt"
-test_iter: 1
+test_iter: 523
 test_interval: 500
 base_lr: 1e-3
 lr_policy: "step"
