@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
         # split into training and testsets
         # 0: train, 1: val, 2: test
-        splits = split_train_test(best_thresholds, 0.2, 0.2)
+        splits = split_train_test(best_thresholds, 0.2)
         s = ' '.join([str(len(split)) for split in splits])
         print 'Final sizes: {0}'.format(s)
 

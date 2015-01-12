@@ -9,7 +9,8 @@ from lib.intrinsic.intrinsic import Zhao2012Estimator
 
 ROOTPATH = acrp('experiments/mitintrinsic/allresults')
 PARAMNAME = 'threshold_chrom'
-OUTPUT_FILENAME = 'best-thresholdvalues.txt'
+OUTPUT_FILENAME_DENSE = 'best-thresholdvalues-dense.txt'
+OUTPUT_FILENAME_ALL = 'best-thresholdvalues-all.txt'
 
 #SCORE_FILENAME = 'ALLDATA-dense-oraclethreshold.dat'
 #SCORE_FILENAME2 = 'ALLDATA-exceptdense-oraclethreshold.dat'
@@ -63,16 +64,10 @@ def extract_thresholds(tagfile_path, tagfilterfile_path, scorefile_path, Estimat
 if __name__ == '__main__':
     scorefile_path = os.path.join(ROOTPATH, SCORE_FILENAME)
     lines = extract_thresholds(IIWTAGPATH, IIWTAGFILTERPATH, scorefile_path, ESTIMATORCLASS)
+    fileproc.fwritelines(os.path.join(ROOTPATH, OUTPUT_FILENAME_DENSE), lines, endline=False)
+    print 'Saved best threshold values for {0} images'.format(len(lines))
 
-    #scorefile_path2 = os.path.join(ROOTPATH, SCORE_FILENAME2)
-    #lines2 = extract_thresholds(IIWTAGPATH2, scorefile_path2)
-    #lines = lines + lines2
-
-    fout = open(os.path.join(ROOTPATH, OUTPUT_FILENAME), 'w')
-    for l in lines:
-        fout.write(l)
-
-    fout.close()
-
+    lines = extract_thresholds(IIWTAGPATH, None, scorefile_path, ESTIMATORCLASS)
+    fileproc.fwritelines(os.path.join(ROOTPATH, OUTPUT_FILENAME_ALL), lines, endline=False)
     print 'Saved best threshold values for {0} images'.format(len(lines))
 

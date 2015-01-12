@@ -56,14 +56,14 @@ def test_alexnet():
     print 'predicted class:', prediction.argmax()
 
 
-def compute_feature(net, input_name, input_image, px, py, croplen):
+def compute_features(net, input_name, feature_options, input_image, px, py, croplen):
     h, w = input_image.shape[0:2]
     cropw = px * w
     croph = py * h
     patch = common.crop_image(input_image, cropw, croph, croplen)
 
     caffe_in = net.preprocess(input_name, patch)
-    prediction = net.forward_all(blobs=['fc7'], **{input_name: caffe_in[np.newaxis, :, :, :]})
+    prediction = net.forward_all(blobs=feature_options, **{input_name: caffe_in[np.newaxis, :, :, :]})
 
     return prediction
 
@@ -217,13 +217,19 @@ if __name__ == '__main__':
     distmetrics.append({'name': 'Dot', 'func': lambda f1, f2: 1 - np.dot(f1, f2) / (np.linalg.norm(f1) * np.linalg.norm(f2))})
     distmetrics.append({'name': 'Chai', 'func': lambda f1, f2: np.sum(np.square(f1 - f2) / np.clip(f1 + f2, 1e-10, np.inf))})
     distmetrics.append({'name': 'L1', 'func': lambda f1, f2: np.sum(np.abs(f1 - f2))})
-    distances_equal = []
-    distances_notequal = []
-    for dm_idx, dm in enumerate(distmetrics):
-        distances_equal.append([])
-        distances_notequal.append([])
 
+    feature_options = ['fc7', 'pool1']
     features = {}
+    distances_equal = {}
+    distances_notequal = {}
+    for f in feature_options:
+        features[f] = {}
+        distances_equal[f] = []
+        distances_notequal[f] = []
+
+        for dm_idx, dm in enumerate(distmetrics):
+            distances_equal[f].append([])
+            distances_notequal[f].append([])
 
     for l_idx, l in enumerate(progress_bar(sampled_lines)):
         #  f.write('{0} {1} {2} {3} {4} {5} {6}\n'.format(grayimg_path, chromimg_path, 1, p1x, p1y, p2x, p2y))
@@ -243,25 +249,27 @@ if __name__ == '__main__':
             raise ValueError('Image file doesn\'t exist: {0}!'.format(origfilepath))
 
         im = common.load_image(origfilepath, is_srgb=True)
-        outputblobs1 = compute_feature(net, input_name, im, p1x, p1y, CROPLEN)
-        outputblobs2 = compute_feature(net, input_name, im, p2x, p2y, CROPLEN)
+        outputblobs1 = compute_features(net, input_name, feature_options, im, p1x, p1y, CROPLEN)
+        outputblobs2 = compute_features(net, input_name, feature_options, im, p2x, p2y, CROPLEN)
 
-        f1 = outputblobs1['fc7']
-        f2 = outputblobs2['fc7']
-        f1 = np.squeeze(f1)
-        f2 = np.squeeze(f2)
+        for f in feature_options:
+            f1 = outputblobs1[f]
+            f2 = outputblobs2[f]
+            f1 = np.squeeze(f1)
+            f2 = np.squeeze(f2)
 
-        features[l] = [f1, f2]
+            features[f][l] = [f1, f2]
 
-        for dm_idx, dm in enumerate(distmetrics):
-            dist = dm['func'](f1, f2)
-            if sim:
-                distances_equal[dm_idx].append(dist)
-            else:
-                distances_notequal[dm_idx].append(dist)
+            for dm_idx, dm in enumerate(distmetrics):
+                dist = dm['func'](f1, f2)
+                if sim:
+                    distances_equal[f][dm_idx].append(dist)
+                else:
+                    distances_notequal[f][dm_idx].append(dist)
 
     packer.fpackb(features, 1.0, os.path.join(EXPROOTPATH, 'featuredata.dat'))
 
-    for dm_idx, dm in enumerate(distmetrics):
-        analyze_distance_metric(dm['name'], distances_equal[dm_idx], distances_notequal[dm_idx], STEPCOUNT, REQUIREDPRECISION)
+    for f in feature_options:
+        for dm_idx, dm in enumerate(distmetrics):
+            analyze_distance_metric('{0}-{1}'.format(f, dm['name']), distances_equal[f][dm_idx], distances_notequal[f][dm_idx], STEPCOUNT, REQUIREDPRECISION)
 
