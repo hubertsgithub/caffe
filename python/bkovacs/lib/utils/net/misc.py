@@ -9,14 +9,17 @@ sys.path.append(acrp('python'))
 import caffe
 
 
-def init_net(model_file, pretrained_weights, mean, input_names, channel_swap=(2, 1, 0), raw_scale=255, input_scale=1):
+def init_net(model_file, pretrained_weights, mean, input_config):
     net = caffe.Net(model_file, pretrained_weights)
     net.set_phase_test()
     net.set_mode_cpu()
-    for input_name in input_names:
-        net.set_channel_swap(input_name, channel_swap)
-        net.set_raw_scale(input_name, raw_scale)
-        net.set_input_scale(input_name, input_scale)
+    for input_name, config in input_config.iteritems():
+        if 'channel_swap' in config:
+            net.set_channel_swap(input_name, config['channel_swap'])
+        if 'raw_scale' in config:
+            net.set_raw_scale(input_name, config['raw_scale'])
+        if 'input_scale' in config:
+            net.set_input_scale(input_name, config['input_scale'])
 
         if isinstance(mean, basestring):
             blob = caffe.proto.caffe_pb2.BlobProto()
