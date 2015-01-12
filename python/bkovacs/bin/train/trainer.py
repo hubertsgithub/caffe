@@ -11,7 +11,7 @@ from Queue import Queue
 
 import numpy as np
 
-from lib.utils.data.fileproc import AsynchronousFileReader
+from lib.utils.data import fileproc
 from lib.utils.misc import plothelper
 
 CORRECTUSAGESTR = 'Correct usage: python trainer.py <root=rootpath> <modelname=the name of the model> <weights=pathtoweights?> <platform=(CPU,GPU)?>'
@@ -119,6 +119,14 @@ def create_figure_data(data_dict):
     return ret
 
 
+def create_csv_data(data_dict):
+    ret = []
+    for itnum, val in data_dict.iteritems():
+        ret.append('{0}, {1}'.format(itnum, val))
+
+    return ret
+
+
 def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepath_root):
     # key: itnum, value: loss value
     itnum = 0
@@ -147,15 +155,21 @@ def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepat
             test_figure_arr = create_figure_data(test_losses)
             max_loss = max(np.max(train_figure_arr[:, 1]), np.max(test_figure_arr[:, 1]))
             loss_figure_filepath = '{0}-loss.png'.format(figure_filepath_root)
-
             plothelper.plot_and_save_2D_arrays(loss_figure_filepath, [train_figure_arr, test_figure_arr], xlabel='Iteration number', xinterval=[0, itnum], ylabel='Loss', yinterval=[0, max_loss*1.1], line_names=['Train loss', 'Test loss'])
+
+            train_loss_data_filepath = '{0}-train-loss.txt'.format(figure_filepath_root)
+            fileproc.fwritelines(train_loss_data_filepath, create_csv_data(train_losses))
+            test_loss_data_filepath = '{0}-test-loss.txt'.format(figure_filepath_root)
+            fileproc.fwritelines(test_loss_data_filepath, create_csv_data(test_losses))
 
         if test_accuracies and itnum != 0 and new_data:
             # Save new plots
             test_acc_figure_filepath = '{0}-test-accuracy.png'.format(figure_filepath_root)
             test_acc_figure_arr = create_figure_data(test_accuracies)
-
             plothelper.plot_and_save_2D_array(test_acc_figure_filepath, test_acc_figure_arr, xlabel='Iteration number', xinterval=[0, itnum], ylabel='Accuracy', yinterval=[0, 1])
+
+            test_accuracy_data_filepath = '{0}-test-accuracy.txt'.format(figure_filepath_root)
+            fileproc.fwritelines(test_accuracy_data_filepath, create_csv_data(test_accuracy_data_filepath))
 
         # Sleep a bit before asking the readers again.
         time.sleep(update_interval)
@@ -204,10 +218,10 @@ if __name__ == '__main__':
 
         # Launch the asynchronous readers of the process' stdout and stderr.
         stdout_queue = Queue()
-        stdout_reader = AsynchronousFileReader(proc.stdout, stdout_queue)
+        stdout_reader = fileproc.AsynchronousFileReader(proc.stdout, stdout_queue)
         stdout_reader.start()
         stderr_queue = Queue()
-        stderr_reader = AsynchronousFileReader(proc.stderr, stderr_queue)
+        stderr_reader = fileproc.AsynchronousFileReader(proc.stderr, stderr_queue)
         stderr_reader.start()
 
         output_processor(stdout_queue, stderr_queue, 1, os.path.join(options['root'], options['modelname']))
