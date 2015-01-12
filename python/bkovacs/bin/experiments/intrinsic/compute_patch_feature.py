@@ -7,6 +7,7 @@ import pylab
 import random
 
 from lib.utils.misc.pathresolver import acrp
+from lib.utils.misc.plothelper import plot_and_save_2D_array
 from lib.utils.misc.progressbaraux import progress_bar
 from lib.utils.data import common
 from lib.utils.misc import packer
@@ -66,25 +67,6 @@ def compute_features(net, input_name, feature_options, input_image, px, py, crop
     prediction = net.forward_all(blobs=feature_options, **{input_name: caffe_in[np.newaxis, :, :, :]})
 
     return prediction
-
-
-def plot_and_save_2D_array(filename, arr, xlabel='', xinterval=None, ylabel='', yinterval=None):
-    if arr.ndim != 2 or arr.shape[1] != 2:
-        raise ValueError('The array should be 2D and the second dimension should be 2!')
-
-    plt.plot(arr[:, 0], arr[:, 1])
-    name, ext = os.path.splitext(os.path.basename(filename))
-    plt.title(name)
-    plt.xlabel(xlabel)
-    if xinterval:
-        plt.xlim(xinterval)
-
-    if yinterval:
-        plt.ylim(yinterval)
-
-    plt.ylabel(ylabel)
-    plt.savefig(filename)
-    plt.clf()
 
 
 def find_nearest_idx(arr, value):
