@@ -19,6 +19,7 @@ TEST_FILEPATH_ALL_RGB = acrp('data/iiw-dataset/test-threshold-rgb-all.txt')
 
 
 def save_train_test_files(threshold_filepath, train_filepath, test_filepath, use_orig_file):
+    print 'Creating train and test files: {0}, {1}'.format(train_filepath, test_filepath)
     lines = fileproc.freadlines(threshold_filepath)
 
     conv_lines = []
@@ -41,6 +42,7 @@ def save_train_test_files(threshold_filepath, train_filepath, test_filepath, use
 
     # Select 20% test set randomly
     train_set, test_set = ml.split_train_test(conv_lines, 0.2)
+    print 'Training set ({0} items), test set ({1} items) created'.format(len(train_set), len(test_set))
 
     fileproc.fwritelines(train_filepath, train_set)
     fileproc.fwritelines(test_filepath, test_set)
