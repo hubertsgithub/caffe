@@ -1,0 +1,168 @@
+name: "IntrinsicCNN"
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  multi_prefetch_data_param {
+  	  share_random_trafos: false
+  	  # input_data_count: 3
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		new_height: 256
+		new_width: 256
+		crop_size: 256
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+		persistent: true
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/train-threshold-rgb-all.txt"
+    batch_size: 20 
+  }
+  multi_image_data_param {
+    use_label: true 
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "data"
+  top: "label"
+  multi_prefetch_data_param {
+  	  share_random_trafos: false
+  	  # input_data_count: 3
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		new_height: 256
+		new_width: 256
+		crop_size: 256
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+		persistent: true
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/test-threshold-rgb-all.txt"
+    batch_size: 10 
+  }
+  multi_image_data_param {
+    use_label: true 
+  }
+  include: { phase: TEST }
+}
+layers {
+  bottom: "data"
+  top: "conv1"
+  name: "conv1"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 96
+    kernel_size: 7
+    stride: 2
+  }
+}
+layers {
+  bottom: "conv1"
+  top: "conv1"
+  name: "relu1"
+  type: RELU
+}
+layers {
+  bottom: "conv1"
+  top: "norm1"
+  name: "norm1"
+  type: LRN
+  lrn_param {
+    local_size: 5
+    alpha: 0.0005
+    beta: 0.75
+    k: 2
+  }
+}
+layers {
+  bottom: "norm1"
+  top: "pool1"
+  name: "pool1"
+  type: POOLING
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "fc2"
+  type: INNER_PRODUCT
+  bottom: "pool1"
+  top: "fc2"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "relu2"
+  type: RELU
+  bottom: "fc2"
+  top: "fc2"
+}
+layers {
+  name: "fc3"
+  type: INNER_PRODUCT
+  bottom: "fc2"
+  top: "fc3"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "loss"
+  type: EUCLIDEAN_LOSS
+  bottom: "fc3"
+  bottom: "label"
+  top: "loss"
+}
