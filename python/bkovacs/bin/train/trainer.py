@@ -59,18 +59,16 @@ def optional_param_default(options, paramname, default):
 
 
 def process_args(argv):
-    if len(argv) < 4:
-        raise ValueError('Too few arguments!')
     argv = argv[1:]
-
     options = dict(process_arg(argstr) for argstr in argv)
-    print options
 
     # Default values
     mandatory_param_check(options, 'root')
     mandatory_param_check(options, 'modelname')
     optional_param_default(options, 'redirect', 'True')
     optional_param_default(options, 'platform', 'GPU')
+
+    print options
 
     return options
 
