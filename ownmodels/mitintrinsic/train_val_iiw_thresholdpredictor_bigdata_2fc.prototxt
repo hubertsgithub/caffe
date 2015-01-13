@@ -173,6 +173,15 @@ layers {
   top: "fc2"
 }
 layers {
+  name: "drop2"
+  type: DROPOUT
+  bottom: "fc2"
+  top: "fc2"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
   name: "fc3"
   type: INNER_PRODUCT
   bottom: "fc2"

@@ -270,6 +270,15 @@ layers {
   top: "conv3"
 }
 layers {
+  name: "drop3"
+  type: DROPOUT
+  bottom: "conv3"
+  top: "conv3"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
   name: "concatconv13out"
   bottom: "conv1"
   bottom: "conv3"
