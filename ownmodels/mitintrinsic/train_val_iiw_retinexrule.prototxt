@@ -373,104 +373,106 @@ layers {
 	name: "silentmask"
 	type: SILENCE
 	bottom: "mask"
-	bottom: "slice-gradx-1"
-	bottom: "slice-grady-1"
-}
-layers {
-	name: "imgsave"
-	type: IMAGE_OUTPUT
-	bottom: "data"
-	bottom: "chrom"
-	bottom: "gradx"
 	bottom: "slice-gradx-0"
-	bottom: "slice-gradx-1"
-	bottom: "grady"
 	bottom: "slice-grady-0"
-	bottom: "slice-grady-1"
-	image_output_param {
-		file_name: "debugimgs/iiw_retinex/img"
-		display: 5000
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-	}
-    include: { phase: TRAIN }
-}
-layers {
-	name: "imgsave"
-	type: IMAGE_OUTPUT
-	bottom: "data"
-	bottom: "chrom"
-	bottom: "gradx"
-	bottom: "slice-gradx-0"
 	bottom: "slice-gradx-1"
-	bottom: "grady"
-	bottom: "slice-grady-0"
 	bottom: "slice-grady-1"
-	image_output_param {
-		file_name: "debugimgs/iiw_retinex/testimg"
-		display: 1
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 128.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-		transformation {
-			upscale: 255.0
-			mean_to_add: 0.0
-		}
-	}
-    include: { phase: TEST } 
 }
+#layers {
+#	name: "imgsave"
+#	type: IMAGE_OUTPUT
+#	bottom: "data"
+#	bottom: "chrom"
+#	bottom: "gradx"
+#	bottom: "slice-gradx-0"
+#	bottom: "slice-gradx-1"
+#	bottom: "grady"
+#	bottom: "slice-grady-0"
+#	bottom: "slice-grady-1"
+#	image_output_param {
+#		file_name: "debugimgs/iiw_retinex/img"
+#		display: 5000
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 128.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 128.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#	}
+#    include: { phase: TRAIN }
+#}
+#layers {
+#	name: "imgsave"
+#	type: IMAGE_OUTPUT
+#	bottom: "data"
+#	bottom: "chrom"
+#	bottom: "gradx"
+#	bottom: "slice-gradx-0"
+#	bottom: "slice-gradx-1"
+#	bottom: "grady"
+#	bottom: "slice-grady-0"
+#	bottom: "slice-grady-1"
+#	image_output_param {
+#		file_name: "debugimgs/iiw_retinex/testimg"
+#		display: 1
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 128.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 128.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#		transformation {
+#			upscale: 255.0
+#			mean_to_add: 0.0
+#		}
+#	}
+#    include: { phase: TEST } 
+#}

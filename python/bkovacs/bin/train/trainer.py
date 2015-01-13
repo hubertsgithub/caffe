@@ -75,12 +75,12 @@ def process_args(argv):
     return options
 
 
-def line_processor(identifier, line, itnum, train_losses, test_losses, test_accuracies):
-    float_pattern = '[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?'
+def line_processor(identifier, line, itnum, outputs, output_names):
+    float_pattern = '[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
     itnum_pattern = 'Iteration (\\d+)'
-    train_loss_pattern = 'Train net output #\\d: loss = ({0})'.format(float_pattern)
-    test_loss_pattern = 'Test net output #\\d: loss = ({0})'.format(float_pattern)
-    test_accuracy_pattern = 'Test net output #\\d: accuracy = ({0})'.format(float_pattern)
+    train_output_pattern = 'Train net output #(\\d+): (\S+) = ({0})'.format(float_pattern)
+    test_output_pattern = 'Test net output #(\\d+): (\S+) = ({0})'.format(float_pattern)
+    patterns = [train_output_pattern, test_output_pattern]
 
     print '{0}: {1}'.format(identifier, line.strip('\n'))
 
@@ -89,23 +89,17 @@ def line_processor(identifier, line, itnum, train_losses, test_losses, test_accu
         itnum = match.groups()[0]
         itnum = int(itnum)
 
-    match = re.search(train_loss_pattern, line)
-    if match:
-        train_loss = match.groups()[0]
-        train_loss = float(train_loss)
-        train_losses[itnum] = train_loss
+    for i in range(2):
+        match = re.search(patterns[i], line)
+        if match:
+            output_num, output_name, output = match.groups()
+            output = float(output)
+            output_num = int(output_num)
 
-    match = re.search(test_loss_pattern, line)
-    if match:
-        test_loss = match.groups()[0]
-        test_loss = float(test_loss)
-        test_losses[itnum] = test_loss
-
-    match = re.search(test_accuracy_pattern, line)
-    if match:
-        test_accuracy = match.groups()[0]
-        test_accuracy = float(test_accuracy)
-        test_accuracies[itnum] = test_accuracy
+            output_names[i][output_num] = output_name
+            if output_num not in outputs[i]:
+                outputs[i][output_num] = OrderedDict()
+            outputs[i][output_num][itnum]= output
 
     return itnum
 
@@ -128,11 +122,20 @@ def create_csv_data(data_dict):
 
 
 def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepath_root):
-    # key: itnum, value: loss value
     itnum = 0
-    train_losses = OrderedDict()
-    test_losses = OrderedDict()
-    test_accuracies = OrderedDict()
+    # index 0 is train, 1 is test
+    # {key: itnum, value: {key: output_num value: output_value}}
+    outputs = [OrderedDict(), OrderedDict()]
+    # {key: output_num, value: output_name}
+    output_names = [OrderedDict(), OrderedDict()]
+
+    disp_config = OrderedDict()
+    # loss
+    disp_config['loss'] = {'file_name': 'loss', 'yaxis_name': 'Loss', 'yinterval_policy': 'max'}
+    # accuracy
+    disp_config['accuracy'] = {'file_name': 'accuracy', 'yaxis_name': 'Accuracy', 'yinterval_policy': 'fix', 'yinterval_value': [0, 1]}
+    # other
+    disp_config['other'] = {'file_name': 'output', 'yaxis_name': 'Output'}
 
     # Check the queues if we received some output (until there is nothing more to get).
     while not stdout_reader.eof() or not stderr_reader.eof():
@@ -140,36 +143,63 @@ def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepat
         # Show what we received from standard output.
         while not stdout_queue.empty():
             line = stdout_queue.get()
-            itnum = line_processor('STDOUT', line, itnum, train_losses, test_losses, test_accuracies)
+            itnum = line_processor('STDOUT', line, itnum, outputs, output_names)
             new_data = True
 
         # Show what we received from standard error.
         while not stderr_queue.empty():
             line = stderr_queue.get()
-            itnum = line_processor('STDERR', line, itnum, train_losses, test_losses, test_accuracies)
+            itnum = line_processor('STDERR', line, itnum, outputs, output_names)
             new_data = True
 
-        if train_losses and test_losses and itnum != 0 and new_data:
-            # Save new plots
-            train_figure_arr = create_figure_data(train_losses)
-            test_figure_arr = create_figure_data(test_losses)
-            max_loss = max(np.max(train_figure_arr[:, 1]), np.max(test_figure_arr[:, 1]))
-            loss_figure_filepath = '{0}-loss.png'.format(figure_filepath_root)
-            plothelper.plot_and_save_2D_arrays(loss_figure_filepath, [train_figure_arr, test_figure_arr], xlabel='Iteration number', xinterval=[0, itnum], ylabel='Loss', yinterval=[0, max_loss*1.1], line_names=['Train loss', 'Test loss'])
+        if itnum != 0 and new_data:
+            # Partition outputs into 'loss', 'accuracy', 'other'
+            # contains index pairs: 0/1 (training/test) and output_num
+            indices = {}
+            for disp_type in disp_config:
+                indices[disp_type] = []
 
-            train_loss_data_filepath = '{0}-train-loss.txt'.format(figure_filepath_root)
-            fileproc.fwritelines(train_loss_data_filepath, create_csv_data(train_losses))
-            test_loss_data_filepath = '{0}-test-loss.txt'.format(figure_filepath_root)
-            fileproc.fwritelines(test_loss_data_filepath, create_csv_data(test_losses))
+            for i in range(2):
+                for output_num, output_name in output_names[i].iteritems():
+                    found_type = False
+                    for disp_type in disp_config:
+                        if disp_type in output_name:
+                            indices[disp_type].append([i, output_num])
+                            found_type = True
 
-        if test_accuracies and itnum != 0 and new_data:
-            # Save new plots
-            test_acc_figure_filepath = '{0}-test-accuracy.png'.format(figure_filepath_root)
-            test_acc_figure_arr = create_figure_data(test_accuracies)
-            plothelper.plot_and_save_2D_array(test_acc_figure_filepath, test_acc_figure_arr, xlabel='Iteration number', xinterval=[0, itnum], ylabel='Accuracy', yinterval=[0, 1])
+                    if not found_type:
+                        indices['other'].append([i, output_num])
 
-            test_accuracy_data_filepath = '{0}-test-accuracy.txt'.format(figure_filepath_root)
-            fileproc.fwritelines(test_accuracy_data_filepath, create_csv_data(test_accuracy_data_filepath))
+            for disp_type, dc in disp_config.iteritems():
+                figure_arrs = []
+                line_names = []
+                line_template_str = ['Train {0}', 'Test {0}']
+                csv_file_template_str = ['{0}-train-{1}.txt', '{0}-test-{1}.txt']
+
+                for i, output_num in indices[disp_type]:
+                    op = outputs[i][output_num]
+                    on = output_names[i][output_num]
+
+                    figure_arrs.append(create_figure_data(op))
+                    line_names.append(line_template_str[i].format(on))
+
+                    data_filepath = csv_file_template_str[i].format(figure_filepath_root, on)
+                    fileproc.fwritelines(data_filepath, create_csv_data(op))
+
+                if not figure_arrs:
+                    continue
+
+                # Choose different settings depending on the config
+                if dc['yinterval_policy'] == 'max':
+                    ymax = np.max([np.max(fa[:, 1]) for fa in figure_arrs])
+                    yinterval = [0, ymax*1.1]
+                elif dc['yinterval_policy'] == 'fix':
+                    yinterval = dc['yinterval_value']
+                else:
+                    yinterval = None
+
+                figure_filepath = '{0}-{1}.png'.format(figure_filepath_root, dc['file_name'])
+                plothelper.plot_and_save_2D_arrays(figure_filepath, figure_arrs, xlabel='Iteration number', xinterval=[0, itnum], ylabel=dc['yaxis_name'], yinterval=yinterval, line_names=line_names)
 
         # Sleep a bit before asking the readers again.
         time.sleep(update_interval)
