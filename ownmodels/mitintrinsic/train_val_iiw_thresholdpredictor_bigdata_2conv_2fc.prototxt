@@ -241,6 +241,12 @@ layers {
   }
 }
 layers {
+  name: "relu4"
+  type: RELU
+  bottom: "fc4"
+  top: "fc4"
+}
+layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
   bottom: "fc4"

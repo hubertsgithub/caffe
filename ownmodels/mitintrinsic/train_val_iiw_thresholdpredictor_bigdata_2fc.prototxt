@@ -203,6 +203,12 @@ layers {
   }
 }
 layers {
+  name: "relu3"
+  type: RELU
+  bottom: "fc3"
+  top: "fc3"
+}
+layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
   bottom: "fc3"
