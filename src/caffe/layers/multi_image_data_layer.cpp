@@ -303,6 +303,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
 		this->transformed_data_[i]->mutable_cpu_data()[0] = label;
 	}
 
+	// Reset state, so it will be reinitialized later when calling UpdateState()
 	if (share_random_trafos) {
 		this->transformers_[0]->ResetState();
 	}

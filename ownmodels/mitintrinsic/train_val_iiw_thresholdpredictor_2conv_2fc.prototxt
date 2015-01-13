@@ -6,16 +6,16 @@ layers {
   top: "chrom"
   top: "label"
   multi_prefetch_data_param {
-  	  share_random_trafos: false
+  	  share_random_trafos: true
   	  # input_data_count: 3
       # data - loaded as grayscale image
 	  data_transformations {
-		random_crop: false
+		random_crop: true
 		new_height: 256
 		new_width: 256
-		crop_size: 256
+		crop_size: 227
 		crop_first: false
-		mirror: false
+		mirror: true
 		scale: 0.00392156862
 		is_color: false
 		gamma: 2.2
@@ -24,12 +24,12 @@ layers {
 	  }
       # chromaticity image
 	  data_transformations {
-		random_crop: false
+		random_crop: true
 		new_height: 256
 		new_width: 256
-		crop_size: 256
+		crop_size: 227
 		crop_first: false
-		mirror: false
+		mirror: true
 		scale: 0.00392156862
 		is_color: true
 		gamma: 2.2
@@ -55,16 +55,16 @@ layers {
   top: "chrom"
   top: "label"
   multi_prefetch_data_param {
-  	  share_random_trafos: false
+  	  share_random_trafos: true
   	  # input_data_count: 3
       # data - loaded as grayscale image
 	  data_transformations {
-		random_crop: false
+		random_crop: true
 		new_height: 256
 		new_width: 256
-		crop_size: 256
+		crop_size: 227
 		crop_first: false
-		mirror: false
+		mirror: true
 		scale: 0.00392156862
 		is_color: false
 		gamma: 2.2
@@ -73,12 +73,12 @@ layers {
 	  }
       # chromaticity image
 	  data_transformations {
-		random_crop: false
+		random_crop: true
 		new_height: 256
 		new_width: 256
-		crop_size: 256
+		crop_size: 227
 		crop_first: false
-		mirror: false
+		mirror: true
 		scale: 0.00392156862
 		is_color: true
 		gamma: 2.2
@@ -209,6 +209,15 @@ layers {
   type: RELU
   bottom: "fc3"
   top: "fc3"
+}
+layers {
+  name: "drop3"
+  type: DROPOUT
+  bottom: "fc3"
+  top: "fc3"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
 }
 layers {
   name: "fc4"

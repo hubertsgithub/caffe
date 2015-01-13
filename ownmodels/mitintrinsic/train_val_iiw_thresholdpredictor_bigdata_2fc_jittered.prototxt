@@ -40,8 +40,8 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/iiw-dataset/train-threshold.txt"
-    batch_size: 7 
+    source: "data/iiw-dataset/train-threshold-all.txt"
+    batch_size: 20 
   }
   multi_image_data_param {
     use_label: true 
@@ -89,8 +89,8 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/iiw-dataset/test-threshold.txt"
-    batch_size: 1 
+    source: "data/iiw-dataset/test-threshold-all.txt"
+    batch_size: 10 
   }
   multi_image_data_param {
     use_label: true 
@@ -201,6 +201,12 @@ layers {
       value: 0
     }
   }
+}
+layers {
+  name: "relu3"
+  type: RELU
+  bottom: "fc3"
+  top: "fc3"
 }
 layers {
   name: "loss"
