@@ -576,6 +576,34 @@ class Zhao2012Estimator:
         #return [{}]
 
 
+class Zhao2012EstimatorWithThresholdImage:
+    def __init__(self, threshold_chrom=0.001, L1=False):
+        self.threshold_chrom = threshold_chrom
+
+    def estimate_shading_refl(self, image, mask, L1=False):
+        MODELPATH = 'ownmodels/mitintrinsic'
+        MODEL_FILE = os.path.join(MODELPATH, 'deploy_{0}.prototxt'.format(model_name))
+        PRETRAINED = os.path.join(MODELPATH, 'snapshots', 'caffenet_train_{0}_iter_{1}.caffemodel'.format(model_name, model_iteration))
+
+        gamma_corrected_image = image / 255.
+        chrom_image = common.compute_chromaticity_image(gamma_corrected_image)
+        gamma_corrected_image = np.mean(gamma_corrected_image, axis=2)
+        threshold_image_x, threshold_image_y = runcnn.predict_thresholds(MODEL_FILE, PRETRAINED, [gamma_corrected_image, chrom_image])
+
+        groups = []
+        return zhao2012algo(image, mask, self.threshold_chrom, groups, L1)
+
+    @staticmethod
+    def get_input(tag, DATASETCHOICE):
+        image = load_object(tag, 'diffuse', DATASETCHOICE)
+        mask = load_object(tag, 'mask', DATASETCHOICE)
+        return image, mask
+
+    @staticmethod
+    def param_choices():
+        return [{}]
+
+
 class Zhao2012GroundTruthGroupsEstimator:
     def __init__(self, threshold_chrom=0.001, L1=False):
         self.threshold_chrom = threshold_chrom

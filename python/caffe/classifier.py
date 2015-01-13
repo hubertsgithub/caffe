@@ -54,6 +54,25 @@ class Classifier(caffe.Net):
         self.image_dims = image_dims
 
 
+    def reset_input_dims(self, new_image_dims, new_crop_dims):
+        if len(new_image_dims) != 2:
+            raise ValueError('new_image_dims should be two dimensional, got: {0}'.format(new_image_dims))
+        if len(new_crop_dims) != 2:
+            raise ValueError('new_crop_dims should be two dimensional, got: {0}'.format(new_crop_dims))
+        if new_crop_dims[0] > new_image_dims[0] or new_crop_dims[1] > new_image_dims[1]:
+            raise ValueError('new_crop_dims should have smaller dimensions than new_image_dims, got: {0} (crop) vs {1} (image)'.format(new_crop_dims, new_image_dims))
+
+        self.image_dims = new_image_dims
+        self.crop_dims = new_crop_dims
+
+        for input in self.inputs:
+            old_shape = self.blobs[input].data.shape
+            # the batch size and channel size stays, we change the width and height only
+            self.blobs[input].reshape((old_shape[0], old_shape[1], new_crop_dims[0], new_crop_dims[1]))
+
+        self.reshape()
+
+
     def predict(self, inputs, oversample=True):
         """
         Predict classification probabilities of inputs.

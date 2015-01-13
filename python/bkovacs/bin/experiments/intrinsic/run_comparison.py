@@ -26,7 +26,7 @@ SETINDOOR = map(lambda n: str(n), range(1, 25))
 
 random.seed(10)
 with open(IIWTAGPATH) as f:
-    SETIIW = [s.strip() for s in f.readlines()]
+    SETIIW = [s.strip() for s in f.readlines()][:10]
 
 if DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
@@ -36,8 +36,8 @@ elif DATASETCHOICE == 1:
     ERRORMETRIC = 0  # LMSE
 elif DATASETCHOICE == 2:
     ALL_TAGS = SETIIW
-    ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
-    ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
+    #ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
+    #ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
     ERRORMETRIC = 1  # WHDR
 else:
     raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))
@@ -65,6 +65,7 @@ ESTIMATORS = [
                 #('Grayscale Retinex with CNN predicted threshold images using chromaticity + grayscale image, big network 4 conv layers, concatenated conv1+3 output + maxpool between conv1-2 and 2-3', intrinsic.GrayscaleRetinexWithThresholdImageChromBigNetConcatMaxpoolEstimator),
                 #('Grayscale Retinex with ground truth threshold images', intrinsic.GrayscaleRetinexWithThresholdImageGroundTruthEstimator),
                 ('Zhao2012', intrinsic.Zhao2012Estimator),
+                ('Zhao2012 with threshold image', intrinsic.Zhao2012EstimatorWithThresholdImage),
                 #('Zhao2012 with ground truth reflectance groups', intrinsic.Zhao2012GroundTruthGroupsEstimator),
                 #('Grayscale Retinex (GR-RET)', intrinsic.GrayscaleRetinexEstimator),
                 #('Color Retinex (COL-RET)', intrinsic.ColorRetinexEstimator),
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     ORACLEEACHIMAGE = True
     USESAVEDSCORES = False
     PARTIALRESULTS = False
-    IMAGESFORALLPARAMS = True
+    IMAGESFORALLPARAMS = False
     option = sys.argv[1]
     if len(sys.argv) >= 3:
         RERUNALLTASKS = {'True': True, 'False': False}.get(sys.argv[2])
