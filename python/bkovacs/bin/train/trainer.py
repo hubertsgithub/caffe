@@ -146,7 +146,7 @@ def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepat
         # Show what we received from standard error.
         while not stderr_queue.empty():
             line = stderr_queue.get()
-            itnum = line_processor('STERR', line, itnum, train_losses, test_losses, test_accuracies)
+            itnum = line_processor('STDERR', line, itnum, train_losses, test_losses, test_accuracies)
             new_data = True
 
         if train_losses and test_losses and itnum != 0 and new_data:
