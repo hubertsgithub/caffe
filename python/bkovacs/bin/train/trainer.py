@@ -76,7 +76,7 @@ def process_args(argv):
     mandatory_param_check(options, 'root')
     mandatory_param_check(options, 'modelname')
     optional_param_default(options, 'redirect', 'True')
-    optional_param_default(options, 'platform', 'GPU')
+    optional_param_default(options, 'platform', caffe_pb2.SolverParameter.GPU)
 
     print options
 
@@ -129,7 +129,7 @@ def create_csv_data(data_dict):
     return ret
 
 
-def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepath_root):
+def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root):
     itnum = 0
     # index 0 is train, 1 is test
     # {key: itnum, value: {key: output_num value: output_value}}
@@ -191,7 +191,7 @@ def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepat
                     figure_arrs.append(create_figure_data(op))
                     line_names.append(line_template_str[i].format(on))
 
-                    data_filepath = csv_file_template_str[i].format(figure_filepath_root, on)
+                    data_filepath = csv_file_template_str[i].format(filepath_root, on)
                     fileproc.fwritelines(data_filepath, create_csv_data(op))
 
                 if not figure_arrs:
@@ -206,7 +206,7 @@ def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepat
                 else:
                     yinterval = None
 
-                figure_filepath = '{0}-{1}.png'.format(figure_filepath_root, dc['file_name'])
+                figure_filepath = '{0}-{1}.png'.format(filepath_root, dc['file_name'])
                 plothelper.plot_and_save_2D_arrays(figure_filepath, figure_arrs, xlabel='Iteration number', xinterval=[0, itnum], ylabel=dc['yaxis_name'], yinterval=yinterval, line_names=line_names)
 
         # Sleep a bit before asking the readers again.
@@ -291,7 +291,7 @@ if __name__ == '__main__':
         stderr_reader = fileproc.AsynchronousFileReader(proc.stderr, stderr_queue)
         stderr_reader.start()
 
-        output_processor(stdout_queue, stderr_queue, 1, acrp(os.path.join(options['root'], options['modelname'])))
+        output_processor(stdout_queue, stderr_queue, 1, acrp(os.path.join(options['root'], '{0}-base_lr{1}'.format(options['modelname'], solver_params.base_lr))))
 
         # Let's be tidy and join the threads we've started.
         stdout_reader.join()
