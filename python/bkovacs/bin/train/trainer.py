@@ -13,6 +13,11 @@ import numpy as np
 
 from lib.utils.data import fileproc
 from lib.utils.misc import plothelper
+from lib.utils.misc.pathresolver import acrp
+
+# Make sure that caffe is on the python path:
+sys.path.append(acrp('python'))
+from caffe.proto import caffe_pb2
 
 CORRECTUSAGESTR = 'Correct usage: python trainer.py <root=rootpath> <modelname=the name of the model> <weights=pathtoweights?> <platform=(CPU,GPU)?>'
 
@@ -39,9 +44,14 @@ def process_arg(argstr):
     elif keyword == 'platform':
         if value != 'CPU' and value != 'GPU':
             raise ValueError('Invalid platform value: {0}'.format(value))
+        value = {'CPU': caffe_pb2.SolverParameter.CPU, 'GPU': caffe_pb2.SolverParameter.GPU}.get(value)
     elif keyword == 'redirect':
         if value != 'True' and value != 'False':
             raise ValueError('Invalid redirect value: {0}'.format(value))
+    elif keyword == 'base_lr':
+        value = float(value)
+    elif keyword == 'testset_size':
+        value = int(value)
     else:
         raise ValueError('Invalid keyword: {0}'.format(keyword))
 
@@ -203,6 +213,23 @@ def output_processor(stdout_queue, stderr_queue, update_interval, figure_filepat
         time.sleep(update_interval)
 
 
+def extract_batchsize_testsetsize(trainfile_path):
+    # Note that we handle only MULTI_IMAGE_DATA layer and some other layers (see below), we require that include.phase be TEST
+    model_params = fileproc.parse_model_definition_file(trainfile_path)
+    batch_size = None
+    testset_size = None
+    for layer in model_params.layers:
+        if layer.type in [caffe_pb2.LayerParameter.MULTI_IMAGE_DATA, caffe_pb2.LayerParameter.MULTI_IMAGE_PATCH_DATA, caffe_pb2.LayerParameter.IMAGE_DATA]:
+            if layer.include[0].phase == caffe_pb2.TEST:
+                batch_size = layer.image_data_param.batch_size
+                source = layer.image_data_param.source
+                # Note that the source should be relative to the caffe root path!
+                testset_size = len(fileproc.freadlines(acrp(source)))
+                break
+
+    return batch_size, testset_size
+
+
 if __name__ == '__main__':
     options = process_args(sys.argv)
     print 'Running training for model {0}...'.format(options['modelname'])
@@ -211,32 +238,44 @@ if __name__ == '__main__':
     trainfilename = 'train_val_{0}.prototxt'.format(options['modelname'])
     solverfilename = 'solver_{0}.prototxt'.format(options['modelname'])
 
-    if not os.path.exists(os.path.join(options['root'], trainfilename)):
+    trainfile_relpath = os.path.join(options['root'], trainfilename)
+    trainfile_fullpath = acrp(trainfile_relpath)
+
+    if not os.path.exists(trainfile_fullpath):
         print 'Traning file {0} doesn\'t exist! Please provide a valid model name!'.format(trainfilename)
         sys.exit()
 
+    solverfile_fullpath = acrp(os.path.join(options['root'], solverfilename))
     sample_to_use = ''
     # if the solver file exists, just use it
-    if os.path.exists(os.path.join(options['root'], solverfilename)):
+    if os.path.exists(solverfile_fullpath):
         sample_to_use = solverfilename
     else:
         sample_to_use = samplesolverfilename
 
     # copy the sample solver file and modify it
-    fin = open(os.path.join(options['root'], sample_to_use), 'r')
-    lines = fin.readlines()
-    fin.close()
+    solver_params = fileproc.parse_solver_file(acrp(os.path.join(options['root'], sample_to_use)))
 
-    fout = open(os.path.join(options['root'], solverfilename), 'w')
-    for l in lines:
-        newl = l.replace('train_val.prototxt', trainfilename)
-        newl = newl.replace('caffenet_train\"', 'caffenet_train_{0}\"'.format(options['modelname']))
-        newl = newl.replace('solver_mode: GPU', 'solver_mode: {0}'.format(options['platform']))
-        fout.write(newl)
+    # modify solver params according to the command line parameters
+    solver_params.net = trainfile_relpath
+    if 'base_lr' in options:
+        solver_params.base_lr = options['base_lr']
+    solver_params.snapshot_prefix = os.path.join(options['root'], 'snapshots', 'caffenet_train_{0}-base_lr{1}'.format(options['modelname'], solver_params.base_lr))
+    solver_params.solver_mode = options['platform']
 
-    fout.close()
+    # compute the proper test_iter
+    batch_size, testset_size = extract_batchsize_testsetsize(trainfile_fullpath)
 
-    commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(os.path.join(options['root'], solverfilename))]
+    if batch_size and testset_size:
+        print 'Extracted batch_size ({0}) and testset_size ({1})'.format(batch_size, testset_size)
+        # Note the solver file should have exactly one test_iter
+        solver_params.test_iter[0] = int(testset_size/batch_size)
+    else:
+        print 'WARNING: Couldn\'t find the batch_size or the source file containing the testset, please set the test_iter to testset_size / batch_size!'
+
+    fileproc.save_solver_file(solverfile_fullpath, solver_params)
+
+    commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_fullpath)]
     if 'weights' in options:
         commandtxt.append('--weights=' + options['weights'])
 
@@ -252,7 +291,7 @@ if __name__ == '__main__':
         stderr_reader = fileproc.AsynchronousFileReader(proc.stderr, stderr_queue)
         stderr_reader.start()
 
-        output_processor(stdout_queue, stderr_queue, 1, os.path.join(options['root'], options['modelname']))
+        output_processor(stdout_queue, stderr_queue, 1, acrp(os.path.join(options['root'], options['modelname'])))
 
         # Let's be tidy and join the threads we've started.
         stdout_reader.join()
