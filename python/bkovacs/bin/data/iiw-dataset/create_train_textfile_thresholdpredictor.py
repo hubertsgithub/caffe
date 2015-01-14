@@ -1,8 +1,9 @@
+import math
 import os
 
 from lib.utils.data import fileproc
-from lib.utils.train import ml
 from lib.utils.misc.pathresolver import acrp
+from lib.utils.train import ml
 
 DATAPATH = 'data/iiw-dataset/data'
 THRESHOLD_FILEPATH_DENSE = acrp('experiments/mitintrinsic/allresults/best-thresholdvalues-dense.txt')
@@ -26,6 +27,9 @@ def save_train_test_files(threshold_filepath, train_filepath, test_filepath, use
     for l in lines:
         tokens = l.split(' ')
         tag, threshold_chrom, score = tokens
+
+        # compute the logarithm of the threshold_chrom and try to predict that!
+        threshold_chrom = math.log(float(threshold_chrom))
 
         if use_orig_file:
             orig_file = '{0}.png'.format(tag)
@@ -59,5 +63,4 @@ if __name__ == "__main__":
         save_train_test_files(threshold_filepath, train_filepath, test_filepath, use_orig_file)
 
     print 'Done.'
-
 
