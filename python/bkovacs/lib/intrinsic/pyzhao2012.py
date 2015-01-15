@@ -16,7 +16,7 @@ ROOTPATH = acrp('experiments/pyzhao2012/input')
 def run(img, mask, lambda_l, lambda_r, lambda_a, abs_const_val, threshold_group_sim, threshold_chrom, groups=None):
     '''
     Input
-    img: W x H x 3
+    img: H x W x 3
         color image in linear RGB colorspace, values in [0.0, 1.0]
 
     Output

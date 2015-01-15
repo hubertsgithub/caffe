@@ -8,6 +8,7 @@ import cPickle as pickle
 import multiprocessing
 
 from lib.utils.data import common
+from lib.utils.train.ml import split_train_test
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc.parallel import call_with_multiprocessing_pool
 
@@ -15,6 +16,7 @@ g_SMALLERDIMSIZE = 1100
 g_NETINPUTSIZE = 224
 g_USESIMPLEGAMMAFORSAVE = True
 g_MINDIST = g_NETINPUTSIZE / 2 + 1
+g_JUSTTEXT = True
 
 # this script finds all the dense images and writes their name to a file
 g_rootpath = acrp('data/iiw-dataset')
@@ -37,7 +39,7 @@ def is_closeto_border(width, height, pw, ph, mindist):
 
 
 def aggregator_func(ret):
-    global g_equal_cmp_train, g_equal_cmp_test, g_notequal_cmp_train, g_notequal_cmp_test, g_skipped_count, g_nofile_count, g_processedfiles, g_lock
+    global g_equal_cmp_train, g_equal_cmp_test, g_notequal_cmp_train, g_notequal_cmp_test, g_skipped_count, g_nofile_count, g_processedfiles, g_lock, g_testset
 
     g_lock.acquire()
     if 'filename' in ret:
@@ -47,7 +49,7 @@ def aggregator_func(ret):
         sys.stdout.flush()
 
         if 'equal_cmp' in ret:
-            if filename in testset:
+            if filename in g_testset:
                 equal_cmp = g_equal_cmp_test
                 notequal_cmp = g_notequal_cmp_test
             else:
@@ -74,16 +76,16 @@ def aggregator_func(ret):
     g_lock.release()
 
 
-def process_photos(pool, origdirnames, processedfiles, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLEGAMMAFORSAVE, MINDIST):
+def process_photos(pool, origdirnames, processedfiles, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLEGAMMAFORSAVE, MINDIST, JUSTTEXT):
     for filename in origdirnames:
         if filename in processedfiles:
             print 'File already processed, skipping'
             continue
 
-        res = pool.apply_async(process_photo, args=(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLEGAMMAFORSAVE, MINDIST), callback=aggregator_func)
+        res = pool.apply_async(process_photo, args=(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLEGAMMAFORSAVE, MINDIST, JUSTTEXT), callback=aggregator_func)
 
 
-def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLEGAMMAFORSAVE, MINDIST):
+def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLEGAMMAFORSAVE, MINDIST, JUSTTEXT):
     print 'Processing file {0}...'.format(filename)
 
     filepath = os.path.join(origpath, filename)
@@ -95,33 +97,34 @@ def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLE
         print 'No highres path exists for {0}'.format(filename)
         return {'filename': filename, 'nofile_count': True}
 
-    # load image, compute grayscale + chromaticity images
-    linimg = common.load_image(highresimgfilepath, is_srgb=True)
-
-    # the minimum resolution should be SMALLERDIMSIZE
-    linimg = common.resize_and_crop_image(linimg, resize=SMALLERDIMSIZE, crop=None, keep_aspect_ratio=True, use_greater_side=False)
-    height, width = linimg.shape[0:2]
-    print 'Width: {0}, Height: {1}'.format(width, height)
-    grayimg = np.mean(linimg, axis=2)
-    chromimg = common.compute_chromaticity_image(linimg)
-
-    # gamma correction
-    if USESIMPLEGAMMAFORSAVE:
-        resizedimg = linimg ** (1. / 2.2)
-        grayimg = grayimg ** (1. / 2.2)
-        chromimg = chromimg ** (1. / 2.2)
-    else:
-        resizedimg = common.rgb_to_srgb(linimg)
-        grayimg = common.rgb_to_srgb(grayimg)
-        chromimg = common.rgb_to_srgb(chromimg)
-
     resizedimg_path = trunc_filepath + '-resized.png'
     grayimg_path = trunc_filepath + '-gray.png'
     chromimg_path = trunc_filepath + '-chrom.png'
 
-    common.save_image(resizedimg_path, resizedimg, is_srgb=False)
-    common.save_image(grayimg_path, grayimg, is_srgb=False)
-    common.save_image(chromimg_path, chromimg, is_srgb=False)
+    if not JUSTTEXT:
+        # load image, compute grayscale + chromaticity images
+        linimg = common.load_image(highresimgfilepath, is_srgb=True)
+
+        # the minimum resolution should be SMALLERDIMSIZE
+        linimg = common.resize_and_crop_image(linimg, resize=SMALLERDIMSIZE, crop=None, keep_aspect_ratio=True, use_greater_side=False)
+        height, width = linimg.shape[0:2]
+        print 'Width: {0}, Height: {1}'.format(width, height)
+        grayimg = np.mean(linimg, axis=2)
+        chromimg = common.compute_chromaticity_image(linimg)
+
+        # gamma correction
+        if USESIMPLEGAMMAFORSAVE:
+            resizedimg = linimg ** (1. / 2.2)
+            grayimg = grayimg ** (1. / 2.2)
+            chromimg = chromimg ** (1. / 2.2)
+        else:
+            resizedimg = common.rgb_to_srgb(linimg)
+            grayimg = common.rgb_to_srgb(grayimg)
+            chromimg = common.rgb_to_srgb(chromimg)
+
+        common.save_image(resizedimg_path, resizedimg, is_srgb=False)
+        common.save_image(grayimg_path, grayimg, is_srgb=False)
+        common.save_image(chromimg_path, chromimg, is_srgb=False)
 
     judgements = json.load(open(filepath))
     points = judgements['intrinsic_points']
@@ -184,11 +187,8 @@ if __name__ == "__main__":
     origdirnames = [x for x in origdirnames if os.path.splitext(x)[1] == '.json']
     origdirnames.sort()
 
-    random.seed(42)
     # Select 20% test set randomly
-    testset_size = int(len(origdirnames) * 0.2)
-    trainset_size = len(origdirnames) - testset_size
-    testset = random.sample(origdirnames, testset_size)
+    trainset, g_testset = split_train_test(origdirnames, 0.2)
 
     f_train = open(os.path.join(g_rootpath, 'train.txt'), 'w')
     f_test = open(os.path.join(g_rootpath, 'test.txt'), 'w')
@@ -211,7 +211,7 @@ if __name__ == "__main__":
         g_equal_cmp_test = dic['g_equal_cmp_test']
         g_notequal_cmp_test = dic['g_notequal_cmp_test']
 
-    call_with_multiprocessing_pool(process_photos, origdirnames, g_processedfiles, g_origpath, g_highresrootpath, g_SMALLERDIMSIZE, g_USESIMPLEGAMMAFORSAVE, g_MINDIST)
+    call_with_multiprocessing_pool(process_photos, origdirnames, g_processedfiles, g_origpath, g_highresrootpath, g_SMALLERDIMSIZE, g_USESIMPLEGAMMAFORSAVE, g_MINDIST, g_JUSTTEXT)
 
     print 'Skipped {0} comparisons because they were close to the border'.format(g_skipped_count)
     print 'No highres file found for {0} images'.format(g_nofile_count)

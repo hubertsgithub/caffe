@@ -50,10 +50,10 @@ def extract_ys(experiment_options):
 
         # Linearize image
         gray_img = common.load_image(acrp(gray_file), is_srgb=False)
-        gray_img = common.resize_and_crop_image(gray_img, experiment_options['input_size'], crop=None, keep_aspect_ratio=False)
+        gray_img = common.resize_and_crop_image(gray_img, experiment_options['input_size'], crop=experiment_options['crop_size'], keep_aspect_ratio=False)
         gray_img = gray_img ** 2.2
         chrom_img = common.load_image(acrp(chrom_file), is_srgb=False)
-        chrom_img = common.resize_and_crop_image(chrom_img, experiment_options['input_size'], crop=None, keep_aspect_ratio=False)
+        chrom_img = common.resize_and_crop_image(chrom_img, experiment_options['input_size'], crop=experiment_options['crop_size'], keep_aspect_ratio=False)
         chrom_img = chrom_img ** 2.2
         inputs = {'data': gray_img[:, :, np.newaxis], 'chrom': chrom_img}
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     common_config = {'mean_val': 128, \
                      'input_config': {'data': {'raw_scale': 255, 'input_scale': 1.0/255}, \
                                       'chrom': {'channel_swap': (2, 1, 0), 'raw_scale': 255, 'input_scale': 1.0/255}}, \
-                     'input_size': 256}
+                     'input_size': 256, 'crop_size': 227}
 
    # experiments.append(dict({'train_filepath': acrp('data/iiw-dataset/train-threshold-dense.txt'), \
    #                     'test_filepath': acrp('data/iiw-dataset/test-threshold-all.txt'), \
@@ -97,9 +97,9 @@ if __name__ == '__main__':
    #                     'output_name': 'fc4'}.items() + common_config.items()))
     experiments.append(dict({'train_filepath': acrp('data/iiw-dataset/train-threshold-all.txt'), \
                         'test_filepath': acrp('data/iiw-dataset/test-threshold-all.txt'), \
-                        'model_file': acrp('ownmodels/mitintrinsic/deploy_iiw_thresholdpredictor_2conv_2fc.prototxt'), \
-                        'pretrained_weights': acrp('ownmodels/mitintrinsic/snapshots/caffenet_train_iiw_thresholdpredictor_bigdata_2conv_2fc_jittered_iter_10000.caffemodel'), \
-                        'output_name': 'fc3'}.items() + common_config.items()))
+                        'model_file': acrp('ownmodels/mitintrinsic/deploy_iiw_thresholdpredictor_2conv_2fc_jittered.prototxt'), \
+                        'pretrained_weights': acrp('ownmodels/mitintrinsic/snapshots/caffenet_train_iiw_thresholdpredictor_bigdata_2conv_2fc_jittered-base_lr0.001_iter_10000.caffemodel'), \
+                        'output_name': 'fc4'}.items() + common_config.items()))
 
     results = {}
     for e in experiments:
