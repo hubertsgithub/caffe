@@ -57,7 +57,7 @@ def test_alexnet():
     print 'predicted class:', prediction.argmax()
 
 
-def compute_features(net, input_name, feature_options, input_image, px, py, croplen):
+def compute_features(net, input_name, feature_options, input_image, input_chrom_image, px, py, croplen):
     h, w = input_image.shape[0:2]
     cropw = px * w
     croph = py * h
@@ -67,6 +67,22 @@ def compute_features(net, input_name, feature_options, input_image, px, py, crop
     prediction = net.forward_all(blobs=feature_options, **{input_name: caffe_in[np.newaxis, :, :, :]})
 
     return prediction
+
+
+def compute_chrompatch(net, input_name, feature_options, input_image, input_chrom_image, px, py, croplen):
+    h, w = input_image.shape[0:2]
+    centerw = px * w
+    centerh = py * h
+
+    ret = {}
+    for f in feature_options:
+        shift = (f - 1) / 2
+        fet = np.zeros((f, f, 3))
+        fet[:] = input_chrom_image[centerh-shift:centerh+shift+1, centerw-shift:centerw+shift+1]
+
+        ret[f] = fet
+
+    return ret
 
 
 def find_nearest_idx(arr, value):
@@ -168,11 +184,11 @@ def analyze_distance_metric(distmetricname, dists_equal, dists_notequal, stepcou
     print 'Best accuracy: {0} at threshold: {1}'.format(acc, thresacc)
     print 'At ~ {0} precision ({1}) the recall is: {2} at threshold: {3}'.format(req_prec, prec, recall, thresprec)
 
+    return thresacc, acc, thresprec, prec, recall
+
 
 if __name__ == '__main__':
     #test_alexnet()
-    input_name = 'data'
-    net = init_net(MODEL_FILE, PRETRAINED_WEIGHTS, MEAN_FILE, input_name)
 
     with open(os.path.join(ROOTPATH, 'train.txt'), 'r') as f:
         lines = f.readlines()
@@ -200,58 +216,102 @@ if __name__ == '__main__':
     distmetrics.append({'name': 'Chai', 'func': lambda f1, f2: np.sum(np.square(f1 - f2) / np.clip(f1 + f2, 1e-10, np.inf))})
     distmetrics.append({'name': 'L1', 'func': lambda f1, f2: np.sum(np.abs(f1 - f2))})
 
-    feature_options = ['fc7', 'pool1']
+    input_name = 'data'
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255.}}
+    net = init_net(MODEL_FILE, PRETRAINED_WEIGHTS, MEAN_FILE, input_config)
+
+    network_options = {}
+    network_options['vgg'] = {'feature_options': ['fc7', 'pool5'], 'comp_feature_func': compute_features}
+    network_options['zhao'] = {'feature_options': [3, 5], 'comp_feature_func': compute_chrompatch}
+
+    scores = []
+    indices = []
     features = {}
     distances_equal = {}
     distances_notequal = {}
-    for f in feature_options:
-        features[f] = {}
-        distances_equal[f] = []
-        distances_notequal[f] = []
 
-        for dm_idx, dm in enumerate(distmetrics):
-            distances_equal[f].append([])
-            distances_notequal[f].append([])
+    # Sort sampled lines, so we don't read the same image twice
+    sampled_lines = sorted(sampled_lines, key=lambda l: l.split(' ')[0])
 
-    for l_idx, l in enumerate(progress_bar(sampled_lines)):
-        #  f.write('{0} {1} {2} {3} {4} {5} {6}\n'.format(grayimg_path, chromimg_path, 1, p1x, p1y, p2x, p2y))
-        tokens = l.split(' ')
-        grayimg_path, chromimg_path, sim, p1x, p1y, p2x, p2y = tokens
-        sim = {'0': False, '1': True}.get(sim)
-        p1x = float(p1x)
-        p1y = float(p1y)
-        p2x = float(p2x)
-        p2y = float(p2y)
-
-        head, filenameext = os.path.split(acrp(grayimg_path))
-        origfilenameext = filenameext.replace('-gray', '-resized')
-        origfilepath = os.path.join(head, origfilenameext)
-
-        if not os.path.exists(origfilepath):
-            raise ValueError('Image file doesn\'t exist: {0}!'.format(origfilepath))
-
-        im = common.load_image(origfilepath, is_srgb=True)
-        outputblobs1 = compute_features(net, input_name, feature_options, im, p1x, p1y, CROPLEN)
-        outputblobs2 = compute_features(net, input_name, feature_options, im, p2x, p2y, CROPLEN)
-
+    for net_name, net_options in network_options.iteritems():
+        feature_options = net_options['feature_options']
+        features[net_name] = {}
+        distances_equal[net_name] = {}
+        distances_notequal[net_name] = {}
         for f in feature_options:
-            f1 = outputblobs1[f]
-            f2 = outputblobs2[f]
-            f1 = np.squeeze(f1)
-            f2 = np.squeeze(f2)
-
-            features[f][l] = [f1, f2]
+            features[net_name][f] = {}
+            distances_equal[net_name][f] = []
+            distances_notequal[net_name][f] = []
 
             for dm_idx, dm in enumerate(distmetrics):
-                dist = dm['func'](f1, f2)
-                if sim:
-                    distances_equal[f][dm_idx].append(dist)
-                else:
-                    distances_notequal[f][dm_idx].append(dist)
+                distances_equal[net_name][f].append([])
+                distances_notequal[net_name][f].append([])
+
+        last_grayimg_path = ''
+        for l_idx, l in enumerate(progress_bar(sampled_lines)):
+            #  f.write('{0} {1} {2} {3} {4} {5} {6}\n'.format(grayimg_path, chromimg_path, 1, p1x, p1y, p2x, p2y))
+            tokens = l.split(' ')
+            grayimg_path, chromimg_path, sim, p1x, p1y, p2x, p2y = tokens
+            sim = {'0': False, '1': True}.get(sim)
+            p1x = float(p1x)
+            p1y = float(p1y)
+            p2x = float(p2x)
+            p2y = float(p2y)
+
+            # Don't load the image again if it is not necessary
+            if grayimg_path != last_grayimg_path:
+                head, filenameext = os.path.split(acrp(grayimg_path))
+                origfilenameext = filenameext.replace('-gray', '-resized')
+                origfilepath = os.path.join(head, origfilenameext)
+
+                if not os.path.exists(origfilepath):
+                    raise ValueError('Image file doesn\'t exist: {0}!'.format(origfilepath))
+
+                img = common.load_image(origfilepath, is_srgb=True)
+                chrom_img = common.compute_chromaticity_image(img)
+                last_grayimg_path = grayimg_path
+
+            outputblobs1 = net_options['comp_feature_func'](net, input_name, feature_options, img, chrom_img, p1x, p1y, CROPLEN)
+            outputblobs2 = net_options['comp_feature_func'](net, input_name, feature_options, img, chrom_img, p2x, p2y, CROPLEN)
+
+            for f in feature_options:
+                f1 = outputblobs1[f]
+                f2 = outputblobs2[f]
+                f1 = np.ravel(np.squeeze(f1))
+                f2 = np.ravel(np.squeeze(f2))
+
+                features[net_name][f][l_idx] = [f1, f2]
+
+                for dm_idx, dm in enumerate(distmetrics):
+                    dist = dm['func'](f1, f2)
+                    if sim:
+                        distances_equal[net_name][f][dm_idx].append(dist)
+                    else:
+                        distances_notequal[net_name][f][dm_idx].append(dist)
 
     packer.fpackb(features, 1.0, os.path.join(EXPROOTPATH, 'featuredata.dat'))
 
-    for f in feature_options:
-        for dm_idx, dm in enumerate(distmetrics):
-            analyze_distance_metric('{0}-{1}'.format(f, dm['name']), distances_equal[f][dm_idx], distances_notequal[f][dm_idx], STEPCOUNT, REQUIREDPRECISION)
+    for net_name, net_options in network_options.iteritems():
+        print '############# {0} #############'.format(net_name)
+
+        feature_options = net_options['feature_options']
+        for f in feature_options:
+            for dm_idx, dm in enumerate(distmetrics):
+                indices.append((net_name, f, dm['name']))
+                scores.append(analyze_distance_metric('{0}-{1}'.format(f, dm['name']), distances_equal[net_name][f][dm_idx], distances_notequal[net_name][f][dm_idx], STEPCOUNT, REQUIREDPRECISION))
+
+    # Search for best results
+    print '########### BEST RESULTS ###########'
+    scores = np.array(scores)
+    max_inds = np.argmax(scores, axis=0)
+    net_name, f, dmname = indices[max_inds[1]]
+    accuracy = scores[max_inds[1], 1]
+    print 'All values: {0}'.format(scores[:, 1])
+    print 'Best accuracy {0}: {1} network, {2} feature with {3} distance metric'.format(accuracy, net_name, f, dmname)
+    net_name, f, dmname = indices[max_inds[4]]
+    recall = scores[max_inds[4], 4]
+    print 'All values: {0}'.format(scores[:, 4])
+    print 'Best recall {0}: {1} network, {2} feature with {3} distance metric'.format(recall, net_name, f, dmname)
+
+
 

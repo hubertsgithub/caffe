@@ -10,6 +10,14 @@ import caffe
 
 
 def init_net(model_file, pretrained_weights, mean, input_config):
+    '''
+    Input:
+        model_file: path to the prototxt file containing the network definition
+        pretrained_weights: path to the file containing the trained weights
+        mean: either path to the mean file or a number which will be used for all pixels and channels
+        input_config: this dictionary contains the different configurations for each network input. Key: input_name, value: dcitionary with the config (key: option name, value: option value)
+    '''
+
     net = caffe.Net(model_file, pretrained_weights)
     net.set_phase_test()
     net.set_mode_cpu()
@@ -23,7 +31,7 @@ def init_net(model_file, pretrained_weights, mean, input_config):
 
         if isinstance(mean, basestring):
             blob = caffe.proto.caffe_pb2.BlobProto()
-            data = open(mean_file, 'rb').read()
+            data = open(mean, 'rb').read()
             blob.ParseFromString(data)
             meanarr = caffe.io.blobproto_to_array(blob)
             # Remove the first dimension (batch), which is 1 anyway
