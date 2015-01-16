@@ -314,6 +314,49 @@ def computeWeight(chromimg, w, h, cw, ch, threshold_chrom):
         return 100.
 
 
+def compute_entropy(reflimg):
+    '''
+    Compute the entropy as described in Zhao2012, using Parzen-window estimators
+    '''
+    if reflimg.ndim != 2:
+        raise ValueError('The grayscale reflectance image should be 2 dimensions!')
+
+    # quantize colors
+    maxval = 256
+    N = 30
+    s = 1.
+
+    approx_max = np.percentile(reflimg, 99.9)
+    reflimg /= approx_max
+    reflimg = (reflimg * maxval).astype(np.int)
+
+    hist, bin_edges = np.histogram(reflimg, bins=maxval, range=[0, 256])
+    probs = np.zeros((maxval))
+
+    for i in range(maxval):
+        pi = 0.
+        wsum = 0.
+
+        for j in range(i - N / 2, i + N / 2 + 1):
+            if j < 0 or j >= maxval:
+                continue
+
+            w_j = math.exp(0.5 * (i - j) ** 2 / (s ** 2))
+            pi += w_j * hist[j]
+            wsum += w_j
+
+        pi /= wsum
+        probs[i] = pi
+
+    # Normalize probabilities
+    probs /= np.sum(probs)
+
+    quadratic_entropy = np.sum(np.power(probs, 2.0))
+    shannon_entropy = -np.sum(np.log(probs) * probs)
+
+    return quadratic_entropy, shannon_entropy
+
+
 def func(s, log_grayimg, chromimg, used_inddic, lambda_l, lambda_a, abs_const_val, threshold_chrom, max_inds):
     height, width = log_grayimg.shape
     sum = 0.0

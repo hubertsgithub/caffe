@@ -329,6 +329,7 @@ def zhao2012algo(image, mask, threshold_chrom, groups, L1=False):
         LAMBDA_R *= 20
 
     shading, refl = pyzhao2012.run(image, mask, LAMBDA_L, LAMBDA_R, LAMBDA_A, ABS_CONST_VAL, THRESHOLD_GROUP_SIM, threshold_chrom, groups)
+
     shading *= 255.
     refl *= 255.
 

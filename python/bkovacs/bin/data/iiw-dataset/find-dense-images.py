@@ -17,6 +17,9 @@ origdirnames.sort()
 
 denseimgcount = 0
 othersimgcount = 0
+distximgcount = 0
+distyimgcount = 0
+incompleteimgs = set()
 
 with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 'w') as others_file, open(outputfilepath_all, 'w') as all_file:
     for filename in origdirnames:
@@ -24,6 +27,14 @@ with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 
 
         filepath = os.path.join(origpath, filename)
         trunc_filename, ext = os.path.splitext(filename)
+
+        if not os.path.exists(os.path.join(origpath, '{0}-dist_x.png'.format(trunc_filename))):
+            distximgcount += 1
+            incompleteimgs.add(trunc_filename)
+
+        if not os.path.exists(os.path.join(origpath, '{0}-dist_y.png'.format(trunc_filename))):
+            distyimgcount += 1
+            incompleteimgs.add(trunc_filename)
 
         judgements = json.load(open(filepath))
         points = judgements['intrinsic_points']
@@ -46,11 +57,11 @@ with open(outputfilepath_dense, 'w') as dense_file, open(outputfilepath_others, 
 
         all_file.write(trunc_filename + '\n')
 
-
 print 'Found {0} dense images'.format(denseimgcount)
 print 'Found {0} other images'.format(othersimgcount)
 print '{0} images altogether'.format(denseimgcount + othersimgcount)
-
+print '{0} distx and {1} disty missing images'.format(distximgcount, distyimgcount)
+print 'Incomplete images: {0}'.format(incompleteimgs)
 
 print 'Done.'
 

@@ -1,11 +1,11 @@
 import os
 import sys
-import random
 
 from lib.intrinsic import intrinsic
 from lib.intrinsic import comparison
 
 from lib.utils.misc.pathresolver import acrp
+from lib.utils.data import fileproc
 
 # 0 mitintrinsic
 # 1 Sean's synthetic dataset
@@ -15,6 +15,7 @@ DATASETCHOICE = 2
 SAVEROOTDIR = acrp('experiments/mitintrinsic/allresults')
 #IIWTAGPATH = acrp('data/iiw-dataset/denseimages.txt')
 IIWTAGPATH = acrp('data/iiw-dataset/all-images.txt')
+JOBSFILEPATH = acrp('data/iiw-dataset/jobs-bin-threshold-all.txt')
 
 # The following objects were used in the evaluation. For the learning algorithms
 # (not included here), we used two-fold cross-validation with the following
@@ -24,9 +25,7 @@ SET2MIT = ['deer', 'frog1', 'frog2', 'paper1', 'paper2', 'raccoon', 'teabag1', '
 
 SETINDOOR = map(lambda n: str(n), range(1, 25))
 
-random.seed(10)
-with open(IIWTAGPATH) as f:
-    SETIIW = [s.strip() for s in f.readlines()]
+SETIIW = fileproc.freadlines(IIWTAGPATH)
 
 if DATASETCHOICE == 0:
     ALL_TAGS = SET1MIT + SET2MIT
@@ -36,8 +35,8 @@ elif DATASETCHOICE == 1:
     ERRORMETRIC = 0  # LMSE
 elif DATASETCHOICE == 2:
     ALL_TAGS = SETIIW
-    ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
-    ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
+    #ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
+    #ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
     ERRORMETRIC = 1  # WHDR
 else:
     raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))

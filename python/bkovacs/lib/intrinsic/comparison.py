@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import scipy as sp
 
-from lib.intrinsic import html, intrinsic, tasks, resulthandler
+from lib.intrinsic import html, intrinsic, tasks, resulthandler, pyzhao2012
 from lib.utils.data import common, whdr
 from lib.utils.misc import packer
 from lib.utils.misc.progressbaraux import progress_bar
@@ -98,6 +98,7 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
             for j, params in progress_bar(enumerate(choices)):
                 estimator = EstimatorClass(**params)
                 est_shading, est_refl = estimator.estimate_shading_refl(*inp)
+                q_ent, s_ent = pyzhao2012.compute_entropy(est_refl)
 
                 if ERRORMETRIC == 0:
                     scores[i, j] = intrinsic.score_image(true_shading, true_refl, est_shading, est_refl, mask)
@@ -107,7 +108,8 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
                     raise ValueError('Unknown error metric choice: {0}'.format(ERRORMETRIC))
 
                 if IMAGESFORALLPARAMS:
-                    gen.text('%s: %1.3f' % (tag, scores[i, j]))
+                    gen.text('Score: %s: %1.3f' % (tag, scores[i, j]))
+                    gen.text('Quadratic entropy: %1.3f, Shannon entropy: %1.3f' % (q_ent, s_ent))
                     gen.text('Parameters %s' % (params))
                     save_estimates(gen, image, est_shading, est_refl, mask)
 
