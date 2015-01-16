@@ -62,13 +62,18 @@ def extract_thresholds(name, root_path, tagfile_path, tagfilterfile_path, scoref
         best_scores.append(score)
         best_param_values.append(bestparams[PARAMNAME])
 
-
     fileproc.fwritelines(os.path.join(root_path, '{0}-{1}.txt'.format(output_filename_root, name)), lines, endline=False)
 
     n, bins, patches = pylab.hist(best_param_values, bins=np.logspace(-3., 0.3, 15))
     pylab.gca().set_xscale("log")
     pylab.title('{0}-{1}-histogram'.format(output_filename_root, name))
     pylab.savefig(os.path.join(root_path, '{0}-{1}-histogram.png'.format(output_filename_root, name)))
+    pylab.clf()
+
+    n, bins, patches = pylab.hist(np.log(best_param_values), bins=30)
+    pylab.title('{0}-{1}-histogram-log'.format(output_filename_root, name))
+    pylab.savefig(os.path.join(root_path, '{0}-{1}-histogram-log.png'.format(output_filename_root, name)))
+    pylab.clf()
 
     print 'Saved best threshold values for {0} images'.format(len(lines))
 

@@ -145,12 +145,12 @@ def resize_and_crop_channel(ch_arr, resize, crop, keep_aspect_ratio=False, use_g
 
 
 def resize_and_crop_image(arr, resize, crop, keep_aspect_ratio=False, use_greater_side=True):
-    if len(arr.shape) == 3:
+    if arr.ndim == 3:
         rets = []
         for c in range(3):
             rets.append(resize_and_crop_channel(arr[:, :, c], resize, crop, keep_aspect_ratio, use_greater_side))
         res_arr = np.dstack(rets)
-    elif len(arr.shape) == 2:
+    elif arr.ndim == 2:
         res_arr = resize_and_crop_channel(arr, resize, crop, keep_aspect_ratio, use_greater_side)
     else:
         raise ValueError('The provided image array should have either 1 or 3 channels!')
@@ -191,9 +191,9 @@ def computegradimgs(shading, reflectance, mask):
 
     #images = map(lambda image: np.clip(image, .001, np.infty), images)
     # Convert to grayscale
-    if len(shading.shape) == 3:
+    if shading.ndim == 3:
         shading = np.mean(shading, axis=2)
-    if len(reflectance.shape) == 3:
+    if reflectance.ndim == 3:
         reflectance = np.mean(reflectance, axis=2)
 
     # Compute log images
@@ -214,7 +214,7 @@ def computegradimgs(shading, reflectance, mask):
 
 
 def compute_chromaticity_image(image):
-    if len(image.shape) != 3:
+    if image.ndim != 3:
         raise ValueError('The image should have 3 channels (RGB)!')
 
     sumimg = np.sum(image, axis=2)
@@ -229,3 +229,18 @@ def compute_color_reflectance(gray_refl, img):
 
     # multiply by 3, because we don't do that when computing the chromaticity image
     return gray_refl[:, :, np.newaxis] * chromimg
+
+
+def compute_chromaticity_dist_image(chrom):
+    if chrom.ndim != 3:
+        raise ValueError('The chromaticity image should have 3 channels!')
+
+    c_y, c_x = poisson.get_gradients(chrom)
+    dist_y = np.sqrt(np.sum(np.power(c_y, 2.), axis=2))
+    dist_x = np.sqrt(np.sum(np.power(c_x, 2.), axis=2))
+
+    return dist_y, dist_x
+
+
+
+

@@ -11,12 +11,14 @@ from lib.utils.data import common
 from lib.utils.train.ml import split_train_test
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.misc.parallel import call_with_multiprocessing_pool
+from lib.utils.misc.progressbaraux import progress_bar_widgets
+from progressbar import ProgressBar
 
 g_SMALLERDIMSIZE = 1100
 g_NETINPUTSIZE = 224
 g_USESIMPLEGAMMAFORSAVE = True
 g_MINDIST = g_NETINPUTSIZE / 2 + 1
-g_JUSTTEXT = True
+g_JUSTTEXT = False
 
 # this script finds all the dense images and writes their name to a file
 g_rootpath = acrp('data/iiw-dataset')
@@ -31,6 +33,8 @@ g_notequal_cmp_test = []
 g_skipped_count = 0
 g_nofile_count = 0
 g_processedfiles = set()
+g_progressbar = None
+g_pbar_counter = 0
 g_lock = multiprocessing.Lock()
 
 
@@ -39,7 +43,7 @@ def is_closeto_border(width, height, pw, ph, mindist):
 
 
 def aggregator_func(ret):
-    global g_equal_cmp_train, g_equal_cmp_test, g_notequal_cmp_train, g_notequal_cmp_test, g_skipped_count, g_nofile_count, g_processedfiles, g_lock, g_testset
+    global g_equal_cmp_train, g_equal_cmp_test, g_notequal_cmp_train, g_notequal_cmp_test, g_skipped_count, g_nofile_count, g_processedfiles, g_lock, g_testset, g_progressbar, g_pbar_counter
 
     g_lock.acquire()
     if 'filename' in ret:
@@ -73,6 +77,9 @@ def aggregator_func(ret):
 
         pickle.dump(dic, open(procfilepath, 'w'))
 
+        g_pbar_counter += 1
+        g_progressbar.update(g_pbar_counter)
+
     g_lock.release()
 
 
@@ -100,31 +107,40 @@ def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLE
     resizedimg_path = trunc_filepath + '-resized.png'
     grayimg_path = trunc_filepath + '-gray.png'
     chromimg_path = trunc_filepath + '-chrom.png'
+    dist_y_path = trunc_filepath + '-dist_y.png'
+    dist_x_path = trunc_filepath + '-dist_x.png'
+
+    # load image, compute grayscale + chromaticity images
+    linimg = common.load_image(highresimgfilepath, is_srgb=True)
+    # the minimum resolution should be SMALLERDIMSIZE
+    linimg = common.resize_and_crop_image(linimg, resize=SMALLERDIMSIZE, crop=None, keep_aspect_ratio=True, use_greater_side=False)
+    height, width = linimg.shape[0:2]
+    print 'Width: {0}, Height: {1}'.format(width, height)
 
     if not JUSTTEXT:
-        # load image, compute grayscale + chromaticity images
-        linimg = common.load_image(highresimgfilepath, is_srgb=True)
-
-        # the minimum resolution should be SMALLERDIMSIZE
-        linimg = common.resize_and_crop_image(linimg, resize=SMALLERDIMSIZE, crop=None, keep_aspect_ratio=True, use_greater_side=False)
-        height, width = linimg.shape[0:2]
-        print 'Width: {0}, Height: {1}'.format(width, height)
         grayimg = np.mean(linimg, axis=2)
         chromimg = common.compute_chromaticity_image(linimg)
+        dist_y, dist_x = common.compute_chromaticity_dist_image(chromimg)
 
         # gamma correction
         if USESIMPLEGAMMAFORSAVE:
             resizedimg = linimg ** (1. / 2.2)
             grayimg = grayimg ** (1. / 2.2)
             chromimg = chromimg ** (1. / 2.2)
+            dist_y = dist_y ** (1. / 2.2)
+            dist_x = dist_x ** (1. / 2.2)
         else:
             resizedimg = common.rgb_to_srgb(linimg)
             grayimg = common.rgb_to_srgb(grayimg)
             chromimg = common.rgb_to_srgb(chromimg)
+            dist_y = common.rgb_to_srgb(dist_y)
+            dist_x = common.rgb_to_srgb(dist_x)
 
         common.save_image(resizedimg_path, resizedimg, is_srgb=False)
         common.save_image(grayimg_path, grayimg, is_srgb=False)
         common.save_image(chromimg_path, chromimg, is_srgb=False)
+        common.save_image(dist_y_path, dist_y, is_srgb=False)
+        common.save_image(dist_x_path, dist_x, is_srgb=False)
 
     judgements = json.load(open(filepath))
     points = judgements['intrinsic_points']
@@ -182,10 +198,15 @@ def process_photo(filename, origpath, highresrootpath, SMALLERDIMSIZE, USESIMPLE
 
 if __name__ == "__main__":
     multiprocessing.log_to_stderr()
+
     origdirnames = listdir(g_origpath)
     # filter for only json files
     origdirnames = [x for x in origdirnames if os.path.splitext(x)[1] == '.json']
     origdirnames.sort()
+
+    g_progressbar = ProgressBar(widgets=progress_bar_widgets(), maxval=len(origdirnames))
+    g_pbar_counter = 0
+    g_progressbar.start()
 
     # Select 20% test set randomly
     trainset, g_testset = split_train_test(origdirnames, 0.2)
@@ -212,6 +233,8 @@ if __name__ == "__main__":
         g_notequal_cmp_test = dic['g_notequal_cmp_test']
 
     call_with_multiprocessing_pool(process_photos, origdirnames, g_processedfiles, g_origpath, g_highresrootpath, g_SMALLERDIMSIZE, g_USESIMPLEGAMMAFORSAVE, g_MINDIST, g_JUSTTEXT)
+
+    g_progressbar.finish()
 
     print 'Skipped {0} comparisons because they were close to the border'.format(g_skipped_count)
     print 'No highres file found for {0} images'.format(g_nofile_count)

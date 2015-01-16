@@ -5,12 +5,13 @@ import time
 
 from lib.utils.misc import packer
 from lib.utils.misc.progressbaraux import progress_bar_widgets
-from celeryconfig_local import PASSWORD, REDISIP
 from progressbar import ProgressBar
+from celeryconfig_local import PASSWORD, REDISIP
 
 REDIS_CONFIG = {'host': REDISIP, 'port': 6379, 'password': PASSWORD, 'db': 0}
 #REDIS_CONFIG = {'host': 'localhost', 'port': 6379, 'password': None, 'db': 0}
 BATCHSIZE = 1024
+
 
 def delete_results(keys):
     client = redis.StrictRedis(**REDIS_CONFIG)
