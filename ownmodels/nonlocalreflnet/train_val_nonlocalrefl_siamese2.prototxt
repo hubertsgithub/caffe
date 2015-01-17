@@ -84,8 +84,8 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/iiw-dataset/train.txt"
-    batch_size: 123
+    source: "data/iiw-dataset/test-small.txt"
+    batch_size: 100
   }
   include: { phase: TEST }
 }
