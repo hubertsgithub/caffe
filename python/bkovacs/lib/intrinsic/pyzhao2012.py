@@ -323,7 +323,6 @@ def compute_entropy(reflimg):
 
     # quantize colors
     maxval = 256
-    N = 30
     s = 1.
 
     approx_max = np.percentile(reflimg, 99.9)
@@ -337,11 +336,8 @@ def compute_entropy(reflimg):
         pi = 0.
         wsum = 0.
 
-        for j in range(i - N / 2, i + N / 2 + 1):
-            if j < 0 or j >= maxval:
-                continue
-
-            w_j = math.exp(0.5 * (i - j) ** 2 / (s ** 2))
+        for j in range(maxval):
+            w_j = 1./(s * math.sqrt(2 * math.pi)) * math.exp(-(i - j) ** 2 / (2 * s ** 2))
             pi += w_j * hist[j]
             wsum += w_j
 
@@ -352,7 +348,7 @@ def compute_entropy(reflimg):
     probs /= np.sum(probs)
 
     quadratic_entropy = np.sum(np.power(probs, 2.0))
-    shannon_entropy = -np.sum(np.log(probs) * probs)
+    shannon_entropy = -np.sum(np.clip(np.log(probs), 0.0001, np.inf) * probs)
 
     return quadratic_entropy, shannon_entropy
 
