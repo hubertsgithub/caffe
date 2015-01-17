@@ -348,7 +348,7 @@ def compute_entropy(reflimg):
     probs /= np.sum(probs)
 
     quadratic_entropy = np.sum(np.power(probs, 2.0))
-    shannon_entropy = -np.sum(np.clip(np.log(probs), 0.0001, np.inf) * probs)
+    shannon_entropy = -np.sum(np.log(np.clip(probs, 0.0001, np.inf)) * probs)
 
     return quadratic_entropy, shannon_entropy
 
