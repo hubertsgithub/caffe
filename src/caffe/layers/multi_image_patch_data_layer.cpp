@@ -268,12 +268,13 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 	// Preload all images in the memory using multiple threads
 	vector<vector<cv::Mat> > cv_imgs(batch_size);
 
+	// get a blob
+	timer.Start();
+
 	#pragma omp parallel for schedule(dynamic, 1)
 	for (int item_id = 0; item_id < batch_size; ++item_id) {
 		cv_imgs[item_id] = vector<cv::Mat>(image_count);
 
-		// get a blob
-		timer.Start();
 		CHECK_GT(lines_size, lines_id_);
 
 		for (int i = 0; i < image_count; ++i) {
@@ -298,8 +299,9 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 			}
 			cv_imgs[item_id][i] = cv_img;
 		}
-		read_time += timer.MicroSeconds();
 	}
+
+	read_time += timer.MicroSeconds();
 
 	for (int item_id = 0; item_id < batch_size; ++item_id) {
 		// get a blob
