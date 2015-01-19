@@ -348,7 +348,8 @@ def dispatch_predefined_jobs(job_params, DATASETCHOICE, ERRORMETRIC, USE_L1, RES
         # Start jobs for which we don't have a result already
         rest_job_param = OrderedDict({'classnum': job_param['classnum'], 'samplenum': job_param['samplenum']})
         key = resulthandler.get_task_key('imageAsResult', job_param['EstimatorClass'], job_param['tag'], rest_job_param)
-        runtask = key not in all_processed
+        #runtask = key not in all_processed
+        runtask = not os.path.exists(os.path.join(RESULTS_DIR, job_param['tag'], '{0}-classnum{1}-samplenum{2}-refl.png'.format(job_param['tag'], job_param['classnum'], job_param['samplenum']))) or not os.path.exists(os.path.join(RESULTS_DIR, job_param['tag'], '{0}-classnum{1}-samplenum{2}-shading.png'.format(job_param['tag'], job_param['classnum'], job_param['samplenum'])))
 
         if runtask:
             tasks.computeScoreJob_task.delay(job_param['EstimatorClass'], job_param['params'], job_param['tag'], rest_job_param, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, imageAsResult=True)

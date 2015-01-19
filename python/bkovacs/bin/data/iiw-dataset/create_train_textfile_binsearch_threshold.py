@@ -8,7 +8,7 @@ from lib.utils.data import fileproc
 from lib.utils.misc.pathresolver import acrp
 from lib.utils.train import ml
 
-DATAPATH = 'data/iiw-dataset/data'
+DATAPATH = 'data/iiw-dataset/binsearchdata'
 
 THRESHOLD_FILEPATH_ALL = acrp('experiments/mitintrinsic/allresults/best-thresholdvalues-all.txt')
 TRAIN_FILEPATH_ALL = acrp('data/iiw-dataset/train-bin-threshold-all.txt')

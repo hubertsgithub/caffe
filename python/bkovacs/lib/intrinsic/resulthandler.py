@@ -215,7 +215,7 @@ def save_images_by_keys(keys_to_get, client, pattern, visited, results_dir, proc
     processed_keys += keys_to_get
     fileproc.fwritelines(processed_tasks_filepath, processed_keys)
 
-    client.delete(keys_to_get)
+    client.delete(*keys_to_get)
 
 
 def gather_all_jobresults(job_params, results_dir, processed_tasks_filepath):
@@ -250,6 +250,8 @@ def gather_all_jobresults(job_params, results_dir, processed_tasks_filepath):
         pbar_counter += len(keys_to_get)
         pbar.update(pbar_counter)
         keys_to_get.clear()
+
+        time.sleep(2)
 
     pbar.finish()
 

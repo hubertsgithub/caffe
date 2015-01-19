@@ -22,6 +22,7 @@ sudo pip install 'pip<1.6,>=1.5'
 sudo pip install numpy
 sudo pip install scipy
 sudo pip install pypng pyamg redis msgpack-numpy Celery flower Pillow
+sudo pip install -I git+https://github.com/seanbell/python-progressbar
 
 mkdir /home/ubuntu/gitrepos
 cd /home/ubuntu/gitrepos
