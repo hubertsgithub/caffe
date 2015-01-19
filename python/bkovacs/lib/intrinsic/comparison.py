@@ -3,10 +3,11 @@ import sys
 
 import numpy as np
 import scipy as sp
+from collections import OrderedDict
 
 from lib.intrinsic import html, intrinsic, tasks, resulthandler, pyzhao2012
 from lib.utils.data import common, whdr
-from lib.utils.misc import packer
+from lib.utils.misc import packer, strhelper
 from lib.utils.misc.progressbaraux import progress_bar
 from lib.utils.misc.mathhelper import nanrankdata
 
@@ -172,6 +173,9 @@ def run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ES
         gen.text('%s: %1.3f' % (name, avg))
 
 
+'''
+Comparison experiment
+'''
 def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, RERUNALLTASKS):
     tags = ALL_TAGS
     if not RERUNALLTASKS:
@@ -185,7 +189,8 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
 
             for i, tag in enumerate(tags):
                 for j, params in enumerate(choices):
-                    key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+                    jobid_params = OrderedDict({'i': i, 'j': j})
+                    key = resulthandler.get_task_key('intermediary', EstimatorClass, tag, jobid_params)
                     keys_to_delete.append(key)
 
         print 'Deleting {0} results before starting new jobs'.format(len(keys_to_delete))
@@ -200,16 +205,17 @@ def dispatch_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1,
 
         for i, tag in enumerate(tags):
             for j, params in enumerate(choices):
+                jobid_params = OrderedDict({'i': i, 'j': j})
                 runtask = False
                 if RERUNALLTASKS:
                     runtask = True
                 else:
                     # Start jobs for which we don't have a result already
-                    key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+                    key = resulthandler.get_task_key('intermediary', EstimatorClass, tag, jobid_params)
                     runtask = key not in all_processed
 
                 if runtask:
-                    tasks.computeScoreJob_task.delay(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore=False)
+                    tasks.computeScoreJob_task.delay(EstimatorClass, params, tag, jobid_params, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, imageAsResult=False)
                     started_job_count += 1
                 else:
                     print 'Skipped (already processed): {0}'.format(key)
@@ -327,19 +333,39 @@ def aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1
     packer.fpackb({'results': results, 'allscores': allscores, 'best_params': best_params, 'tags': tags}, 1.1, os.path.join(RESULTS_DIR, SCORE_FILENAME))
 
 
-def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, isFinalScore):
-    """
-    Input paramsDict:
-        {'estimator' : (name, EstimatorClass)}
-        {'params' : params with which the estimation will be called}
-        {'tag' : the estimated object's (image) tag}
-        {'score_coords' : the coordinates in the score matrix (i, j)}
-    """
+'''
+Compute certain predefined jobs
+'''
+def dispatch_predefined_jobs(job_params, DATASETCHOICE, ERRORMETRIC, USE_L1, RESULTS_DIR, RERUNALLTASKS, processed_tasks_filepath):
+    if RERUNALLTASKS:
+        all_processed = []
+    else:
+        print 'Getting all processed tasks, these won\'t be started again'
+        all_processed = resulthandler.get_all_processed_from_file(processed_tasks_filepath)
 
+    started_job_count = 0
+    for job_param in progress_bar(job_params):
+        # Start jobs for which we don't have a result already
+        rest_job_param = OrderedDict({'classnum': job_param['classnum'], 'samplenum': job_param['samplenum']})
+        key = resulthandler.get_task_key('imageAsResult', job_param['EstimatorClass'], job_param['tag'], rest_job_param)
+        runtask = key not in all_processed
+
+        if runtask:
+            tasks.computeScoreJob_task.delay(job_param['EstimatorClass'], job_param['params'], job_param['tag'], rest_job_param, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, imageAsResult=True)
+            started_job_count += 1
+        else:
+            print 'Skipped (already processed): {0}'.format(key)
+
+    print 'Started {0} jobs'.format(started_job_count)
+
+
+def aggregate_predifined_jobs(job_params, RESULTS_DIR, processed_tasks_filepath):
+    resulthandler.gather_all_jobresults(job_params, RESULTS_DIR, processed_tasks_filepath)
+
+
+def computeScoreJob(EstimatorClass, params, tag, jobid_params, DATASETCHOICE, ERRORMETRIC, RESULTS_DIR, USE_L1, imageAsResult):
     # Estimators know what input they expect (grayscale image, color image, etc.)
     inp = EstimatorClass.get_input(tag, DATASETCHOICE)
-    if isFinalScore:
-        inp = inp + (USE_L1,)
 
     if ERRORMETRIC == 0:
         true_shading = intrinsic.load_object(tag, 'shading', DATASETCHOICE)
@@ -363,16 +389,15 @@ def computeScoreJob(name, EstimatorClass, params, tag, i, j, DATASETCHOICE, ERRO
     except sp.linalg.LinAlgError:
         score = np.nan
 
-    if isFinalScore:
-        key = 'intrinsicresults-final-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+    if imageAsResult:
+        key = resulthandler.get_task_key('imageAsResult', EstimatorClass, tag, jobid_params)
         value = (score, est_shading, est_refl)
     else:
-        key = 'intrinsicresults-intermediary-class={0}-tag={1}-i={2}-j={3}'.format(EstimatorClass, tag, i, j)
+        key = resulthandler.get_task_key('intermediary', EstimatorClass, tag, jobid_params)
         value = score
 
     packed = packer.packb(value, version='1.0')
 
     return key, packed
-
 
 

@@ -6,7 +6,7 @@ from lib.utils.data import fileproc
 TESTFILEPATH = acrp('data/iiw-dataset/test.txt')
 TESTSMALLFILEPATH = acrp('data/iiw-dataset/test-small.txt')
 # number for each class
-SAMPLECOUNT = 5000
+SAMPLECOUNT = 500
 CLASSNUMBER = 2
 
 

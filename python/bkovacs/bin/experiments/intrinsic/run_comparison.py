@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 
 from lib.intrinsic import intrinsic
 from lib.intrinsic import comparison
@@ -36,7 +37,7 @@ elif DATASETCHOICE == 1:
 elif DATASETCHOICE == 2:
     ALL_TAGS = SETIIW
     #ALL_TAGS = ['100520', '101684', '76601', '101880', '76078', '104535', '34047']
-    #ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
+    ALL_TAGS = ['117613', '117832', '71129', '93481', '93835']
     ERRORMETRIC = 1  # WHDR
 else:
     raise ValueError('Unknown dataset choice: {0}'.format(DATASETCHOICE))
@@ -71,10 +72,21 @@ ESTIMATORS = [
                 #('Weiss + Retinex (W+RET)', intrinsic.WeissRetinexEstimator),
                 ]
 
+lines = fileproc.freadlines(JOBSFILEPATH)
+JOB_PARAMS = []
+for l in lines:
+    tokens = l.split(' ')
+    tag, threshold_chrom, classnum, samplenum, shift = tokens
+    params = {'threshold_chrom': math.exp(float(threshold_chrom) + float(shift))}
+
+    job_param = {'EstimatorClass': intrinsic.Zhao2012Estimator, 'params': params, 'tag': tag, 'classnum': classnum, 'samplenum': samplenum}
+    JOB_PARAMS.append(job_param)
+
+PROCESSED_TASKS_PATH = os.path.join(RESULTS_DIR, 'proctasks.txt')
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2 or sys.argv[1] not in ['dispatch', 'aggregate', 'simple']:
-        print 'Usage: run_comparison.py dispatch|aggregate|simple RERUNALLTASKS=True|False?'
+    if len(sys.argv) < 2 or sys.argv[1] not in ['dispatch', 'aggregate', 'simple', 'dispatchpredefjobs', 'aggregatepredefjobs']:
+        print 'Usage: run_comparison.py dispatch|aggregate|simple|dispatchpredefjobs|aggregatepredefjobs RERUNALLTASKS=True|False?'
         sys.exit(1)
 
     ORACLEEACHIMAGE = True
@@ -95,6 +107,10 @@ if __name__ == '__main__':
         comparison.aggregate_comparison_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, USESAVEDSCORES, ORACLEEACHIMAGE, PARTIALRESULTS)
     elif option == 'simple':
         comparison.run_experiment(DATASETCHOICE, ALL_TAGS, ERRORMETRIC, USE_L1, RESULTS_DIR, ESTIMATORS, ORACLEEACHIMAGE, IMAGESFORALLPARAMS)
+    elif option == 'dispatchpredefjobs':
+        comparison.dispatch_predefined_jobs(JOB_PARAMS, DATASETCHOICE, ERRORMETRIC, USE_L1, RESULTS_DIR, RERUNALLTASKS, PROCESSED_TASKS_PATH)
+    elif option == 'aggregatepredefjobs':
+        comparison.aggregate_predifined_jobs(JOB_PARAMS, RESULTS_DIR, PROCESSED_TASKS_PATH)
     else:
         raise ValueError('Invalid option: {0}'.format(option))
 
