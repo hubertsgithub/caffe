@@ -264,12 +264,18 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 
 	// datum scales
 	const int lines_size = lines_.size();
+
+	// Preload all images in the memory using multiple threads
+	vector<vector<cv::Mat> > cv_imgs(batch_size);
+
+	#pragma omp parallel for schedule(dynamic, 1)
 	for (int item_id = 0; item_id < batch_size; ++item_id) {
+		cv_imgs[item_id] = vector<cv::Mat>(image_count);
+
 		// get a blob
 		timer.Start();
 		CHECK_GT(lines_size, lines_id_);
 
-		vector<cv::Mat> cv_imgs;
 		for (int i = 0; i < image_count; ++i) {
 			const int new_height = mpdp.data_transformations(i).new_height();
 			const int new_width  = mpdp.data_transformations(i).new_width();
@@ -290,11 +296,16 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 				LOG(ERROR) << "Couldn't load image " << img_path;
 				continue;
 			}
-			cv_imgs.push_back(cv_img);
+			cv_imgs[item_id][i] = cv_img;
 		}
 		read_time += timer.MicroSeconds();
+	}
 
+	for (int item_id = 0; item_id < batch_size; ++item_id) {
+		// get a blob
 		timer.Start();
+		CHECK_GT(lines_size, lines_id_);
+
 		// Apply transformations (mirror, crop...) to the image
 		// For each patch for each image
 		for (int iPatch = 0; iPatch < patch_count; ++iPatch) {
@@ -314,8 +325,8 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 					// If we share the random transformations, set the state of the current transformation to the state of the first transformation
 					this->transformers_[iImage]->ResetState(*this->transformers_[0]);
 				}
-				const int img_height = cv_imgs[iImage].rows;
-				const int img_width = cv_imgs[iImage].cols;
+				const int img_height = cv_imgs[item_id][iImage].rows;
+				const int img_width = cv_imgs[item_id][iImage].cols;
 				int h_off = int(img_height * ph);
 				int w_off = int(img_width * pw);
 
@@ -323,7 +334,7 @@ void MultiImagePatchDataLayer<Dtype>::InternalThreadEntry() {
 				this->transformers_[iImage]->SetKeepCrop(true);
 				this->transformers_[iImage]->ResetCropCoords(h_off, w_off);
 				DLOG(INFO) << "Transforming bottom " << iImage << "...";
-				this->transformers_[iImage]->Transform(cv_imgs[iImage], &(*this->transformed_data_[i]));
+				this->transformers_[iImage]->Transform(cv_imgs[item_id][iImage], &(*this->transformed_data_[i]));
 			}
 		}
 
