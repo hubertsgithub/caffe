@@ -4,14 +4,13 @@ import os
 import re
 import subprocess
 import sys
-import threading
 import time
 from collections import OrderedDict
 from Queue import Queue
 
 import numpy as np
 
-from lib.utils.data import fileproc
+from lib.utils.data import fileproc, caffefileproc
 from lib.utils.misc import plothelper
 from lib.utils.misc.pathresolver import acrp
 
@@ -215,7 +214,7 @@ def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root)
 
 def extract_batchsize_testsetsize(trainfile_path):
     # Note that we handle only MULTI_IMAGE_DATA layer and some other layers (see below), we require that include.phase be TEST
-    model_params = fileproc.parse_model_definition_file(trainfile_path)
+    model_params = caffefileproc.parse_model_definition_file(trainfile_path)
     batch_size = None
     testset_size = None
     for layer in model_params.layers:
@@ -254,7 +253,7 @@ if __name__ == '__main__':
         sample_to_use = samplesolverfilename
 
     # copy the sample solver file and modify it
-    solver_params = fileproc.parse_solver_file(acrp(os.path.join(options['root'], sample_to_use)))
+    solver_params = caffefileproc.parse_solver_file(acrp(os.path.join(options['root'], sample_to_use)))
 
     # modify solver params according to the command line parameters
     solver_params.net = trainfile_relpath
@@ -273,7 +272,7 @@ if __name__ == '__main__':
     else:
         print 'WARNING: Couldn\'t find the batch_size or the source file containing the testset, please set the test_iter to testset_size / batch_size!'
 
-    fileproc.save_solver_file(solverfile_fullpath, solver_params)
+    caffefileproc.save_solver_file(solverfile_fullpath, solver_params)
 
     commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_fullpath)]
     if 'weights' in options:
