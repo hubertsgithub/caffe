@@ -12,6 +12,7 @@ import numpy as np
 
 from lib.utils.data import fileproc, caffefileproc
 from lib.utils.misc import plothelper
+from lib.utils.net import visnet
 from lib.utils.misc.pathresolver import acrp
 
 # Make sure that caffe is on the python path:
@@ -47,6 +48,11 @@ def process_arg(argstr):
     elif keyword == 'redirect':
         if value != 'True' and value != 'False':
             raise ValueError('Invalid redirect value: {0}'.format(value))
+        value = value == 'True'
+    elif keyword == 'visweights':
+        if value != 'True' and value != 'False':
+            raise ValueError('Invalid visweights value: {0}'.format(value))
+        value = value == 'True'
     elif keyword == 'base_lr':
         value = float(value)
     elif keyword == 'testset_size':
@@ -74,7 +80,8 @@ def process_args(argv):
     # Default values
     mandatory_param_check(options, 'root')
     mandatory_param_check(options, 'modelname')
-    optional_param_default(options, 'redirect', 'True')
+    optional_param_default(options, 'redirect', True)
+    optional_param_default(options, 'visweights', False)
     optional_param_default(options, 'platform', caffe_pb2.SolverParameter.GPU)
 
     print options
@@ -128,7 +135,7 @@ def create_csv_data(data_dict):
     return ret
 
 
-def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root):
+def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root, visweights, model_file, snapshot_freq, snapshot_prefix):
     itnum = 0
     # index 0 is train, 1 is test
     # {key: itnum, value: {key: output_num value: output_value}}
@@ -177,6 +184,7 @@ def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root)
                     if not found_type:
                         indices['other'].append([i, output_num])
 
+            # Collect data and draw figures
             for disp_type, dc in disp_config.iteritems():
                 figure_arrs = []
                 line_names = []
@@ -207,6 +215,16 @@ def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root)
 
                 figure_filepath = '{0}-{1}.png'.format(filepath_root, dc['file_name'])
                 plothelper.plot_and_save_2D_arrays(figure_filepath, figure_arrs, xlabel='Iteration number', xinterval=[0, itnum], ylabel=dc['yaxis_name'], yinterval=yinterval, line_names=line_names)
+
+            # Save the current weights
+            if visweights and itnum % snapshot_freq == 0:
+                snapshot_filepath_root = acrp('{0}_iter_{1}'.format(snapshot_prefix, itnum))
+                snapshot_filepath = acrp('{0}.caffemodel'.format(snapshot_filepath_root))
+                solverstate_filepath = acrp('{0}.solverstate'.format(snapshot_filepath_root))
+                visnet.vis_net('{0}-vis'.format(filepath_root), '', model_file, snapshot_filepath)
+                # delete the snapshot to save space
+                #os.remove(snapshot_filepath)
+                #os.remove(solverstate_filepath)
 
         # Sleep a bit before asking the readers again.
         time.sleep(update_interval)
@@ -259,6 +277,8 @@ if __name__ == '__main__':
     solver_params.net = trainfile_relpath
     if 'base_lr' in options:
         solver_params.base_lr = options['base_lr']
+    if options['visweights']:
+        solver_params.snapshot = 100
     solver_params.snapshot_prefix = os.path.join(options['root'], 'snapshots', 'caffenet_train_{0}-base_lr{1}'.format(options['modelname'], solver_params.base_lr))
     solver_params.solver_mode = options['platform']
 
@@ -279,7 +299,7 @@ if __name__ == '__main__':
         commandtxt.append('--weights=' + options['weights'])
 
     print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
-    if options['redirect'] == 'True':
+    if options['redirect'] == True:
         proc = subprocess.Popen(commandtxt, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Launch the asynchronous readers of the process' stdout and stderr.
@@ -290,7 +310,8 @@ if __name__ == '__main__':
         stderr_reader = fileproc.AsynchronousFileReader(proc.stderr, stderr_queue)
         stderr_reader.start()
 
-        output_processor(stdout_queue, stderr_queue, 1, acrp(os.path.join(options['root'], '{0}-base_lr{1}'.format(options['modelname'], solver_params.base_lr))))
+        filepath_root = acrp(os.path.join(options['root'], '{0}-base_lr{1}'.format(options['modelname'], solver_params.base_lr)))
+        output_processor(stdout_queue, stderr_queue, 1, filepath_root, options['visweights'], trainfile_fullpath, solver_params.snapshot, solver_params.snapshot_prefix)
 
         # Let's be tidy and join the threads we've started.
         stdout_reader.join()

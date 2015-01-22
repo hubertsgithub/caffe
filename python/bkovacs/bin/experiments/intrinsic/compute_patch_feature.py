@@ -12,6 +12,7 @@ from lib.utils.misc.progressbaraux import progress_bar
 from lib.utils.data import common
 from lib.utils.misc import packer
 from lib.utils.net.misc import init_net
+from lib.utils.net import visnet
 
 # Make sure that caffe is on the python path:
 sys.path.append(acrp('python'))
@@ -32,6 +33,9 @@ REQUIREDPRECISION = 0.9
 def test_alexnet():
     model_file = acrp('models/bvlc_reference_caffenet/deploy.prototxt')
     pretrained_weights = acrp('models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel')
+
+    visnet.vis_net(acrp('models/alma'), '', model_file, pretrained_weights)
+
     net = caffe.Net(model_file, pretrained_weights)
     net.set_phase_test()
     net.set_mode_cpu()
@@ -188,7 +192,7 @@ def analyze_distance_metric(distmetricname, dists_equal, dists_notequal, stepcou
 
 
 if __name__ == '__main__':
-    #test_alexnet()
+    test_alexnet()
 
     with open(os.path.join(ROOTPATH, 'train.txt'), 'r') as f:
         lines = f.readlines()

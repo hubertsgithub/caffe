@@ -9,7 +9,7 @@ sys.path.append(acrp('python'))
 import caffe
 
 
-def init_net(model_file, pretrained_weights, mean, input_config):
+def init_net(model_file, pretrained_weights, mean=None, input_config={}):
     '''
     Input:
         model_file: path to the prototxt file containing the network definition
@@ -29,19 +29,20 @@ def init_net(model_file, pretrained_weights, mean, input_config):
         if 'input_scale' in config:
             net.set_input_scale(input_name, config['input_scale'])
 
-        if isinstance(mean, basestring):
-            blob = caffe.proto.caffe_pb2.BlobProto()
-            data = open(mean, 'rb').read()
-            blob.ParseFromString(data)
-            meanarr = caffe.io.blobproto_to_array(blob)
-            # Remove the first dimension (batch), which is 1 anyway
-            meanarr = np.squeeze(meanarr, axis=0)
+        if mean:
+            if isinstance(mean, basestring):
+                blob = caffe.proto.caffe_pb2.BlobProto()
+                data = open(mean, 'rb').read()
+                blob.ParseFromString(data)
+                meanarr = caffe.io.blobproto_to_array(blob)
+                # Remove the first dimension (batch), which is 1 anyway
+                meanarr = np.squeeze(meanarr, axis=0)
 
-            net.set_mean(input_name, meanarr, mode='elementwise')
-        elif isinstance(mean, int) or isinstance(mean, float):
-            meanarr = np.empty((1, 3))
-            meanarr.fill(mean)
-            net.set_mean(input_name, meanarr, mode='channel')
+                net.set_mean(input_name, meanarr, mode='elementwise')
+            elif isinstance(mean, int) or isinstance(mean, float):
+                meanarr = np.empty((1, 3))
+                meanarr.fill(mean)
+                net.set_mean(input_name, meanarr, mode='channel')
 
     return net
 

@@ -49,7 +49,7 @@ def load_image(filename, is_srgb=True):
     """ Load an image that is either linear or sRGB-encoded. """
 
     if not filename:
-        raise ValueError("Empty filename")
+        raise ValueError('Empty filename')
     image = np.asarray(Image.open(filename)).astype(np.float) / 255.0
     if is_srgb:
         return srgb_to_rgb(image)
@@ -59,18 +59,25 @@ def load_image(filename, is_srgb=True):
 
 def save_image(filename, imagearr, is_srgb=True):
     """
-    The image values should in [0.0, 1.0]
+    The image values should be in [0.0, 1.0]
     Save an image that is either linear or sRGB-encoded.
     """
 
     if not filename:
-        raise ValueError("Empty filename")
+        raise ValueError('Empty filename')
 
     if is_srgb:
         imagearr = rgb_to_srgb(imagearr)
 
+    if not (imagearr.ndim == 2 or (imagearr.ndim == 3 and (imagearr.shape[2] == 1 or imagearr.shape[2] == 3))):
+        raise ValueError('Invalid image dimensions: {0}'.format(imagearr.shape))
+
+    if imagearr.ndim == 3 and imagearr.shape[2] == 1:
+        imagearr = np.squeeze(imagearr, axis=2)
+
     imagearr *= 255.0
     imagearr = np.asarray(imagearr, dtype=np.uint8)
+
     image = Image.fromarray(imagearr)
     image.save(filename)
 
