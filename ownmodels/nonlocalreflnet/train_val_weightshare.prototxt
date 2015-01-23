@@ -1,0 +1,208 @@
+name: "NonlocalreflSiameseNet"
+layers {
+  name: "data"
+  type: MULTI_IMAGE_PATCH_DATA
+  top: "data"
+  top: "chrom"
+  top: "data_p"
+  top: "chrom_p"
+  top: "label"
+  multi_image_patch_data_param {
+  	patch_count: 2
+  }
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  input_data_count: 2
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2 
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/train.txt"
+    batch_size: 128
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+  type: MULTI_IMAGE_PATCH_DATA
+  top: "data"
+  top: "chrom"
+  top: "data_p"
+  top: "chrom_p"
+  top: "label"
+  multi_image_patch_data_param {
+  	patch_count: 2
+  }
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  input_data_count: 2
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2 
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/test-small.txt"
+    batch_size: 100
+  }
+  include: { phase: TEST }
+}
+layers {
+  name: "concatinput"
+  bottom: "data"
+  bottom: "chrom"
+  top: "concatinput"
+  type: CONCAT
+  concat_param {
+    concat_dim: 1
+  }
+}
+layers {
+  bottom: "concatinput"
+  top: "conv1"
+  name: "conv1"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+  param: "conv1_w"
+  param: "conv1_b"
+}
+layers {
+  name: "concatinput_p"
+  bottom: "data_p"
+  bottom: "chrom_p"
+  top: "concatinput_p"
+  type: CONCAT
+  concat_param {
+    concat_dim: 1
+  }
+}
+layers {
+  bottom: "concatinput_p"
+  top: "conv1_p"
+  name: "conv1_p"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+  param: "conv1_w"
+  param: "conv1_b"
+}
+layers {
+  name: "concatsiamese"
+  bottom: "conv1"
+  bottom: "conv1_p"
+  top: "concatsiamese"
+  type: CONCAT
+  concat_param {
+    concat_dim: 1
+  }
+}
+layers {
+  bottom: "concatsiamese"
+  top: "concatsiamese"
+  name: "relu3"
+  type: RELU
+}
+layers {
+  bottom: "concatsiamese"
+  top: "fc4"
+  name: "fc4"
+  type: INNER_PRODUCT
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layers {
+    name: "loss"
+    type: SOFTMAX_LOSS
+    bottom: "fc4"
+    bottom: "label"
+    top: "loss"
+}
+layers {
+  name: "accuracy"
+  type: ACCURACY
+  bottom: "fc4"
+  bottom: "label"
+  top: "accuracy"
+  include: { phase: TEST }
+}
