@@ -14,6 +14,7 @@ def vis_net(filepath_root, postfix, model_file, pretrained_weights, ratio=1):
 
         # get a sample from the channels based on ratio
         output_channels, input_channels, height, width = weights.data.shape
+        random.seed(42)
         indices = random.sample(xrange(output_channels), int(output_channels*ratio))
 
         # sample channels using the indices
