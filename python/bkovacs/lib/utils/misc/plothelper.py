@@ -1,8 +1,9 @@
 import os
-import numpy as np
-import matplotlib.pyplot as plt
 
-from lib.utils.data import common
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+
 
 def plot_and_save_2D_arrays(filename, arrs, xlabel='', xinterval=None, ylabel='', yinterval=None, line_names=[]):
     for arr in arrs:
@@ -36,8 +37,13 @@ def plot_and_save_2D_array(filename, arr, xlabel='', xinterval=None, ylabel='', 
 # and visualize each (height, width) thing in a grid of size approx. sqrt(n) by sqrt(n)
 def vis_square(data, padsize=1):
     padval = -1
-    data -= data.min()
-    data /= data.max()
+    data_min = data.min()
+    data_max = data.max()
+    data_mean = data.mean()
+
+    data -= data_min
+    if data_max > 1e-5:
+        data /= data_max
 
     output_channels, input_channels, height, width = data.shape
 
@@ -58,7 +64,51 @@ def vis_square(data, padsize=1):
     return new_data
 
 
-def save_vis_square(filename, data, padsize=1):
-    padded_data = vis_square(data, padsize)
+def fig2data ( fig ):
+    """
+    @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
+    @param fig a matplotlib figure
+    @return a numpy 3D array of RGBA values
+    """
+    # draw the renderer
+    fig.canvas.draw ( )
 
-    common.save_image(filename, padded_data, is_srgb=False)
+    # Get the RGBA buffer from the figure
+    w,h = fig.canvas.get_width_height()
+    buf = np.fromstring ( fig.canvas.tostring_argb(), dtype=np.uint8 )
+    buf.shape = ( w, h,4 )
+
+    # canvas.tostring_argb give pixmap in ARGB mode. Roll the ALPHA channel to have it in RGBA mode
+    buf = np.roll ( buf, 3, axis = 2 )
+    return buf
+
+
+def fig2img ( fig ):
+    """
+    @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it
+    @param fig a matplotlib figure
+    @return a Python Imaging Library ( PIL ) image
+    """
+    # put the figure pixmap into a numpy array
+    buf = fig2data ( fig )
+    w, h, d = buf.shape
+    return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
+
+
+def save_vis_square(filename, data, padsize=1):
+    plt.hist(np.ravel(data), bins=30)
+    histimg = fig2img(plt.gcf())
+    plt.clf()
+
+    padded_data = vis_square(data, padsize)
+    padded_data *= 255.0
+    padded_data = np.asarray(padded_data, dtype=np.uint8)
+    dataimg = Image.fromarray(padded_data)
+
+    w, h = dataimg.size
+    hw, hh = histimg.size
+
+    blank_image = Image.new('RGB', (w + hw, max(h, hh)))
+    blank_image.paste(dataimg, (0, 0))
+    blank_image.paste(histimg, (w, 0))
+    blank_image.save(filename)
