@@ -1,0 +1,97 @@
+name: "IntrinsicCNN"
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "chrom"
+  top: "label"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  # input_data_count: 3
+      # chromaticity image
+	  data_transformations {
+		random_crop: true
+		new_height: 256
+		new_width: 256
+		crop_size: 227
+		crop_first: false
+		mirror: true
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+		persistent: true
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/train-threshold-all.txt"
+    batch_size: 20 
+  }
+  multi_image_data_param {
+    use_label: true 
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+  type: MULTI_IMAGE_DATA
+  top: "chrom"
+  top: "label"
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  # input_data_count: 3
+      # chromaticity image
+	  data_transformations {
+		random_crop: true
+		new_height: 256
+		new_width: 256
+		crop_size: 227
+		crop_first: false
+		mirror: true
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+		persistent: true
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/test-threshold-all.txt"
+    batch_size: 10 
+  }
+  multi_image_data_param {
+    use_label: true 
+  }
+  include: { phase: TEST }
+}
+layers {
+  name: "fc3"
+  type: INNER_PRODUCT
+  bottom: "chrom"
+  top: "fc3"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "loss"
+  type: EUCLIDEAN_LOSS
+  bottom: "fc3"
+  bottom: "label"
+  top: "loss"
+}
