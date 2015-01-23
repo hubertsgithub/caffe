@@ -2,11 +2,26 @@ name: "IntrinsicCNN"
 layers {
   name: "data"
   type: MULTI_IMAGE_DATA
+  top: "data"
   top: "chrom"
   top: "label"
   multi_prefetch_data_param {
   	  share_random_trafos: true
   	  # input_data_count: 3
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: true
+		new_height: 256
+		new_width: 256
+		crop_size: 227
+		crop_first: false
+		mirror: true
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2
+		mean_value: 128
+		persistent: true
+	  }
       # chromaticity image
 	  data_transformations {
 		random_crop: true
@@ -36,11 +51,26 @@ layers {
 layers {
   name: "data"
   type: MULTI_IMAGE_DATA
+  top: "data"
   top: "chrom"
   top: "label"
   multi_prefetch_data_param {
   	  share_random_trafos: true
   	  # input_data_count: 3
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: true
+		new_height: 256
+		new_width: 256
+		crop_size: 227
+		crop_first: false
+		mirror: true
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2
+		mean_value: 128
+		persistent: true
+	  }
       # chromaticity image
 	  data_transformations {
 		random_crop: true
@@ -114,6 +144,11 @@ layers {
       value: 0
     }
   }
+}
+layers {
+  name: "silence"
+  type: SILENCE
+  bottom: "data"
 }
 layers {
   name: "loss"
