@@ -96,7 +96,7 @@ def fig2img ( fig ):
 
 
 def save_vis_square(filename, data, padsize=1):
-    plt.hist(np.ravel(data), bins=30)
+    plt.hist(np.ravel(data), bins=100)
     histimg = fig2img(plt.gcf())
     plt.clf()
 
