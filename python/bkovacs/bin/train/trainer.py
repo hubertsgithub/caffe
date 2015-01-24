@@ -137,6 +137,7 @@ def create_csv_data(data_dict):
 
 def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root, visweights, model_file, snapshot_freq, snapshot_prefix):
     itnum = 0
+    image_files = []
     # index 0 is train, 1 is test
     # {key: itnum, value: {key: output_num value: output_value}}
     outputs = [OrderedDict(), OrderedDict()]
@@ -221,10 +222,13 @@ def output_processor(stdout_queue, stderr_queue, update_interval, filepath_root,
                 snapshot_filepath_root = acrp('{0}_iter_{1}'.format(snapshot_prefix, itnum))
                 snapshot_filepath = acrp('{0}.caffemodel'.format(snapshot_filepath_root))
                 solverstate_filepath = acrp('{0}.solverstate'.format(snapshot_filepath_root))
-                visnet.vis_net('{0}-vis'.format(filepath_root), '', model_file, snapshot_filepath)
+                image_files.append(visnet.vis_net('{0}-vis'.format(filepath_root), itnum, model_file, snapshot_filepath))
                 # delete the snapshot to save space
                 #os.remove(snapshot_filepath)
                 #os.remove(solverstate_filepath)
+
+                # Refresh the gif file
+                visnet.create_gif('{0}-vis'.format(filepath_root), image_files)
 
         # Sleep a bit before asking the readers again.
         time.sleep(update_interval)
