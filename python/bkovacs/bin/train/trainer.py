@@ -283,6 +283,9 @@ if __name__ == '__main__':
         solver_params.base_lr = options['base_lr']
     if options['visweights']:
         solver_params.snapshot = 100
+
+    # Switch on debug_info if we visualize weights to facilitate debugging
+    solver_params.debug_info = options['visweights']
     solver_params.snapshot_prefix = os.path.join(options['root'], 'snapshots', 'caffenet_train_{0}-base_lr{1}'.format(options['modelname'], solver_params.base_lr))
     solver_params.solver_mode = options['platform']
 
