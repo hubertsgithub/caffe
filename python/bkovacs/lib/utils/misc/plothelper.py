@@ -39,7 +39,6 @@ def vis_square(data, padsize=1):
     padval = -1
     data_min = data.min()
     data_max = data.max()
-    data_mean = data.mean()
 
     data -= data_min
     if data_max > 1e-5:
@@ -95,7 +94,7 @@ def fig2img ( fig ):
     return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
 
 
-def save_vis_square(filename, data, padsize=1):
+def create_analytic_image(data, padsize=1):
     plt.hist(np.ravel(data), bins=100)
     histimg = fig2img(plt.gcf())
     plt.clf()
@@ -111,4 +110,5 @@ def save_vis_square(filename, data, padsize=1):
     blank_image = Image.new('RGB', (w + hw, max(h, hh)))
     blank_image.paste(dataimg, (0, 0))
     blank_image.paste(histimg, (w, 0))
-    blank_image.save(filename)
+
+    return blank_image
