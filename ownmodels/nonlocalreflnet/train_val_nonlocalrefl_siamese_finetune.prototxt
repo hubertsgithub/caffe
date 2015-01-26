@@ -39,7 +39,7 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/iiw-dataset/train-negs.txt"
+    source: "data/iiw-dataset/train-rgb-negs.txt"
     batch_size: 128
   }
   include: { phase: TRAIN }
@@ -84,33 +84,23 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/iiw-dataset/test-small.txt"
+    source: "data/iiw-dataset/test-rgb-small.txt"
     batch_size: 100
   }
   include: { phase: TEST }
 }
 layers {
-  name: "concatinput"
-  bottom: "data"
   bottom: "chrom"
-  top: "concatinput"
-  type: CONCAT
-  concat_param {
-    concat_dim: 1
-  }
-}
-layers {
-  bottom: "concatinput"
-  top: "conv1"
-  name: "conv1"
+  top: "conv1_1"
+  name: "conv1_1"
   type: CONVOLUTION
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 8
-    kernel_size: 5
+    num_output: 64
+    kernel_size: 3
     stride: 1
     weight_filler {
       type: "xavier"
@@ -123,13 +113,13 @@ layers {
   param: "conv1_b"
 }
 layers {
-  bottom: "conv1"
-  top: "conv1"
+  bottom: "conv1_1"
+  top: "conv1_1"
   name: "relu1"
   type: RELU
 }
 layers {
-  bottom: "conv1"
+  bottom: "conv1_1"
   top: "fc2"
   name: "fc2"
   type: INNER_PRODUCT
@@ -151,17 +141,7 @@ layers {
   param: "fc2_b"
 }
 layers {
-  name: "concatinput_p"
-  bottom: "data_p"
   bottom: "chrom_p"
-  top: "concatinput_p"
-  type: CONCAT
-  concat_param {
-    concat_dim: 1
-  }
-}
-layers {
-  bottom: "concatinput_p"
   top: "conv1_p"
   name: "conv1_p"
   type: CONVOLUTION
@@ -170,8 +150,8 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 8
-    kernel_size: 5
+    num_output: 64
+    kernel_size: 3
     stride: 1
     weight_filler {
       type: "xavier"

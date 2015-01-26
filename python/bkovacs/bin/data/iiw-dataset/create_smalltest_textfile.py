@@ -9,6 +9,12 @@ TESTSMALLFILEPATH_PATCH = acrp('data/iiw-dataset/test-small.txt')
 SAMPLECOUNT_PATCH = 500
 CLASSNUMBER_PATCH = 2
 
+TESTFILEPATH_PATCH_RGB = acrp('data/iiw-dataset/test-rgb.txt')
+TESTSMALLFILEPATH_PATCH_RGB = acrp('data/iiw-dataset/test-rgb-small.txt')
+# number for each class
+SAMPLECOUNT_PATCH_RGB = 500
+CLASSNUMBER_PATCH_RGB = 2
+
 TESTFILEPATH_BINSEARCH = acrp('data/iiw-dataset/test-bin-threshold-all.txt')
 TESTSMALLFILEPATH_BINSEARCH = acrp('data/iiw-dataset/test-bin-threshold-all-small.txt')
 # number for each class
@@ -48,4 +54,5 @@ def extract_binsearch_data(tokens):
 
 if __name__ == "__main__":
     generate_small_testset(TESTFILEPATH_PATCH, TESTSMALLFILEPATH_PATCH, CLASSNUMBER_PATCH, extract_patches_data, SAMPLECOUNT_PATCH)
+    generate_small_testset(TESTFILEPATH_PATCH_RGB, TESTSMALLFILEPATH_PATCH_RGB, CLASSNUMBER_PATCH_RGB, extract_patches_data, SAMPLECOUNT_PATCH_RGB)
     generate_small_testset(TESTFILEPATH_BINSEARCH, TESTSMALLFILEPATH_BINSEARCH, CLASSNUMBER_BINSEARCH, extract_binsearch_data, SAMPLECOUNT_BINSEARCH)
