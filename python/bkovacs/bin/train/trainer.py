@@ -34,12 +34,12 @@ def process_arg(argstr):
     keyword, value = argstr.split('=')
 
     if keyword == 'root':
-        if not os.path.exists(value):
+        if not os.path.exists(acrp(value)):
             raise ValueError('The root path doesn\'t exist: {0}'.format(value))
     elif keyword == 'modelname':
         dummy = 0
     elif keyword == 'weights':
-        if not os.path.exists(value):
+        if not os.path.exists(acrp(value)):
             raise ValueError('The weight file doesn\'t exist: {0}'.format(value))
     elif keyword == 'platform':
         if value != 'CPU' and value != 'GPU':
@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
     commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_fullpath)]
     if 'weights' in options:
-        commandtxt.append('--weights=' + options['weights'])
+        commandtxt.append('--weights=' + acrp(options['weights']))
 
     print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
     if options['redirect'] == True:
