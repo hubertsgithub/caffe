@@ -95,7 +95,11 @@ def fig2img ( fig ):
 
 
 def create_analytic_image(data, padsize=1):
-    plt.hist(np.ravel(data), bins=100)
+    raveled = np.ravel(data)
+    if np.any(np.isnan(raveled)):
+        print 'NaN value in data, skipping NaN values...'
+
+    plt.hist(raveled[~np.isnan(raveled)], bins=100)
     histimg = fig2img(plt.gcf())
     plt.clf()
 
