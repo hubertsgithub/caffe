@@ -18,14 +18,26 @@ from lib.utils.net import visnet
 sys.path.append(acrp('python'))
 import caffe
 
-CROPLEN = 224
-MODEL_FILE = acrp('models/vgg_cnn_m/VGG_CNN_M_deploy.prototxt')
-PRETRAINED_WEIGHTS = acrp('models/vgg_cnn_m/VGG_CNN_M.caffemodel')
+
+#CROPLEN = 224
+#MODEL_FILE = acrp('models/vgg_cnn_m/VGG_CNN_M_deploy.prototxt')
+#PRETRAINED_WEIGHTS = acrp('models/vgg_cnn_m/VGG_CNN_M.caffemodel')
+#MEAN_FILE = acrp('models/vgg_cnn_m/VGG_mean.binaryproto')
+
+CROPLEN = 32
+MODEL_FILE = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small.prototxt')
+PRETRAINED_WEIGHTS = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese2-base_lr0.005_iter_20000.caffemodel')
+MEAN_FILE = 128
+
+#CROPLEN = 32
+#MODEL_FILE = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_finetune.prototxt')
+#PRETRAINED_WEIGHTS = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_finetune-base_lr0.0001_iter_2500.caffemodel')
+#MEAN_FILE = 128
+
 ROOTPATH = acrp('data/iiw-dataset')
-MEAN_FILE = acrp('models/vgg_cnn_m/VGG_mean.binaryproto')
 EXPROOTPATH = acrp('experiments/distancemetrics')
 
-SAMPLECOUNT = 1000
+SAMPLECOUNT = 100
 STEPCOUNT = 500
 REQUIREDPRECISION = 0.9
 
@@ -61,19 +73,24 @@ def test_alexnet():
     print 'predicted class:', prediction.argmax()
 
 
-def compute_features(net, input_name, feature_options, input_image, input_chrom_image, px, py, croplen):
+def compute_features(net, input_names, feature_options, input_image, input_chrom_image, px, py, croplen):
     h, w = input_image.shape[0:2]
     cropw = px * w
     croph = py * h
-    patch = common.crop_image(input_image, cropw, croph, croplen)
+    #patch = common.crop_image(input_image, cropw, croph, croplen)
+    patch = common.crop_image(input_chrom_image, cropw, croph, croplen)
 
-    caffe_in = net.preprocess(input_name, patch)
-    prediction = net.forward_all(blobs=feature_options, **{input_name: caffe_in[np.newaxis, :, :, :]})
+    input_dict = {}
+    for input_name in input_names:
+        caffe_in = net.preprocess(input_name, patch)
+        input_dict[input_name] = caffe_in[np.newaxis, :, :, :]
+
+    prediction = net.forward_all(blobs=feature_options, **input_dict)
 
     return prediction
 
 
-def compute_chrompatch(net, input_name, feature_options, input_image, input_chrom_image, px, py, croplen):
+def compute_chrompatch(net, input_names, feature_options, input_image, input_chrom_image, px, py, croplen):
     h, w = input_image.shape[0:2]
     centerw = px * w
     centerh = py * h
@@ -124,6 +141,29 @@ def solve_accuracy(distmetricname, dists_equal, dists_notequal, avg_equal, avg_n
     plot_and_save_2D_array(os.path.join(EXPROOTPATH, '{0}-threshold-precision.png'.format(distmetricname)), precisions, xlabel='threshold', ylabel='precision', yinterval=(0.0, 1.0))
     plot_and_save_2D_array(os.path.join(EXPROOTPATH, '{0}-threshold-recall.png'.format(distmetricname)), recalls, xlabel='threshold', ylabel='recall', yinterval=(0.0, 1.0))
     plot_and_save_2D_array(os.path.join(EXPROOTPATH, '{0}-precision-recall.png'.format(distmetricname)), precrecall, xlabel='recall', xinterval=(0.0, 1.0), ylabel='precision', yinterval=(0.0, 1.0))
+
+    hist_min = min([np.min(dists_equal), np.min(dists_notequal)])
+    hist_max = max([np.max(dists_equal), np.max(dists_notequal)])
+    heq, _ = np.histogram(dists_equal, bins=50, range=(hist_min, hist_max))
+    hneq, _ = np.histogram(dists_notequal, bins=50, range=(hist_min, hist_max))
+    y_max = max([np.max(heq), np.max(hneq)])
+
+    plt.subplot(2, 1, 1)
+    plt.hist(dists_equal, bins=50, range=(hist_min, hist_max), color='r')
+    plt.ylim((0, y_max))
+    plt.title(distmetricname)
+    plt.ylabel('Count')
+    plt.legend(['Equal distances'], loc='best')
+
+    plt.subplot(2, 1, 2)
+    plt.hist(dists_notequal, bins=50, range=(hist_min, hist_max), color='b')
+    plt.ylim((0, y_max))
+    plt.xlabel('Distance')
+    plt.ylabel('Count')
+    plt.legend(['Not equal distances'], loc='best')
+
+    plt.savefig(os.path.join(EXPROOTPATH, '{0}-dist-histograms.png'.format(distmetricname)))
+    plt.clf()
 
     best_index = np.argmax(accuracies[:, 1])
     idx = find_nearest_idx(precisions[:, 1], req_prec)
@@ -192,7 +232,7 @@ def analyze_distance_metric(distmetricname, dists_equal, dists_notequal, stepcou
 
 
 if __name__ == '__main__':
-    test_alexnet()
+    #test_alexnet()
 
     with open(os.path.join(ROOTPATH, 'train.txt'), 'r') as f:
         lines = f.readlines()
@@ -220,12 +260,13 @@ if __name__ == '__main__':
     distmetrics.append({'name': 'Chai', 'func': lambda f1, f2: np.sum(np.square(f1 - f2) / np.clip(f1 + f2, 1e-10, np.inf))})
     distmetrics.append({'name': 'L1', 'func': lambda f1, f2: np.sum(np.abs(f1 - f2))})
 
-    input_name = 'data'
-    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255.}}
+    input_names = ['data', 'chrom']
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255.} for input_name in input_names}
     net = init_net(MODEL_FILE, PRETRAINED_WEIGHTS, MEAN_FILE, input_config)
 
     network_options = {}
-    network_options['vgg'] = {'feature_options': ['fc7', 'pool5'], 'comp_feature_func': compute_features}
+    #network_options['vgg'] = {'feature_options': ['fc7', 'pool5'], 'comp_feature_func': compute_features}
+    network_options['siamese'] = {'feature_options': ['fc2'], 'comp_feature_func': compute_features}
     network_options['zhao'] = {'feature_options': [3, 5], 'comp_feature_func': compute_chrompatch}
 
     scores = []
@@ -275,8 +316,8 @@ if __name__ == '__main__':
                 chrom_img = common.compute_chromaticity_image(img)
                 last_grayimg_path = grayimg_path
 
-            outputblobs1 = net_options['comp_feature_func'](net, input_name, feature_options, img, chrom_img, p1x, p1y, CROPLEN)
-            outputblobs2 = net_options['comp_feature_func'](net, input_name, feature_options, img, chrom_img, p2x, p2y, CROPLEN)
+            outputblobs1 = net_options['comp_feature_func'](net, input_names, feature_options, img, chrom_img, p1x, p1y, CROPLEN)
+            outputblobs2 = net_options['comp_feature_func'](net, input_names, feature_options, img, chrom_img, p2x, p2y, CROPLEN)
 
             for f in feature_options:
                 f1 = outputblobs1[f]

@@ -1,0 +1,210 @@
+name: "NonlocalreflSiameseNet"
+layers {
+  name: "data"
+  type: MULTI_IMAGE_PATCH_DATA
+  top: "data"
+  top: "chrom"
+  top: "data_p"
+  top: "chrom_p"
+  top: "label"
+  multi_image_patch_data_param {
+  	patch_count: 2
+  }
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  input_data_count: 2
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2 
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/train-negs.txt"
+    batch_size: 128
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "data"
+  type: MULTI_IMAGE_PATCH_DATA
+  top: "data"
+  top: "chrom"
+  top: "data_p"
+  top: "chrom_p"
+  top: "label"
+  multi_image_patch_data_param {
+  	patch_count: 2
+  }
+  multi_prefetch_data_param {
+  	  share_random_trafos: true
+  	  input_data_count: 2
+      # data - loaded as grayscale image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: false
+		gamma: 2.2 
+		mean_value: 128
+	  }
+      # chromaticity image
+	  data_transformations {
+		random_crop: false
+		crop_size: 32
+		crop_first: false
+		mirror: false
+		scale: 0.00392156862
+		is_color: true
+		gamma: 2.2 
+		mean_value: 128
+		mean_value: 128
+		mean_value: 128
+	  }
+  }
+  image_data_param {
+    source: "data/iiw-dataset/test-small.txt"
+    batch_size: 100
+  }
+  include: { phase: TEST }
+}
+layers {
+  bottom: "chrom"
+  top: "conv1"
+  name: "conv1"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+  param: "conv1_w"
+  param: "conv1_b"
+}
+layers {
+  bottom: "conv1"
+  top: "conv1"
+  name: "relu1"
+  type: RELU
+}
+layers {
+  bottom: "conv1"
+  top: "fc2"
+  name: "fc2"
+  type: INNER_PRODUCT
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+  param: "fc2_w"
+  param: "fc2_b"
+}
+layers {
+  bottom: "chrom_p"
+  top: "conv1_p"
+  name: "conv1_p"
+  type: CONVOLUTION
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+  param: "conv1_w"
+  param: "conv1_b"
+}
+layers {
+  bottom: "conv1_p"
+  top: "conv1_p"
+  name: "relu1_p"
+  type: RELU
+}
+layers {
+  bottom: "conv1_p"
+  top: "fc2_p"
+  name: "fc2_p"
+  type: INNER_PRODUCT
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+  param: "fc2_w"
+  param: "fc2_b"
+}
+layers {
+	name: "loss"
+	bottom: "fc2"
+	bottom: "fc2_p"
+	bottom: "label"
+	top: "loss"
+	type: CONTRASTIVE_LOSS
+	contrastive_loss_param {
+		margin: 10000
+	}
+}
+layers {
+	name: "silence"
+	type: SILENCE
+	bottom: "data"
+	bottom: "data_p"
+}
