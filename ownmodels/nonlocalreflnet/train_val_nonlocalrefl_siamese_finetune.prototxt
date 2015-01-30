@@ -41,6 +41,7 @@ layers {
   image_data_param {
     source: "data/iiw-dataset/train-rgb-negs.txt"
     batch_size: 128
+    shuffle: true
   }
   include: { phase: TRAIN }
 }

@@ -37,7 +37,7 @@ MEAN_FILE = 128
 ROOTPATH = acrp('data/iiw-dataset')
 EXPROOTPATH = acrp('experiments/distancemetrics')
 
-SAMPLECOUNT = 100
+SAMPLECOUNT = 1000
 STEPCOUNT = 500
 REQUIREDPRECISION = 0.9
 
