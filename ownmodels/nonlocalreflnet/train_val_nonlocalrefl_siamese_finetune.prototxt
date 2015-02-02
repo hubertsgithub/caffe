@@ -200,7 +200,7 @@ layers {
 	top: "loss"
 	type: CONTRASTIVE_LOSS
 	contrastive_loss_param {
-		margin: 0.1
+		margin: 5000
 	}
 }
 layers {

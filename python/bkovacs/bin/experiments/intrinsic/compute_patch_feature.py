@@ -24,10 +24,10 @@ import caffe
 #PRETRAINED_WEIGHTS = acrp('models/vgg_cnn_m/VGG_CNN_M.caffemodel')
 #MEAN_FILE = acrp('models/vgg_cnn_m/VGG_mean.binaryproto')
 
-CROPLEN = 32
-MODEL_FILE = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small.prototxt')
-PRETRAINED_WEIGHTS = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese2-base_lr0.005_iter_20000.caffemodel')
-MEAN_FILE = 128
+#CROPLEN = 32
+#MODEL_FILE = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small.prototxt')
+#PRETRAINED_WEIGHTS = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese2-base_lr0.005_iter_20000.caffemodel')
+#MEAN_FILE = 128
 
 #CROPLEN = 32
 #MODEL_FILE = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_finetune.prototxt')
@@ -73,15 +73,14 @@ def test_alexnet():
     print 'predicted class:', prediction.argmax()
 
 
-def compute_features(net, input_names, feature_options, input_image, input_chrom_image, px, py, croplen):
-    h, w = input_image.shape[0:2]
-    cropw = px * w
-    croph = py * h
-    #patch = common.crop_image(input_image, cropw, croph, croplen)
-    patch = common.crop_image(input_chrom_image, cropw, croph, croplen)
-
+def compute_features(net, inputs, feature_options, px, py, croplen):
     input_dict = {}
-    for input_name in input_names:
+    for input_name, input_image in inputs.iteritems():
+        h, w = input_image.shape[0:2]
+        cropw = px * w
+        croph = py * h
+        patch = common.crop_image(input_image, cropw, croph, croplen)
+
         caffe_in = net.preprocess(input_name, patch)
         input_dict[input_name] = caffe_in[np.newaxis, :, :, :]
 
@@ -90,8 +89,8 @@ def compute_features(net, input_names, feature_options, input_image, input_chrom
     return prediction
 
 
-def compute_chrompatch(net, input_names, feature_options, input_image, input_chrom_image, px, py, croplen):
-    h, w = input_image.shape[0:2]
+def compute_chrompatch(net, inputs, feature_options, px, py, croplen):
+    h, w = inputs['chrom'].shape[0:2]
     centerw = px * w
     centerh = py * h
 
@@ -99,7 +98,7 @@ def compute_chrompatch(net, input_names, feature_options, input_image, input_chr
     for f in feature_options:
         shift = (f - 1) / 2
         fet = np.zeros((f, f, 3))
-        fet[:] = input_chrom_image[centerh-shift:centerh+shift+1, centerw-shift:centerw+shift+1]
+        fet[:] = inputs['chrom'][centerh-shift:centerh+shift+1, centerw-shift:centerw+shift+1]
 
         ret[f] = fet
 
@@ -260,14 +259,50 @@ if __name__ == '__main__':
     distmetrics.append({'name': 'Chai', 'func': lambda f1, f2: np.sum(np.square(f1 - f2) / np.clip(f1 + f2, 1e-10, np.inf))})
     distmetrics.append({'name': 'L1', 'func': lambda f1, f2: np.sum(np.abs(f1 - f2))})
 
-    input_names = ['data', 'chrom']
-    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255.} for input_name in input_names}
-    net = init_net(MODEL_FILE, PRETRAINED_WEIGHTS, MEAN_FILE, input_config)
-
     network_options = {}
     #network_options['vgg'] = {'feature_options': ['fc7', 'pool5'], 'comp_feature_func': compute_features}
-    network_options['siamese'] = {'feature_options': ['fc2'], 'comp_feature_func': compute_features}
-    network_options['zhao'] = {'feature_options': [3, 5], 'comp_feature_func': compute_chrompatch}
+
+    input_names = ['data', 'chrom']
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
+    croplen = 32
+    model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small.prototxt')
+    pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese2-base_lr0.005_iter_20000.caffemodel')
+    mean = 128
+    print 'Initializing siamese net'
+    net = init_net(model_file, pretrained_weights, mean, input_config)
+    network_options['siamese'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
+
+    input_names = ['data', 'chrom']
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
+    croplen = 32
+    model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_chrom.prototxt')
+    pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_chrom-base_lr0.0001_iter_15000.caffemodel')
+    mean = 128
+    print 'Initializing siamese_chrom net'
+    net = init_net(model_file, pretrained_weights, mean, input_config)
+    network_options['siamese_chrom'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
+
+    input_names = ['data', 'chrom']
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
+    croplen = 32
+    model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_chrom.prototxt')
+    pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_chrom_margin5000-base_lr0.0001_iter_20000.caffemodel')
+    mean = 128
+    print 'Initializing siamese_chrom_margin5000 net'
+    net = init_net(model_file, pretrained_weights, mean, input_config)
+    network_options['siamese_chrom_margin5000'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
+
+    input_names = ['data', 'chrom']
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
+    croplen = 32
+    model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_finetune_chrom.prototxt')
+    pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_finetune_chrom-base_lr0.0001_iter_20000.caffemodel')
+    mean = 128
+    print 'Initializing siamese_finetune_chrom_margin5000 net'
+    net = init_net(model_file, pretrained_weights, mean, input_config)
+    network_options['siamese_finetune_chrom_margin5000'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
+
+    network_options['zhao'] = {'feature_options': [3, 5], 'net': None, 'croplen': None, 'input_names': None, 'comp_feature_func': compute_chrompatch}
 
     scores = []
     indices = []
@@ -280,6 +315,11 @@ if __name__ == '__main__':
 
     for net_name, net_options in network_options.iteritems():
         feature_options = net_options['feature_options']
+        net = net_options['net']
+        croplen = net_options['croplen']
+        input_names = net_options['input_names']
+        comp_feature_func = net_options['comp_feature_func']
+
         features[net_name] = {}
         distances_equal[net_name] = {}
         distances_notequal[net_name] = {}
@@ -316,8 +356,13 @@ if __name__ == '__main__':
                 chrom_img = common.compute_chromaticity_image(img)
                 last_grayimg_path = grayimg_path
 
-            outputblobs1 = net_options['comp_feature_func'](net, input_names, feature_options, img, chrom_img, p1x, p1y, CROPLEN)
-            outputblobs2 = net_options['comp_feature_func'](net, input_names, feature_options, img, chrom_img, p2x, p2y, CROPLEN)
+            # We list all possible inputs here...
+            inputs = {}
+            inputs['data'] = img
+            inputs['chrom'] = chrom_img
+
+            outputblobs1 = comp_feature_func(net, inputs, feature_options, p1x, p1y, croplen)
+            outputblobs2 = comp_feature_func(net, inputs, feature_options, p2x, p2y, croplen)
 
             for f in feature_options:
                 f1 = outputblobs1[f]
@@ -343,7 +388,7 @@ if __name__ == '__main__':
         for f in feature_options:
             for dm_idx, dm in enumerate(distmetrics):
                 indices.append((net_name, f, dm['name']))
-                scores.append(analyze_distance_metric('{0}-{1}'.format(f, dm['name']), distances_equal[net_name][f][dm_idx], distances_notequal[net_name][f][dm_idx], STEPCOUNT, REQUIREDPRECISION))
+                scores.append(analyze_distance_metric('{0}-{1}-{2}'.format(net_name, f, dm['name']), distances_equal[net_name][f][dm_idx], distances_notequal[net_name][f][dm_idx], STEPCOUNT, REQUIREDPRECISION))
 
     # Search for best results
     print '########### BEST RESULTS ###########'

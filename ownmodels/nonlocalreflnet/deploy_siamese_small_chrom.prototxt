@@ -1,0 +1,42 @@
+name: "NonlocalreflSiameseNet"
+input: "data"
+input_dim: 1
+input_dim: 3
+input_dim: 32
+input_dim: 32
+input: "chrom"
+input_dim: 1
+input_dim: 3
+input_dim: 32
+input_dim: 32
+layers {
+  bottom: "chrom"
+  top: "conv1"
+  name: "conv1"
+  type: CONVOLUTION
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    stride: 1
+  }
+}
+layers {
+  bottom: "conv1"
+  top: "conv1"
+  name: "relu1"
+  type: RELU
+}
+layers {
+  bottom: "conv1"
+  top: "fc2"
+  name: "fc2"
+  type: INNER_PRODUCT
+  inner_product_param {
+    num_output: 100
+  }
+}
+layers {
+	name: "silence"
+	type: SILENCE
+	bottom: "data"
+}
