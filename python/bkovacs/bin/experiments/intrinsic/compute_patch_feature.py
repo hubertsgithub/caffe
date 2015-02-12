@@ -265,39 +265,28 @@ if __name__ == '__main__':
     input_names = ['data', 'chrom']
     input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
     croplen = 32
+    mean = 128
+
     model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small.prototxt')
     pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese2-base_lr0.005_iter_20000.caffemodel')
-    mean = 128
     print 'Initializing siamese net'
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['siamese'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    input_names = ['data', 'chrom']
-    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
-    croplen = 32
     model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_chrom.prototxt')
     pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_chrom-base_lr0.0001_iter_15000.caffemodel')
-    mean = 128
     print 'Initializing siamese_chrom net'
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['siamese_chrom'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    input_names = ['data', 'chrom']
-    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
-    croplen = 32
     model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_chrom.prototxt')
     pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_chrom_margin5000-base_lr0.0001_iter_20000.caffemodel')
-    mean = 128
     print 'Initializing siamese_chrom_margin5000 net'
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['siamese_chrom_margin5000'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    input_names = ['data', 'chrom']
-    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
-    croplen = 32
     model_file = acrp('ownmodels/nonlocalreflnet/deploy_siamese_small_finetune_chrom.prototxt')
     pretrained_weights = acrp('ownmodels/nonlocalreflnet/snapshots/caffenet_train_nonlocalrefl_siamese_finetune_chrom-base_lr0.0001_iter_20000.caffemodel')
-    mean = 128
     print 'Initializing siamese_finetune_chrom_margin5000 net'
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['siamese_finetune_chrom_margin5000'] = {'feature_options': ['fc2'], 'net': net, 'croplen': croplen, 'input_names': input_names, 'comp_feature_func': compute_features}
