@@ -34,7 +34,7 @@ void ContrastiveLossLayer<Dtype>::Forward_gpu(
   Dtype margin = this->layer_param_.contrastive_loss_param().margin();
   Dtype loss(0.0);
   for (int i = 0; i < bottom[0]->num(); ++i) {
-    if (static_cast<int>(bottom[2]->cpu_data()[i])) {  // similar pairs
+    if (static_cast<int>(bottom[2]->cpu_data()[i] + 0.5)) {  // similar pairs
       loss += dist_sq_.cpu_data()[i];
     } else {  // dissimilar pairs
       loss += std::max(margin-dist_sq_.cpu_data()[i], Dtype(0.0));
@@ -51,7 +51,7 @@ __global__ void CLLForward(const int count, const int channels,
     Dtype *bottom_diff) {
   CUDA_KERNEL_LOOP(i, count) {
     int n = i / channels;  // the num index, to access y and dist_sq
-    if (static_cast<int>(y[n])) {  // similar pairs
+    if (static_cast<int>(y[n] + 0.5)) {  // similar pairs
       bottom_diff[i] = alpha * diff[i];
     } else {  // dissimilar pairs
       if ((margin-dist_sq[n]) > 0.0) {
