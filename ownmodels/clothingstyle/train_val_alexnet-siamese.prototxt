@@ -35,7 +35,7 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/clothingstyle/train_filtered.txt"
+    source: "data/clothingstyle/train_filtered_reduced.txt"
     batch_size: 20 
   }
   multi_image_data_param {
