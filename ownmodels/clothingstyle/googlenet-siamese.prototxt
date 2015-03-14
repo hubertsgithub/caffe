@@ -1,92 +1,91 @@
 name: "GoogleNet-siamese"
 layers {
   top: "data"
+  top: "data__p1"
   top: "sim"
   name: "data"
-  type: IMAGE_DATA
+  type: MULTI_IMAGE_DATA
+  multi_prefetch_data_param {
+  	  share_random_trafos: false
+      # data
+	  data_transformations {
+		new_height: 256
+		new_width: 256
+		random_crop: true
+		crop_size: 224
+		crop_first: false
+		mirror: true
+		is_color: true
+		mean_value: 104.0
+		mean_value: 117.0
+		mean_value: 123.0
+	  }
+      # data2
+	  data_transformations {
+		new_height: 256
+		new_width: 256
+		random_crop: true
+		crop_size: 224
+		crop_first: false
+		mirror: true
+		is_color: true
+		mean_value: 104.0
+		mean_value: 117.0
+		mean_value: 123.0
+	  }
+  }
   image_data_param {
-    source: "dataset/listP_train.txt"
-    batch_size: 16
-    shuffle: false
+    source: "data/clothingstyle/train_filtered_reduced.txt"
+    batch_size: 20 
   }
-  include {
-    phase: TRAIN
+  multi_image_data_param {
+    use_label: true 
   }
-  transform_param {
-    mirror: true
-    crop_size: 224
-    mean_value: 104.0
-    mean_value: 117.0
-    mean_value: 123.0
-  }
-}
-layers {
-  top: "data__p1"
-  top: "ignore_label"
-  name: "data__p1"
-  type: IMAGE_DATA
-  image_data_param {
-    source: "dataset/listR_train.txt"
-    batch_size: 16
-    shuffle: false
-  }
-  include {
-    phase: TRAIN
-  }
-  transform_param {
-    mirror: true
-    crop_size: 224
-    mean_value: 104.0
-    mean_value: 117.0
-    mean_value: 123.0
-  }
+  include: { phase: TRAIN }
 }
 layers {
   top: "data"
+  top: "data__p1"
   top: "sim"
   name: "data"
-  type: IMAGE_DATA
+  type: MULTI_IMAGE_DATA
+  multi_prefetch_data_param {
+  	  share_random_trafos: false
+      # data
+	  data_transformations {
+		new_height: 256
+		new_width: 256
+		random_crop: true
+		crop_size: 224
+		crop_first: false
+		mirror: true
+		is_color: true
+		mean_value: 104.0
+		mean_value: 117.0
+		mean_value: 123.0
+	  }
+      # data2
+	  data_transformations {
+		new_height: 256
+		new_width: 256
+		random_crop: true
+		crop_size: 224
+		crop_first: false
+		mirror: true
+		is_color: true
+		mean_value: 104.0
+		mean_value: 117.0
+		mean_value: 123.0
+	  }
+  }
   image_data_param {
-    source: "dataset/listP_val.txt"
-    batch_size: 4
-    shuffle: false
+    source: "data/clothingstyle/val_filtered_reduced.txt"
+    batch_size: 20 
   }
-  include {
-    phase: TEST
+  multi_image_data_param {
+    use_label: true 
   }
-  transform_param {
-    mirror: false
-    crop_size: 224
-    mean_value: 104.0
-    mean_value: 117.0
-    mean_value: 123.0
-  }
-}
-layers {
-  top: "data__p1"
-  top: "ignore_label"
-  name: "data__p1"
-  type: IMAGE_DATA
-  image_data_param {
-    source: "dataset/listR_val.txt"
-    batch_size: 4
-    shuffle: false
-  }
-  include {
-    phase: TEST
-  }
-  transform_param {
-    mirror: false
-    crop_size: 224
-    mean_value: 104.0
-    mean_value: 117.0
-    mean_value: 123.0
-  }
-}
-layers {
-  bottom: "ignore_label"
-  name: "silience"
-  type: SILENCE
+  include: { phase: TEST }
 }
 layers {
   bottom: "data"
