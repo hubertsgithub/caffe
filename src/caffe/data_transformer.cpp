@@ -1,7 +1,5 @@
-#ifndef OSX
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#endif
 
 #include <string>
 #include <vector>
@@ -14,16 +12,16 @@
 namespace caffe {
 
 template<typename Dtype>
-DataTransformer<Dtype>::DataTransformer(const TransformationParameter& param)
-    : param_(param) {
-  phase_ = Caffe::phase();
+DataTransformer<Dtype>::DataTransformer(const TransformationParameter& param,
+    Phase phase)
+    : param_(param), phase_(phase) {
   ResetState();
   // check if we want to use mean_file
   if (param_.has_mean_file()) {
     CHECK_EQ(param_.mean_value_size(), 0) <<
       "Cannot specify mean_file and mean_value at the same time";
     const string& mean_file = param.mean_file();
-    LOG(INFO) << "Loading mean file from" << mean_file;
+    LOG(INFO) << "Loading mean file from: " << mean_file;
     BlobProto blob_proto;
     ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
     data_mean_.FromProto(blob_proto);
@@ -172,7 +170,7 @@ void DataTransformer<Dtype>::Transform(const vector<Datum> & datum_vector,
 
   CHECK_GT(datum_num, 0) << "There is no datum to add";
   CHECK_LE(datum_num, num) <<
-    "The size of datum_vector must be smaller than transformed_blob->num()";
+    "The size of datum_vector must be no greater than transformed_blob->num()";
   CHECK(!crop_first) << "Datum transformation does not support crop first";
   CHECK_LE(abs(gamma - 1.0), 0.001) << "Gamma not supported here";
 
@@ -184,7 +182,26 @@ void DataTransformer<Dtype>::Transform(const vector<Datum> & datum_vector,
   }
 }
 
-#ifndef OSX
+template<typename Dtype>
+void DataTransformer<Dtype>::Transform(const vector<cv::Mat> & mat_vector,
+                                       Blob<Dtype>* transformed_blob) {
+  const int mat_num = mat_vector.size();
+  const int num = transformed_blob->num();
+  const int channels = transformed_blob->channels();
+  const int height = transformed_blob->height();
+  const int width = transformed_blob->width();
+
+  CHECK_GT(mat_num, 0) << "There is no MAT to add";
+  CHECK_EQ(mat_num, num) <<
+    "The size of mat_vector must be equals to transformed_blob->num()";
+  Blob<Dtype> uni_blob(1, channels, height, width);
+  for (int item_id = 0; item_id < mat_num; ++item_id) {
+    int offset = transformed_blob->offset(item_id);
+    uni_blob.set_cpu_data(transformed_blob->mutable_cpu_data() + offset);
+    Transform(mat_vector[item_id], &uni_blob);
+  }
+}
+
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        Blob<Dtype>* transformed_blob) {
@@ -258,7 +275,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
 		CHECK_EQ(crop_size, height);
 		CHECK_EQ(crop_size, width);
   		DLOG(INFO) << "Cropping image (w_off: " << w_off << " , h_off: " << h_off << ", crop_size: " << crop_size << ")";
-		cv::Rect roi(w_off - crop_size / 2, h_off - crop_size / 2, crop_size, crop_size);
+    if (phase_ == TRAIN) {
 		cv_cropped_img = cv_img(roi);
 	}
   } else {
@@ -309,7 +326,6 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
     }
   }
 }
-#endif
 
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
@@ -410,7 +426,7 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
 template <typename Dtype>
 void DataTransformer<Dtype>::InitRand() {
   const bool needs_rand = param_.mirror() ||
-      (phase_ == Caffe::TRAIN && param_.crop_size());
+      (phase_ == TRAIN && param_.crop_size());
   if (needs_rand) {
     const unsigned int rng_seed = caffe_rng_rand();
     rng_.reset(new Caffe::RNG(rng_seed));

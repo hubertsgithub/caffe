@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "caffe/layer.hpp"
+#include "caffe/layer_factory.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/vision_layers.hpp"
 
@@ -12,11 +13,21 @@ template <typename Dtype>
 void SoftmaxWithLossLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::LayerSetUp(bottom, top);
+  LayerParameter softmax_param(this->layer_param_);
+  softmax_param.set_type("Softmax");
+  softmax_layer_ = LayerRegistry<Dtype>::CreateLayer(softmax_param);
   softmax_bottom_vec_.clear();
   softmax_bottom_vec_.push_back(bottom[0]);
   softmax_top_vec_.clear();
   softmax_top_vec_.push_back(&prob_);
   softmax_layer_->SetUp(softmax_bottom_vec_, softmax_top_vec_);
+
+  has_ignore_label_ =
+    this->layer_param_.loss_param().has_ignore_label();
+  if (has_ignore_label_) {
+    ignore_label_ = this->layer_param_.loss_param().ignore_label();
+  }
+  normalize_ = this->layer_param_.loss_param().normalize();
 }
 
 template <typename Dtype>
@@ -24,6 +35,15 @@ void SoftmaxWithLossLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
   softmax_layer_->Reshape(softmax_bottom_vec_, softmax_top_vec_);
+  softmax_axis_ =
+      bottom[0]->CanonicalAxisIndex(this->layer_param_.softmax_param().axis());
+  outer_num_ = bottom[0]->count(0, softmax_axis_);
+  inner_num_ = bottom[0]->count(softmax_axis_ + 1);
+  CHECK_EQ(outer_num_ * inner_num_, bottom[1]->count())
+      << "Number of labels must match number of predictions; "
+      << "e.g., if softmax axis == 1 and prediction shape is (N, C, H, W), "
+      << "label count (number of labels) must be N*H*W, "
+      << "with integer values in {0, 1, ..., C-1}.";
   if (top.size() >= 2) {
     // softmax output
     top[1]->ReshapeLike(*bottom[0]);
@@ -94,10 +114,9 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
 
 template <typename Dtype>
 void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
-    const vector<bool>& propagate_down,
-    const vector<Blob<Dtype>*>& bottom) {
+    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
   if (propagate_down[1]) {
-    LOG(FATAL) << this->type_name()
+    LOG(FATAL) << this->type()
                << " Layer cannot backpropagate to label inputs.";
   }
   if (propagate_down.size() >= 3 && propagate_down[2]) {
@@ -156,5 +175,6 @@ STUB_GPU(SoftmaxWithLossLayer);
 #endif
 
 INSTANTIATE_CLASS(SoftmaxWithLossLayer);
-REGISTER_LAYER_CLASS(SOFTMAX_LOSS, SoftmaxWithLossLayer);
+REGISTER_LAYER_CLASS(SoftmaxWithLoss);
+
 }  // namespace caffe

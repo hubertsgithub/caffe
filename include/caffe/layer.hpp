@@ -17,11 +17,11 @@ namespace caffe {
  * @brief An interface for the units of computation which can be composed into a
  *        Net.
  *
- * Layer&s must implement a Forward function, in which they take their input
- * (bottom) Blob&s (if any) and compute their output Blob&s (if any).
+ * Layer%s must implement a Forward function, in which they take their input
+ * (bottom) Blob%s (if any) and compute their output Blob%s (if any).
  * They may also implement a Backward function, in which they compute the error
- * gradients with respect to their input Blob&s, given the error gradients with
- * their output Blob&s.
+ * gradients with respect to their input Blob%s, given the error gradients with
+ * their output Blob%s.
  */
 template <typename Dtype>
 class Layer {
@@ -33,7 +33,8 @@ class Layer {
    */
   explicit Layer(const LayerParameter& param)
     : layer_param_(param) {
-      // The only thing we do is to copy blobs if there are any.
+      // Set phase and copy blobs (if there are any).
+      phase_ = param.phase();
       if (layer_param_.blobs_size() > 0) {
         blobs_.resize(layer_param_.blobs_size());
         for (int i = 0; i < layer_param_.blobs_size(); ++i) {
@@ -179,18 +180,9 @@ class Layer {
   }
 
   /**
-   * @brief Returns the layer type as an enum value.
+   * @brief Returns the layer type.
    */
-  virtual inline LayerParameter_LayerType type() const {
-    return LayerParameter_LayerType_NONE;
-  }
-
-  /**
-   * @brief Returns the layer type name.
-   */
-  virtual inline const string& type_name() const {
-    return LayerParameter_LayerType_Name(type());
-  }
+  virtual inline const char* type() const { return ""; }
 
   /**
    * @brief Returns the exact number of bottom blobs required by the layer,
@@ -297,6 +289,8 @@ class Layer {
  protected:
   /** The protobuf that stores the layer parameters */
   LayerParameter layer_param_;
+  /** The phase: TRAIN or TEST */
+  Phase phase_;
   /** The vector that stores the learnable parameters as a set of blobs. */
   vector<shared_ptr<Blob<Dtype> > > blobs_;
   /** Vector indicating whether to compute the diff of each param blob. */
@@ -347,37 +341,37 @@ class Layer {
                                const vector<Blob<Dtype>*>& top) {
     if (ExactNumBottomBlobs() >= 0) {
       CHECK_EQ(ExactNumBottomBlobs(), bottom.size())
-          << type_name() << " Layer takes " << ExactNumBottomBlobs()
+          << type() << " Layer takes " << ExactNumBottomBlobs()
           << " bottom blob(s) as input.";
     }
     if (MinBottomBlobs() >= 0) {
       CHECK_LE(MinBottomBlobs(), bottom.size())
-          << type_name() << " Layer takes at least " << MinBottomBlobs()
+          << type() << " Layer takes at least " << MinBottomBlobs()
           << " bottom blob(s) as input.";
     }
     if (MaxBottomBlobs() >= 0) {
       CHECK_GE(MaxBottomBlobs(), bottom.size())
-          << type_name() << " Layer takes at most " << MaxBottomBlobs()
+          << type() << " Layer takes at most " << MaxBottomBlobs()
           << " bottom blob(s) as input.";
     }
     if (ExactNumTopBlobs() >= 0) {
       CHECK_EQ(ExactNumTopBlobs(), top.size())
-          << type_name() << " Layer produces " << ExactNumTopBlobs()
+          << type() << " Layer produces " << ExactNumTopBlobs()
           << " top blob(s) as output.";
     }
     if (MinTopBlobs() >= 0) {
       CHECK_LE(MinTopBlobs(), top.size())
-          << type_name() << " Layer produces at least " << MinTopBlobs()
+          << type() << " Layer produces at least " << MinTopBlobs()
           << " top blob(s) as output.";
     }
     if (MaxTopBlobs() >= 0) {
       CHECK_GE(MaxTopBlobs(), top.size())
-          << type_name() << " Layer produces at most " << MaxTopBlobs()
+          << type() << " Layer produces at most " << MaxTopBlobs()
           << " top blob(s) as output.";
     }
     if (EqualNumBottomTopBlobs()) {
       CHECK_EQ(bottom.size(), top.size())
-          << type_name() << " Layer produces one top blob as output for each "
+          << type() << " Layer produces one top blob as output for each "
           << "bottom blob input.";
     }
   }

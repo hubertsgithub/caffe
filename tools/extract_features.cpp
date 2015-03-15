@@ -7,19 +7,19 @@
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
-#include "caffe/dataset_factory.hpp"
 #include "caffe/net.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include "caffe/util/db.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/vision_layers.hpp"
 
-using boost::shared_ptr;
 using caffe::Blob;
 using caffe::Caffe;
-using caffe::Dataset;
-using caffe::DatasetFactory;
 using caffe::Datum;
 using caffe::Net;
+using boost::shared_ptr;
+using std::string;
+namespace db = caffe::db;
 
 template<typename Dtype>
 int feature_extraction_pipeline(int argc, char** argv);
@@ -64,7 +64,6 @@ int feature_extraction_pipeline(int argc, char** argv) {
     LOG(ERROR) << "Using CPU";
     Caffe::set_mode(Caffe::CPU);
   }
-  Caffe::set_phase(Caffe::TEST);
 
   arg_pos = 0;  // the name of the executable
   std::string pretrained_binary_proto(argv[++arg_pos]);
@@ -98,7 +97,7 @@ int feature_extraction_pipeline(int argc, char** argv) {
    */
   std::string feature_extraction_proto(argv[++arg_pos]);
   shared_ptr<Net<Dtype> > feature_extraction_net(
-      new Net<Dtype>(feature_extraction_proto));
+      new Net<Dtype>(feature_extraction_proto, caffe::TEST));
   feature_extraction_net->CopyTrainedLayersFrom(pretrained_binary_proto);
 
   std::string extract_feature_blob_names(argv[++arg_pos]);
@@ -121,13 +120,15 @@ int feature_extraction_pipeline(int argc, char** argv) {
 
   int num_mini_batches = atoi(argv[++arg_pos]);
 
-  std::vector<shared_ptr<Dataset<std::string, Datum> > > feature_dbs;
+  std::vector<shared_ptr<db::DB> > feature_dbs;
+  std::vector<shared_ptr<db::Transaction> > txns;
   for (size_t i = 0; i < num_features; ++i) {
     LOG(INFO)<< "Opening dataset " << dataset_names[i];
-    shared_ptr<Dataset<std::string, Datum> > dataset =
-        DatasetFactory<std::string, Datum>(argv[++arg_pos]);
-    CHECK(dataset->open(dataset_names.at(i), Dataset<std::string, Datum>::New));
-    feature_dbs.push_back(dataset);
+    shared_ptr<db::DB> db(db::GetDB(argv[++arg_pos]));
+    db->Open(dataset_names.at(i), db::NEW);
+    feature_dbs.push_back(db);
+    shared_ptr<db::Transaction> txn(db->NewTransaction());
+    txns.push_back(txn);
   }
 
   LOG(ERROR)<< "Extacting Features";
@@ -146,9 +147,9 @@ int feature_extraction_pipeline(int argc, char** argv) {
       int dim_features = feature_blob->count() / batch_size;
       const Dtype* feature_blob_data;
       for (int n = 0; n < batch_size; ++n) {
-        datum.set_height(dim_features);
-        datum.set_width(1);
-        datum.set_channels(1);
+        datum.set_height(feature_blob->height());
+        datum.set_width(feature_blob->width());
+        datum.set_channels(feature_blob->channels());
         datum.clear_data();
         datum.clear_float_data();
         feature_blob_data = feature_blob->cpu_data() +
@@ -158,10 +159,13 @@ int feature_extraction_pipeline(int argc, char** argv) {
         }
         int length = snprintf(key_str, kMaxKeyStrLength, "%d",
             image_indices[i]);
-        CHECK(feature_dbs.at(i)->put(std::string(key_str, length), datum));
+        string out;
+        CHECK(datum.SerializeToString(&out));
+        txns.at(i)->Put(std::string(key_str, length), out);
         ++image_indices[i];
         if (image_indices[i] % 1000 == 0) {
-          CHECK(feature_dbs.at(i)->commit());
+          txns.at(i)->Commit();
+          txns.at(i).reset(feature_dbs.at(i)->NewTransaction());
           LOG(ERROR)<< "Extracted features of " << image_indices[i] <<
               " query images for feature blob " << blob_names[i];
         }
@@ -171,11 +175,11 @@ int feature_extraction_pipeline(int argc, char** argv) {
   // write the last batch
   for (int i = 0; i < num_features; ++i) {
     if (image_indices[i] % 1000 != 0) {
-      CHECK(feature_dbs.at(i)->commit());
+      txns.at(i)->Commit();
     }
     LOG(ERROR)<< "Extracted features of " << image_indices[i] <<
         " query images for feature blob " << blob_names[i];
-    feature_dbs.at(i)->close();
+    feature_dbs.at(i)->Close();
   }
 
   LOG(ERROR)<< "Successfully extracted the features!";
