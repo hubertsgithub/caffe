@@ -36,7 +36,7 @@ layers {
   }
   image_data_param {
     source: "data/clothingstyle/train_filtered_reduced.txt"
-    batch_size: 20 
+    batch_size: 10 
   }
   multi_image_data_param {
     use_label: true 
@@ -80,7 +80,7 @@ layers {
   }
   image_data_param {
     source: "data/clothingstyle/val_filtered_reduced.txt"
-    batch_size: 20 
+    batch_size: 10 
   }
   multi_image_data_param {
     use_label: true 
