@@ -198,20 +198,20 @@ def process_line(line):
     return img_path1, img_path2, sim
 
 
-def analyze_distance_metric(distmetricname, dists_equal, dists_notequal, stepcount, req_prec):
-    print '** {0} distance metric **'.format(distmetricname)
-    print dists_equal
-    print dists_notequal
+def analyze_distance_metric(distmetricname, dists_equal, dists_notequal, stepcount, req_prec, fout):
+    fout.write('** {0} distance metric **\n'.format(distmetricname))
+    #fout.write(str(dists_equal))
+    #fout.write(str(dists_notequal))
     avg_equal = np.mean(dists_equal)
     avg_notequal = np.mean(dists_notequal)
-    print 'Average distance between patches with equal reflectance: {0}'.format(avg_equal)
-    print 'Standard deviation: {0}'.format(np.std(dists_equal))
-    print 'Average distance between patches with not equal reflectance: {0}'.format(avg_notequal)
-    print 'Standard deviation: {0}'.format(np.std(dists_notequal))
+    fout.write('Average distance between patches with equal reflectance: {0}\n'.format(avg_equal))
+    fout.write('Standard deviation: {0}\n'.format(np.std(dists_equal)))
+    fout.write('Average distance between patches with not equal reflectance: {0}\n'.format(avg_notequal))
+    fout.write('Standard deviation: {0}\n'.format(np.std(dists_notequal)))
     # Solve for accuracy
     thresacc, acc, thresprec, prec, recall = solve_accuracy(distmetricname, dists_equal, dists_notequal, avg_equal, avg_notequal, stepcount, req_prec)
-    print 'Best accuracy: {0} at threshold: {1}'.format(acc, thresacc)
-    print 'At ~ {0} precision ({1}) the recall is: {2} at threshold: {3}'.format(req_prec, prec, recall, thresprec)
+    fout.write('Best accuracy: {0} at threshold: {1}\n'.format(acc, thresacc))
+    fout.write('At ~ {0} precision ({1}) the recall is: {2} at threshold: {3}\n'.format(req_prec, prec, recall, thresprec))
 
     return thresacc, acc, thresprec, prec, recall
 
@@ -363,25 +363,34 @@ if __name__ == '__main__':
     scores = []
     indices = []
 
+    fout = open(os.path.join(EXPROOTPATH, 'output.txt'), 'w')
+
     for net_name, net_options in network_options.iteritems():
-        print '############# {0} #############'.format(net_name)
+        fout.write('############# {0} #############\n'.format(net_name))
 
         feature_options = net_options['feature_options']
         for f in feature_options:
             for dm_idx, dm in enumerate(distmetrics):
                 indices.append((net_name, f, dm['name']))
-                scores.append(analyze_distance_metric('{0}-{1}-{2}'.format(net_name, f, dm['name']), distances_equal[net_name][f][dm_idx], distances_notequal[net_name][f][dm_idx], STEPCOUNT, REQUIREDPRECISION))
+                score = analyze_distance_metric(
+                    '{0}-{1}-{2}'.format(net_name, f, dm['name']),
+                    distances_equal[net_name][f][dm_idx],
+                    distances_notequal[net_name][f][dm_idx],
+                    STEPCOUNT, REQUIREDPRECISION, fout)
+                scores.append(score)
 
     # Search for best results
-    print '########### BEST RESULTS ###########'
+    fout.write('########### BEST RESULTS ###########\n')
     scores = np.array(scores)
     max_inds = np.argmax(scores, axis=0)
     net_name, f, dmname = indices[max_inds[1]]
     accuracy = scores[max_inds[1], 1]
-    print 'All values: {0}'.format(scores[:, 1])
-    print 'Best accuracy {0}: {1} network, {2} feature with {3} distance metric'.format(accuracy, net_name, f, dmname)
+    fout.write('All values: {0}\n'.format(scores[:, 1]))
+    fout.write('Best accuracy {0}: {1} network, {2} feature with {3} distance metric\n'.format(accuracy, net_name, f, dmname))
     net_name, f, dmname = indices[max_inds[4]]
     recall = scores[max_inds[4], 4]
-    print 'All values: {0}'.format(scores[:, 4])
-    print 'Best recall {0}: {1} network, {2} feature with {3} distance metric'.format(recall, net_name, f, dmname)
+    fout.write('All values: {0}\n'.format(scores[:, 4]))
+    fout.write('Best recall {0}: {1} network, {2} feature with {3} distance metric\n'.format(recall, net_name, f, dmname))
+
+    fout.close()
 
