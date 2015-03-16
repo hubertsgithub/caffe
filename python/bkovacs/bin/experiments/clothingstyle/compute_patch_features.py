@@ -246,7 +246,12 @@ if __name__ == '__main__':
     network_options = {}
 
     input_names = ['data']
-    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1./255.} for input_name in input_names}
+    # raw_scale is used to upscale the loaded image from [0, 1] (because we
+    # load it that way) to [0, 255]
+    # input_scale is used to downscale the image after mean subraction, but
+    # because there networks were trained with [0, 255] output, we set this to
+    # 1.
+    input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1.} for input_name in input_names}
     mean = [104.0, 117.0, 123.0]
 
     model_file = acrp('models/bvlc_alexnet/deploy.prototxt')

@@ -15,7 +15,9 @@ def init_net(model_file, pretrained_weights, mean=None, input_config={}):
         model_file: path to the prototxt file containing the network definition
         pretrained_weights: path to the file containing the trained weights
         mean: either path to the mean file or a number which will be used for all pixels and channels
-        input_config: this dictionary contains the different configurations for each network input. Key: input_name, value: dcitionary with the config (key: option name, value: option value)
+        input_config: this dictionary contains the different configurations for
+        each network input. Key: input_name, value: dcitionary with the config
+        (key: option name, value: option value)
     '''
 
     net = caffe.Net(model_file, pretrained_weights)
@@ -30,6 +32,7 @@ def init_net(model_file, pretrained_weights, mean=None, input_config={}):
             net.set_input_scale(input_name, config['input_scale'])
 
         if mean:
+            # If it is a filename
             if isinstance(mean, basestring):
                 blob = caffe.proto.caffe_pb2.BlobProto()
                 data = open(mean, 'rb').read()
@@ -43,6 +46,13 @@ def init_net(model_file, pretrained_weights, mean=None, input_config={}):
                 meanarr = np.empty((1, 3))
                 meanarr.fill(mean)
                 net.set_mean(input_name, meanarr, mode='channel')
+            elif isinstance(mean, list):
+                meanarr = np.array(mean)
+                net.set_mean(input_name, meanarr, mode='channel')
+            else:
+                raise ValueError(
+                    'Invalid mean input, it should be a filename, int, float or\
+                     list of ints or floats!')
 
     return net
 
