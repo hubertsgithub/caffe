@@ -303,7 +303,15 @@ if __name__ == '__main__':
 
     commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_fullpath)]
     if 'weights' in options:
-        commandtxt.append('--weights=' + acrp(options['weights']))
+        # If we gave a solverstate file, we have to call with '--snapshot',
+        # otherwise we use '--weights'
+        _, ext = os.path.splitext(options['weights'])
+        if ext == '.solverstate':
+            prefix = 'snapshot'
+        else:
+            prefix = 'weights'
+
+        commandtxt.append('--{}={}'.format(prefix, acrp(options['weights'])))
 
     print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
     if options['redirect'] == True:
