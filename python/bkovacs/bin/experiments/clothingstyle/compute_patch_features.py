@@ -254,23 +254,23 @@ if __name__ == '__main__':
     input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1.} for input_name in input_names}
     mean = [104.0, 117.0, 123.0]
 
-    model_file = acrp('models/bvlc_alexnet/deploy.prototxt')
-    pretrained_weights = acrp('models/bvlc_alexnet/bvlc_alexnet.caffemodel')
-    print 'Initializing alexnet net'
-    net = init_net(model_file, pretrained_weights, mean, input_config)
-    network_options['alexnet'] = {'feature_options': ['fc7'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
+    # model_file = acrp('models/bvlc_alexnet/deploy.prototxt')
+    # pretrained_weights = acrp('models/bvlc_alexnet/bvlc_alexnet.caffemodel')
+    # print 'Initializing alexnet net'
+    # net = init_net(model_file, pretrained_weights, mean, input_config)
+    # network_options['alexnet'] = {'feature_options': ['fc7'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
 
     model_file = acrp('ownmodels/clothingstyle/deploy_alexnet-siamese.prototxt')
-    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_alexnet-siamese-base_lr5e-06_iter_40000.caffemodel')
+    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_alexnet-siamese-base_lr5e-06_iter_90000.caffemodel')
     print 'Initializing alexnet-siamese net'
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['alexnet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
-    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-base_lr1e-05_iter_70000.caffemodel')
-    print 'Initializing googlenet-siamese net'
-    net = init_net(model_file, pretrained_weights, mean, input_config)
-    network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
+    # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
+    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-base_lr1e-05_iter_70000.caffemodel')
+    # print 'Initializing googlenet-siamese net'
+    # net = init_net(model_file, pretrained_weights, mean, input_config)
+    # network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
 
     featurefilepath = os.path.join(EXPROOTPATH, 'featuredata.dat')
     loaded = False
