@@ -35,7 +35,7 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/clothingstyle/holdout-Shoes/train.txt"
+    source: "data/clothingstyle/trainingfiles/holdout-Shoes/train.txt"
     batch_size: 10 
   }
   multi_image_data_param {
@@ -79,7 +79,7 @@ layers {
 	  }
   }
   image_data_param {
-    source: "data/clothingstyle/holdout-Shoes/val.txt"
+    source: "data/clothingstyle/trainingfiles/holdout-Shoes/val.txt"
     batch_size: 10 
   }
   multi_image_data_param {
