@@ -6,15 +6,13 @@
 # The usual modules.
 
 import numpy as np
-import itertools as it
-from tsne import bh_sne
 from PIL import Image
-import itertools
+import itertools as it
 import scipy as sp
+from sklearn.neighbors import KDTree
 import math
 import os
 import os.path
-import glob
 import random
 import sys
 
@@ -22,14 +20,13 @@ import sys
 EXPDATAFOLDER = '../../experiments/clothingstyle/'
 FILENAMES_FILE = 'categories_googlenet_sorted.npy'
 FEATURES_FILE = 'features_googlenet_sorted.npy'
-# look at dataanalysis.py for the categories and levels
-CATEGORY = 'Shirts' #put 'all' for all categories
-CATEGORYLEVEL = 3
+CATEGORY = 'Shoes'
 IMG_SIZE = 160
-SIZE_EMBEDDING = 100000
-SCALAR = 200
-RANDOM = True
-IMAGE_FILENAME = 'embedding_{}_{}.jpg'.format(CATEGORY,SIZE_EMBEDDING)
+NUMBEROFLINES = 10
+STEPS = 100
+IMAGE_FILENAME = 'lines_{}_numlines_{}_numsteps_{}.jpg'.format(CATEGORY,NUMBEROFLINES,STEPS)
+
+
 
 def createImage_new(xs, ys, heights, widths, urls, binsize, img=None):
     min_x = np.min(xs)
@@ -65,24 +62,24 @@ def quantize_embedding(embedding, binsize):
         quantized_space[(qx,qy)] = quantized_space.get((qx,qy),[]) + [i]
     return (quantized_space, binsize) 
 
-def convert_to_quantized(data_files, (quantized_space, binsize)):
+def convert_to_image_coord(data_files, lines, binsize):
     urls = []
     xs = []
     ys = []
     heights = []
     widths = []
-    for (x,y), imglist in quantized_space.items():
-        which_img = np.random.choice(imglist)
-        savename = '../../' + data_files[which_img]
-        # im = load_image('../../' + data_files[which_img])
-        # im = resize_and_crop_image(im, binsize, binsize, keep_aspect_ratio=False, use_greater_side=False)
-        # savename='imgs/'+ str(x)+ str(y) +'.jpg'
-        # save_image(savename, im)
-        urls.append(savename)
-        xs.append(x)
-        ys.append(y)
-        heights.append(binsize)
-        widths.append(binsize)
+    row = 0 
+    for line in lines:
+        col = 0
+        for image in line:
+            urls.append('../../' + image)
+            xs.append(col * binsize)
+            ys.append(row * binsize)
+            heights.append(binsize)
+            widths.append(binsize)
+            col += 1
+        row += 1
+
     return xs, ys, urls, heights, widths
 
 # ### Image Handling Helper Functions from Balazs
@@ -170,41 +167,32 @@ if __name__ == '__main__':
     features = features[:max_len]
 
     #Select individual classes
-    if CATEGORY != 'all':
-        indices = np.where(data_files[:,CATEGORYLEVEL]==CATEGORY)
-        data_files = data_files[indices]
-        features = features[indices]
+    indices = np.where(data_files[:,2]==CATEGORY)
+    data_files = data_files[indices]
+    features = features[indices]
 
-    #generate random subset of files
-    max_len = min(max_len, features.shape[0])
-    size = min(features.shape[0], SIZE_EMBEDDING)
+    #remove categories from file list
     data_files = data_files[:,0]
+    print 'Create KDTree'
+    tree = KDTree(features, leaf_size=2)
+    print 'KDTree created'
+    lines = []
+    endpoints = np.random.randint(features.shape[0], size=(NUMBEROFLINES, 2))
+    for i in range(NUMBEROFLINES):
+        vec_a = 1.0*features[endpoints[i,0]]
+        vec_b = 1.0*features[endpoints[i,1]]
+        vec_ab =  1.0*vec_b-1.0*vec_a
+        line = []
+        for j in range(STEPS):
+            p = vec_a + 1.0*j/STEPS*(vec_ab)
+            dist, ind = tree.query(p, k=1)
+            print ind[0][0]
+            line.append(data_files[ind[0][0]])  
+        line.append(data_files[endpoints[i,1]])
+        lines.append(line)
+    print lines
 
-    if RANDOM == True:
-        nums = np.zeros(max_len)
-        nums[:size] = 1
-        np.random.shuffle(nums)
-        np.save('../../experiments/clothingstyle/rand_subset_{}_{}.npy'.format(SIZE_EMBEDDING,CATEGORY), nums)
-        # nums = np.load('../../experiments/clothingstyle/rand_subset_{0}.npy'.format(SIZE_EMBEDDING))
-        data_files = data_files[nums==1]
-        #load features
-        features = features[nums==1,:].astype('float64')
-        #compute embedding
-        X_2 = bh_sne(features)
-        np.save('../../experiments/clothingstyle/image_tsne_embedding_Google_Siamese_rand_{}_{}.npy'.format(SIZE_EMBEDDING,CATEGORY), X_2)
-    else:
-        nums = np.load('../../experiments/clothingstyle/rand_subset_{0}.npy'.format(SIZE_EMBEDDING))
-        data_files = data_files[nums==1]
-        #load features
-        features = features[nums==1,:].astype('float64') 
-        X_2 = np.load('../../experiments/clothingstyle/image_tsne_embedding_Google_Siamese_rand_{}_{}.npy'.format(SIZE_EMBEDDING,CATEGORY))
-
-        # X_2 = np.load('../../experiments/clothingstyle/image_tsne_embedding_Google_Siamese_rand_100000.npy')
-
-    #scale embedding
-    X_2b = X_2*SCALAR
-
-    xs,ys,urls, heights, widths = convert_to_quantized(data_files, quantize_embedding(X_2b, IMG_SIZE))
+    xs,ys,urls, heights, widths = convert_to_image_coord(data_files, lines, IMG_SIZE)
 
     img = createImage_new(xs, ys, heights, widths, urls, IMG_SIZE)
 
