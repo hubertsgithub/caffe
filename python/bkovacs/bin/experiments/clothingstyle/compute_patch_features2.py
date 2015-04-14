@@ -22,9 +22,10 @@ import caffe
 ROOTPATH = acrp('data/clothingstyle')
 EXPROOTPATH = acrp('experiments/clothingstyle/')
 TESTFILE = 'balanced/train.txt'
+EXPERIMENTNAME = 'googlenet_interlink'
 
 SAMPLESTART = 0
-SAMPLECOUNT = 1300000
+SAMPLECOUNT = 1000000
 STEPCOUNT = 500
 REQUIREDPRECISION = 0.9
 
@@ -122,15 +123,23 @@ if __name__ == '__main__':
         file_names_list.append(strs[1])
     #filter for duplicates
     file_names_list = list(set(file_names_list))
-    print len(file_names_list)
+    maxlen = len(file_names_list)
     file_names_list = sorted(file_names_list)
-    file_names_list = file_names_list[SAMPLESTART:SAMPLECOUNT]
-    file_names = np.array(file_names_list)
-    filenamesfilepath = os.path.join(EXPROOTPATH, 'image_filenames{0}-{1}.npy'.format(SAMPLESTART, SAMPLESTART+SAMPLECOUNT-1))
+    sample_end = np.min(maxlen, SAMPLESTART+SAMPLECOUNT)
+    file_names_list = file_names_list[SAMPLESTART:sample_end]
+
+    filenames = np.array(file_names_list)
+    categories = np.load(ROOTPATH + '/file_categories_unique.npy')
+    filenames_short = filenames[np.in1d(filenames, categories[:,0])]
+    categories_short = categories[np.in1d(categories[:,0], filenames),:]
+    indices = np.argsort(categories_short[:,0])
+    categories_short = categories_short[indices,:]
+
+    filenamesfilepath = os.path.join(EXPROOTPATH, 'filenames_categories_{}_{}-{}.npy'.format(EXPERIMENTNAME,SAMPLESTART, sample_end-1))
     if os.path.exists(filenamesfilepath):
         pass
     else:
-        np.save(filenamesfilepath, file_names)
+        np.save(filenamesfilepath, categories_short)
 
     network_options = {}
 
@@ -155,47 +164,47 @@ if __name__ == '__main__':
     # net = init_net(model_file, pretrained_weights, mean, input_config)
     # network_options['alexnet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
-    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-base_lr1e-05_iter_130000.caffemodel')
-    # print 'Initializing googlenet-siamese net'
-    # net = init_net(model_file, pretrained_weights, mean, input_config)
-    # network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
+    model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
+    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-base_lr1e-05_iter_130000.caffemodel')
+    print 'Initializing googlenet-siamese net'
+    net = init_net(model_file, pretrained_weights, mean, input_config)
+    network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    # features = []
+    features = []
 
-    # for net_name, net_options in network_options.iteritems():
-    #     feature_options = net_options['feature_options']
-    #     net = net_options['net']
-    #     croplen = net_options['croplen']
-    #     input_names = net_options['input_names']
-    #     comp_feature_func = net_options['comp_feature_func']
+    for net_name, net_options in network_options.iteritems():
+        feature_options = net_options['feature_options']
+        net = net_options['net']
+        croplen = net_options['croplen']
+        input_names = net_options['input_names']
+        comp_feature_func = net_options['comp_feature_func']
 
-    #     #last_grayimg_path = ''
-    #     for i, img_path in enumerate(progress_bar(file_names_list)):
-    #         if i % 20000 == 0 and i>0:
-    #             image_features = np.array(features)            
-    #             featurefilepath = os.path.join(EXPROOTPATH, 'image_features{0}-{1}.npy'.format(SAMPLESTART, SAMPLESTART+i-1))
-    #             if os.path.exists(featurefilepath):
-    #                 pass
-    #             else:
-    #                 np.save(featurefilepath, image_features[0:image_features.shape[0]])
+        #last_grayimg_path = ''
+        for i, img_path in enumerate(progress_bar(file_names_list)):
+            if i % 50000 == 0 and i>0:
+                image_features = np.array(features)            
+                featurefilepath = os.path.join(EXPROOTPATH, 'features_{}_{}-{}.npy'.format(EXPERIMENTNAME,SAMPLESTART, SAMPLESTART+i-1))
+                if os.path.exists(featurefilepath):
+                    pass
+                else:
+                    np.save(featurefilepath, image_features[0:image_features.shape[0]])
 
-    #         img  = common.load_image(img_path, is_srgb=False)
+            img  = common.load_image(img_path, is_srgb=False)
 
-    #         # We list all possible inputs here...
-    #         inputs = {}
-    #         inputs['data'] = img
-    #         outputblobs = comp_feature_func(net, inputs, feature_options, croplen)
+            # We list all possible inputs here...
+            inputs = {}
+            inputs['data'] = img
+            outputblobs = comp_feature_func(net, inputs, feature_options, croplen)
 
-    #         for f in feature_options:
-    #             f1 = outputblobs[f]
-    #             f1 = np.ravel(np.squeeze(f1))
+            for f in feature_options:
+                f1 = outputblobs[f]
+                f1 = np.ravel(np.squeeze(f1))
 
-    #             features.append(f1)
-    # image_features = np.array(features)            
-    # featurefilepath = os.path.join(EXPROOTPATH, 'image_features{0}-{1}.npy'.format(SAMPLESTART, SAMPLESTART+SAMPLECOUNT-1))
-    # if os.path.exists(featurefilepath):
-    #     pass
-    # else:
-    #     np.save(featurefilepath, image_features)
+                features.append(f1)
+    image_features = np.array(features)            
+    featurefilepath = os.path.join(EXPROOTPATH, 'features_{}_{}-{}.npy'.format(EXPERIMENTNAME,SAMPLESTART, sample_end-1))
+    if os.path.exists(featurefilepath):
+        pass
+    else:
+        np.save(featurefilepath, image_features)
 
