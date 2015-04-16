@@ -21,8 +21,8 @@ import caffe
 
 ROOTPATH = acrp('data/clothingstyle')
 EXPROOTPATH = acrp('experiments/clothingstyle/')
-TESTFILE = 'balanced/train.txt'
-EXPERIMENTNAME = 'googlenet_interlink'
+FILENAMES = 'trainingfiles/file_categories_unique.npy'
+
 
 SAMPLESTART = 0
 SAMPLECOUNT = 1000000
@@ -112,34 +112,27 @@ def process_line(line):
 
 if __name__ == '__main__':
 
-    with open(os.path.join(ROOTPATH, TESTFILE), 'r') as f:
-        lines = f.readlines()
+    # with open(os.path.join(ROOTPATH, TESTFILE), 'r') as f:
+    #     lines = f.readlines()
 
-    #create list of file names
-    file_names_list = []
-    for i,line in enumerate(lines):
-        strs = line.split(None, 2)[:2]
-        file_names_list.append(strs[0])
-        file_names_list.append(strs[1])
-    #filter for duplicates
-    file_names_list = list(set(file_names_list))
-    maxlen = len(file_names_list)
-    file_names_list = sorted(file_names_list)
-    sample_end = np.min(maxlen, SAMPLESTART+SAMPLECOUNT)
-    file_names_list = file_names_list[SAMPLESTART:sample_end]
+    # #create list of file names
+    # file_names_list = []
+    # for i,line in enumerate(lines):
+    #     strs = line.split(None, 2)[:2]
+    #     file_names_list.append(strs[0])
+    #     file_names_list.append(strs[1])
+    # #filter for duplicates
+    # file_names_list = list(set(file_names_list))
+    # maxlen = len(file_names_list)
+    # file_names_list = sorted(file_names_list)
+    # sample_end = np.min(maxlen, SAMPLESTART+SAMPLECOUNT)
+    # file_names_list = file_names_list[SAMPLESTART:sample_end]
 
-    filenames = np.array(file_names_list)
-    categories = np.load(ROOTPATH + '/file_categories_unique.npy')
-    filenames_short = filenames[np.in1d(filenames, categories[:,0])]
-    categories_short = categories[np.in1d(categories[:,0], filenames),:]
-    indices = np.argsort(categories_short[:,0])
-    categories_short = categories_short[indices,:]
-
-    filenamesfilepath = os.path.join(EXPROOTPATH, 'filenames_categories_{}_{}-{}.npy'.format(EXPERIMENTNAME,SAMPLESTART, sample_end-1))
-    if os.path.exists(filenamesfilepath):
-        pass
-    else:
-        np.save(filenamesfilepath, categories_short)
+    # filenames = np.array(file_names_list)
+    categories = np.load(ROOTPATH + FILENAMES)
+    categories = categories[:,0]
+    file_names_list = list(categories)
+    sample_end = len(file_names_list)
 
     network_options = {}
 
@@ -152,23 +145,27 @@ if __name__ == '__main__':
     input_config = {input_name: {'channel_swap': (2, 1, 0), 'raw_scale': 255., 'input_scale': 1.} for input_name in input_names}
     mean = [104.0, 117.0, 123.0]
 
-    # model_file = acrp('models/bvlc_alexnet/deploy.prototxt')
-    # pretrained_weights = acrp('models/bvlc_alexnet/bvlc_alexnet.caffemodel')
-    # print 'Initializing alexnet net'
-    # net = init_net(model_file, pretrained_weights, mean, input_config)
-    # network_options['alexnet'] = {'feature_options': ['fc7'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
-
+    # EXPERIMENTNAME = 'alexnet-interclasslinks'
     # model_file = acrp('ownmodels/clothingstyle/deploy_alexnet-siamese.prototxt')
-    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_alexnet-siamese-base_lr5e-06_iter_90000.caffemodel')
+    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_alexnet-siamese-interclasslinks-base_lr5e-06_iter_150000.caffemodel')
     # print 'Initializing alexnet-siamese net'
     # net = init_net(model_file, pretrained_weights, mean, input_config)
     # network_options['alexnet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
 
+    # EXPERIMENTNAME = 'googlenet-interclasslinks'
+    # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
+    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-interclasslinks-base_lr1e-05_iter_140000.caffemodel')
+    # print 'Initializing googlenet-siamese interclass net'
+    # net = init_net(model_file, pretrained_weights, mean, input_config)
+    # network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
+
+    EXPERIMENTNAME = 'googlenet-alllinks'
     model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
-    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-base_lr1e-05_iter_130000.caffemodel')
-    print 'Initializing googlenet-siamese net'
+    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-alllinks-base_lr1e-05_iter_120000.caffemodel')
+    print 'Initializing googlenet-siamese allclass net'
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
+
 
     features = []
 
@@ -181,7 +178,7 @@ if __name__ == '__main__':
 
         #last_grayimg_path = ''
         for i, img_path in enumerate(progress_bar(file_names_list)):
-            if i % 50000 == 0 and i>0:
+            if i % 200000 == 0 and i>0:
                 image_features = np.array(features)            
                 featurefilepath = os.path.join(EXPROOTPATH, 'features_{}_{}-{}.npy'.format(EXPERIMENTNAME,SAMPLESTART, SAMPLESTART+i-1))
                 if os.path.exists(featurefilepath):
