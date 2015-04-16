@@ -19,9 +19,9 @@ sys.path.append(acrp('python'))
 import caffe
 
 
-ROOTPATH = acrp('data/clothingstyle')
+ROOTPATH = acrp('data/clothingstyle/')
 EXPROOTPATH = acrp('experiments/clothingstyle/')
-FILENAMES = '/trainingfiles/file_categories_unique.npy'
+FILENAMES = 'trainingfiles/file_categories_unique.npy'
 
 
 SAMPLESTART = 0
