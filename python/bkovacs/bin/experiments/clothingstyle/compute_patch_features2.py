@@ -129,10 +129,7 @@ if __name__ == '__main__':
     # file_names_list = file_names_list[SAMPLESTART:sample_end]
 
     # filenames = np.array(file_names_list)
-    categories = np.load(ROOTPATH + FILENAMES)
-    categories = categories[:,0]
-    file_names_list = list(categories)
-    sample_end = len(file_names_list)
+    
 
     network_options = {}
 
@@ -149,27 +146,52 @@ if __name__ == '__main__':
     # model_file = acrp('ownmodels/clothingstyle/deploy_alexnet-siamese.prototxt')
     # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_alexnet-siamese-interclasslinks-base_lr5e-06_iter_150000.caffemodel')
     # print 'Initializing alexnet-siamese net'
-    # net = init_net(model_file, pretrained_weights, mean, input_config)
-    # network_options['alexnet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 227, 'input_names': input_names, 'comp_feature_func': compute_features}
 
     # EXPERIMENTNAME = 'googlenet-interclasslinks'
     # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
     # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-interclasslinks-base_lr1e-05_iter_140000.caffemodel')
     # print 'Initializing googlenet-siamese interclass net'
-    # net = init_net(model_file, pretrained_weights, mean, input_config)
-    # network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
 
     # EXPERIMENTNAME = 'googlenet-alllinks'
     # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
     # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-alllinks-base_lr1e-05_iter_120000.caffemodel')
     # print 'Initializing googlenet-siamese allclass net'
-    # net = init_net(model_file, pretrained_weights, mean, input_config)
-    # network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
 
-    EXPERIMENTNAME = 'googlenet-vanilla'
+    # EXPERIMENTNAME = 'googlenet-vanilla'
+    # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
+    # pretrained_weights = acrp('models/bvlc_googlenet/bvlc_googlenet.caffemodel')
+    # print 'Initializing googlenet vanilla net'
+
+    only_test = True
+    EXPERIMENTNAME = 'googlenet-holdout_Shoes'
     model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
-    pretrained_weights = acrp('models/bvlc_googlenet/bvlc_googlenet.caffemodel')
-    print 'Initializing googlenet-siamese allclass net'
+    pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-interclasslinks-holdout-shoes-base_lr1e-05_iter_130000.caffemodel')
+    TESTINDICES_FILE = 'data/clothingstyle/holdout_Shoes_test_indices.npy'
+    print 'Initializing googlenet vanilla net'
+
+    # EXPERIMENTNAME = 'googlenet-holdout_Shirts'
+    # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
+    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-interclasslinks-holdout-shirts-base_lr1e-05_iter_130000.caffemodel')
+    # TESTINDICES_FILE = 'data/clothingstyle/holdout_Shirts_test_indices.npy'
+    # print 'Initializing googlenet vanilla net'
+
+    # EXPERIMENTNAME = 'googlenet-holdout_Jeans'
+    # model_file = acrp('ownmodels/clothingstyle/deploy_googlenet-siamese.prototxt')
+    # pretrained_weights = acrp('ownmodels/clothingstyle/snapshots/caffenet_train_googlenet-siamese-interclasslinks-holdout-jeans-base_lr1e-05_iter_90000.caffemodel')
+    # TESTINDICES_FILE = 'data/clothingstyle/holdout_Jeans_test_indices.npy'
+    # print 'Initializing googlenet vanilla net'
+
+    categories = np.load(ROOTPATH + FILENAMES)
+    categories = categories[:,0]  
+
+    print 'select only from the test set'
+    if only_test == True:
+        indices = np.load(TESTINDICES_FILE)
+        categories = categories[indices]
+
+    file_names_list = list(categories)
+    sample_end = len(file_names_list)
+
     net = init_net(model_file, pretrained_weights, mean, input_config)
     network_options['googlenet-siamese'] = {'feature_options': ['embedding'], 'net': net, 'croplen': 224, 'input_names': input_names, 'comp_feature_func': compute_features}
 
