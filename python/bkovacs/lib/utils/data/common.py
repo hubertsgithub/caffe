@@ -7,7 +7,6 @@ import scipy as sp
 from PIL import Image
 
 import png
-from lib.intrinsic import poisson
 
 SCALE16BIT = 65535.
 
@@ -195,33 +194,6 @@ def crop_image(arr, cropw, croph, croplen):
     return res_arr
 
 
-def computegradimgs(shading, reflectance, mask):
-    #mask = np.mean(maskimg, axis = 2)
-
-    #images = map(lambda image: np.clip(image, .001, np.infty), images)
-    # Convert to grayscale
-    if shading.ndim == 3:
-        shading = np.mean(shading, axis=2)
-    if reflectance.ndim == 3:
-        reflectance = np.mean(reflectance, axis=2)
-
-    # Compute log images
-    #images = map(lambda image: np.where(mask, np.log(image), 0.), images)
-    # Compute gradients
-    s_y, s_x = poisson.get_gradients(shading)
-    r_y, r_x = poisson.get_gradients(reflectance)
-
-    # Shading gradient -> 1, reflectance gradient -> 0
-    epsilon = 0.01
-    b_y = np.where(np.logical_or(np.abs(s_y) > np.abs(r_y), np.abs(r_y) < epsilon), 1., 0.)
-    b_x = np.where(np.logical_or(np.abs(s_x) > np.abs(r_x), np.abs(r_x) < epsilon), 1., 0.)
-
-    b_y = b_y * 255.0
-    b_x = b_x * 255.0
-
-    return b_x, b_y
-
-
 def compute_chromaticity_image(image):
     if image.ndim != 3:
         raise ValueError('The image should have 3 channels (RGB)!')
@@ -238,17 +210,6 @@ def compute_color_reflectance(gray_refl, img):
 
     # multiply by 3, because we don't do that when computing the chromaticity image
     return gray_refl[:, :, np.newaxis] * chromimg
-
-
-def compute_chromaticity_dist_image(chrom):
-    if chrom.ndim != 3:
-        raise ValueError('The chromaticity image should have 3 channels!')
-
-    c_y, c_x = poisson.get_gradients(chrom)
-    dist_y = np.sqrt(np.sum(np.power(c_y, 2.), axis=2))
-    dist_x = np.sqrt(np.sum(np.power(c_x, 2.), axis=2))
-
-    return dist_y, dist_x
 
 
 def ensuredir(dirpath):

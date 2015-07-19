@@ -28,17 +28,6 @@ def plot_2D_arrays(arrs, title='', xlabel='', xinterval=None, ylabel='', yinterv
         plt.legend(line_names, loc='best')
 
 
-def plot_and_svg_2D_arrays(filename, arrs, xlabel='', xinterval=None, ylabel='', yinterval=None, line_names=[]):
-    name, ext = os.path.splitext(os.path.basename(filename))
-    plot_2D_arrays(arrs, name, xlabel, xinterval, ylabel, yinterval, line_names)
-
-    buf = StringIO.StringIO()
-    plt.savefig(buf, format='svg')
-    plt.clf()
-
-    return buf.getvalue()
-
-
 def plot_and_save_2D_arrays(filename, arrs, xlabel='', xinterval=None, ylabel='', yinterval=None, line_names=[]):
     name, ext = os.path.splitext(os.path.basename(filename))
     plot_2D_arrays(arrs, name, xlabel, xinterval, ylabel, yinterval, line_names)

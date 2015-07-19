@@ -48,10 +48,10 @@ def line_processor(identifier, line, itnum, outputs, output_names):
     return itnum
 
 
-
 def output_processor(stdout_queue, stderr_queue,
                      stdout_reader, stderr_reader,
-                     update_interval, data_callback):
+                     update_interval,
+                     caffe_cnn_trrun_id, data_callback):
     itnum = 0
     # index 0 is train, 1 is test
     # {key: output_num, value: {key: it_num value: output_value}}
@@ -76,7 +76,7 @@ def output_processor(stdout_queue, stderr_queue,
 
         if itnum != 0 and new_data:
             # Call the callback function to notify the views about new data
-            data_callback(outputs, output_names)
+            data_callback(caffe_cnn_trrun_id, outputs, output_names, itnum)
 
         # Sleep a bit before asking the readers again.
         time.sleep(update_interval)
@@ -100,7 +100,7 @@ def extract_batchsize_testsetsize(model_file_content):
 
 
 def start_training(model_name, model_file_content, solver_file_content,
-                   weights_path, options, data_callback):
+                   options, caffe_cnn_trrun_id, data_callback):
     print 'Running training for model {}...'.format(model_name)
 
     rand_name = str(uuid.uuid4())
@@ -112,6 +112,10 @@ def start_training(model_name, model_file_content, solver_file_content,
     trainfile_path = os.path.join(root_path, trainfilename)
     solverfile_path = os.path.join(root_path, solverfilename)
 
+    # Save the model_file_content to a file, so Caffe can read it
+    with open(trainfile_path, 'w') as f:
+        f.write(model_file_content)
+
     # copy the sample solver file and modify it
     solver_params = caffefileproc.parse_solver_file_content(solver_file_content)
 
@@ -121,7 +125,8 @@ def start_training(model_name, model_file_content, solver_file_content,
         solver_params.base_lr = options['base_lr']
 
     # Switch on debug_info to facilitate debugging
-    solver_params.debug_info = options['debug_info']
+    if 'debug_info' in options:
+        solver_params.debug_info = options['debug_info']
 
     snapshot_path = os.path.join(root_path, 'snapshots')
     common.ensuredir(snapshot_path)
@@ -129,7 +134,11 @@ def start_training(model_name, model_file_content, solver_file_content,
         snapshot_path,
         'train_{}-base_lr{}'.format(model_name, solver_params.base_lr)
     )
-    solver_params.solver_mode = options['platform']
+    # The default is GPU
+    if 'cpu' in options and options['cpu']:
+        solver_params.solver_mode = caffe_pb2.SolverParameter.CPU
+    else:
+        solver_params.solver_mode = caffe_pb2.SolverParameter.GPU
 
     # compute the proper test_iter
     batch_size, testset_size = extract_batchsize_testsetsize(model_file_content)
@@ -144,7 +153,7 @@ def start_training(model_name, model_file_content, solver_file_content,
             'containing the testset, please set the test_iter to ' + \
             'testset_size / batch_size!'
 
-    caffefileproc.save_solver_file(solverfile_path, solver_params)
+    caffefileproc.save_protobuf_file(solverfile_path, solver_params)
 
     commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_path)]
     if 'weights' in options:
@@ -159,7 +168,13 @@ def start_training(model_name, model_file_content, solver_file_content,
         commandtxt.append('--{}={}'.format(prefix, acrp(options['weights'])))
 
     print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
-    proc = subprocess.Popen(commandtxt, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Set the caffe root path as the working directory of the command
+    proc = subprocess.Popen(
+        commandtxt,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=acrp('')
+    )
 
     # Launch the asynchronous readers of the process' stdout and stderr.
     stdout_queue = Queue()
@@ -172,7 +187,10 @@ def start_training(model_name, model_file_content, solver_file_content,
     output_processor(
         stdout_queue=stdout_queue,
         stderr_queue=stderr_queue,
+        stdout_reader=stdout_reader,
+        stderr_reader=stderr_reader,
         update_interval=1,
+        caffe_cnn_trrun_id=caffe_cnn_trrun_id,
         data_callback=data_callback,
     )
 
