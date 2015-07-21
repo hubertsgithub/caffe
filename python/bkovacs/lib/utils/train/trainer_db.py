@@ -169,11 +169,13 @@ def start_training(model_name, model_file_content, solver_file_content,
 
     print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
     # Set the caffe root path as the working directory of the command
+    cwd = acrp('')
+    print 'Working directory:', cwd
     proc = subprocess.Popen(
         commandtxt,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        cwd=acrp('')
+        cwd=cwd,
     )
 
     # Launch the asynchronous readers of the process' stdout and stderr.
