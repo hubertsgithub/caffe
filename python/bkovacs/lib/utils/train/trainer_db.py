@@ -5,11 +5,9 @@ import re
 import subprocess
 import sys
 import time
-import uuid
 from collections import OrderedDict
+from datetime import datetime
 from Queue import Queue
-
-import numpy as np
 
 from caffe.proto import caffe_pb2
 from lib.utils.data import caffefileproc, common, fileproc
@@ -102,13 +100,14 @@ def extract_batchsize_testsetsize(model_file_content):
 def start_training(model_name, model_file_content, solver_file_content,
                    options, caffe_cnn_trrun_id, data_callback):
     print 'Running training for model {}...'.format(model_name)
+    print 'with options: {}'.format(options)
 
-    rand_name = str(uuid.uuid4())
-    root_path = acrp(os.path.join('training_runs', rand_name))
+    rand_name = str(datetime.now())
+    root_path = acrp(os.path.join('training_runs', '-'.join([rand_name, model_name])))
 
     common.ensuredir(root_path)
-    trainfilename = 'train_val_{}.prototxt'.format(model_name)
-    solverfilename = 'solver_{}.prototxt'.format(model_name)
+    trainfilename = 'train_val.prototxt'
+    solverfilename = 'solver.prototxt'
     trainfile_path = os.path.join(root_path, trainfilename)
     solverfile_path = os.path.join(root_path, solverfilename)
 
@@ -121,11 +120,11 @@ def start_training(model_name, model_file_content, solver_file_content,
 
     # modify solver params according to the command line parameters
     solver_params.net = trainfile_path
-    if 'base_lr' in options:
+    if 'base_lr' in options and options['base_lr'] is not None:
         solver_params.base_lr = options['base_lr']
 
     # Switch on debug_info to facilitate debugging
-    if 'debug_info' in options:
+    if 'debug_info' in options and options['debug_info'] is not None:
         solver_params.debug_info = options['debug_info']
 
     snapshot_path = os.path.join(root_path, 'snapshots')
@@ -156,7 +155,7 @@ def start_training(model_name, model_file_content, solver_file_content,
     caffefileproc.save_protobuf_file(solverfile_path, solver_params)
 
     commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_path)]
-    if 'weights' in options:
+    if 'weights' in options and options['weights'] is not None:
         # If we gave a solverstate file, we have to call with '--snapshot',
         # otherwise we use '--weights'
         _, ext = os.path.splitext(options['weights'])
