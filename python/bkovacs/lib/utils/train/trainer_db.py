@@ -6,7 +6,6 @@ import subprocess
 import sys
 import time
 from collections import OrderedDict
-from datetime import datetime
 from pipes import quote
 from Queue import Queue
 
@@ -103,7 +102,7 @@ def start_training(model_name, model_file_content, solver_file_content,
     print 'Running training for model {}...'.format(model_name)
     print 'with options: {}'.format(options)
 
-    rand_name = str(datetime.now())
+    rand_name = str(time.time())
     root_path = acrp(os.path.join('training_runs', '-'.join([rand_name, model_name])))
 
     common.ensuredir(root_path)
@@ -171,10 +170,6 @@ def start_training(model_name, model_file_content, solver_file_content,
     # Set the caffe root path as the working directory of the command
     cwd = acrp('')
     print 'Working directory:', cwd
-    if not os.path.exists(cwd):
-        print 'asdaaaaaa'
-    if not os.path.exists(acrp('build/tools/caffe')):
-        print 'abbbbabbbbbbbb'
 
     proc = subprocess.Popen(
         commandtxt,
