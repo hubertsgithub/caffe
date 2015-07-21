@@ -7,6 +7,7 @@ import sys
 import time
 from collections import OrderedDict
 from datetime import datetime
+from pipes import quote
 from Queue import Queue
 
 from caffe.proto import caffe_pb2
@@ -154,7 +155,7 @@ def start_training(model_name, model_file_content, solver_file_content,
 
     caffefileproc.save_protobuf_file(solverfile_path, solver_params)
 
-    commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(solverfile_path)]
+    commandtxt = ['./build/tools/caffe', 'train', '--solver={0}'.format(quote(solverfile_path))]
     if 'weights' in options and options['weights'] is not None:
         # If we gave a solverstate file, we have to call with '--snapshot',
         # otherwise we use '--weights'
@@ -164,7 +165,7 @@ def start_training(model_name, model_file_content, solver_file_content,
         else:
             prefix = 'weights'
 
-        commandtxt.append('--{}={}'.format(prefix, acrp(options['weights'])))
+        commandtxt.append('--{}={}'.format(prefix, quote(acrp(options['weights']))))
 
     print 'Running command \'{0}\'...'.format(' '.join(commandtxt))
     # Set the caffe root path as the working directory of the command
