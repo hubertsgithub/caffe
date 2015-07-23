@@ -44,7 +44,7 @@ class Classifier(caffe.Net):
             image_dims = self.crop_dims
         self.image_dims = image_dims
 
-    def predict(self, inputs, oversample=True):
+    def predict(self, inputs, oversample=True, auto_reshape=False):
         """
         Predict classification probabilities of inputs.
 
@@ -86,6 +86,11 @@ class Classifier(caffe.Net):
                             dtype=np.float32)
         for ix, in_ in enumerate(input_):
             caffe_in[ix] = self.transformer.preprocess(self.inputs[0], in_)
+
+        if auto_reshape:
+            self.blobs[self.inputs[0]].reshape(*caffe_in.shape)
+            self.reshape()
+
         out = self.forward_all(**{self.inputs[0]: caffe_in})
         predictions = out[self.outputs[0]]
 
