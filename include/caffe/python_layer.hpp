@@ -19,6 +19,9 @@ class PythonLayer : public Layer<Dtype> {
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
     try {
+      self_.attr("param_str_") = bp::str(
+         this->layer_param_.python_param().param_str()
+      );
       self_.attr("setup")(bottom, top);
     } catch (bp::error_already_set) {
       PyErr_Print();
