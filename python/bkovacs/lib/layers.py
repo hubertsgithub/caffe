@@ -13,6 +13,7 @@ RoIDataLayer implements a Caffe Python layer.
 from multiprocessing import Process, Queue
 
 import numpy as np
+import numpy.random as npr
 
 import caffe
 import json
@@ -24,17 +25,32 @@ class BalancedImageDataLayer(caffe.Layer):
 
     def _shuffle_db_inds(self):
         """Randomly permute the training set."""
+        if self._balance:
+            return
+
         self._perm = np.random.permutation(np.arange(len(self._db)))
         self._cur = 0
 
     def _get_next_minibatch_inds(self):
         """Return the db indices for the next minibatch."""
-        # Shuffle again, if we reached the end of the database
-        if self._cur + self._ims_per_batch >= len(self._db):
-            self._shuffle_db_inds()
+        if self._balance:
+            # Choose random label with uniform probability
+            labels = npr.randint(
+                0, self._num_classes, size=(self._ims_per_batch)
+            )
+            # Choose random image for the specified label
+            db_inds = [
+                npr.choice(self._db_by_label[l])
+                for l in labels
+            ]
+        else:
+            # Shuffle again, if we reached the end of the database
+            if self._cur + self._ims_per_batch >= len(self._db):
+                self._shuffle_db_inds()
 
-        db_inds = self._perm[self._cur:self._cur + self._ims_per_batch]
-        self._cur += self._ims_per_batch
+            db_inds = self._perm[self._cur:self._cur + self._ims_per_batch]
+            self._cur += self._ims_per_batch
+
         return db_inds
 
     def _get_next_minibatch(self):
@@ -62,16 +78,20 @@ class BalancedImageDataLayer(caffe.Layer):
 
         print 'Loading source file...'
         db = []
+        db_by_label = [[] for i in range(self._num_classes)]
         with open(self._source) as f:
-            for l in f.readlines():
+            for i, l in enumerate(f.readlines()):
                 img_path, label = l.split(' ')
+                label = int(label)
                 db.append({
                     'image': img_path,
                     'label': label,
                 })
+                db_by_label[label].append(i)
         print 'Done.'
 
         self._db = db
+        self._db_by_label = db_by_label
         self._shuffle_db_inds()
 
         if self._use_prefetch:
@@ -105,6 +125,7 @@ class BalancedImageDataLayer(caffe.Layer):
         # TODO: Use these parameters
         #self._shuffle = layer_params['shuffle']
         #self._balance = layer_params['balance']
+        self._balance = True
         # TODO: Fix prefetching in different process...
         self._use_prefetch = False
 
