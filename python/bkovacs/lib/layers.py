@@ -10,13 +10,13 @@
 RoIDataLayer implements a Caffe Python layer.
 """
 
-from multiprocessing import Process, Queue
+import json
+import random
 
 import numpy as np
 import numpy.random as npr
 
 import caffe
-import json
 from minibatch import get_minibatch
 
 
@@ -28,7 +28,7 @@ class BalancedImageDataLayer(caffe.Layer):
         if self._balance:
             return
 
-        self._perm = np.random.permutation(np.arange(len(self._db)))
+        self._perm = npr.permutation(np.arange(len(self._db)))
         self._cur = 0
 
     def _get_next_minibatch_inds(self):
@@ -44,8 +44,9 @@ class BalancedImageDataLayer(caffe.Layer):
                 for l in labels
             ]
         else:
-            # Shuffle again, if we reached the end of the database
-            if self._cur + self._ims_per_batch >= len(self._db):
+            # Shuffle again, if we reached the end of the database or we just
+            # started
+            if self._cur == 0 or self._cur + self._ims_per_batch >= len(self._db):
                 self._shuffle_db_inds()
 
             db_inds = self._perm[self._cur:self._cur + self._ims_per_batch]
@@ -59,19 +60,16 @@ class BalancedImageDataLayer(caffe.Layer):
         Blobs will be computed in a separate process and made available through
         self._blob_queue.
         """
-        if self._use_prefetch:
-            return self._blob_queue.get()
-        else:
-            db_inds = self._get_next_minibatch_inds()
-            minibatch_db = [self._db[i] for i in db_inds]
-            return get_minibatch(
-                minibatch_db,
-                self._num_classes,
-                self._transformer,
-                self._input_name,
-                self._image_dims,
-                self._crop_dims,
-            )
+        db_inds = self._get_next_minibatch_inds()
+        minibatch_db = [self._db[i] for i in db_inds]
+        return get_minibatch(
+            minibatch_db,
+            self._num_classes,
+            self._transformer,
+            self._input_name,
+            self._image_dims,
+            self._crop_dims,
+        )
 
     def _load_db(self):
         """Set the db to be used by this layer during training."""
@@ -92,28 +90,6 @@ class BalancedImageDataLayer(caffe.Layer):
 
         self._db = db
         self._db_by_label = db_by_label
-        self._shuffle_db_inds()
-
-        if self._use_prefetch:
-            self._blob_queue = Queue(10)
-            self._prefetch_process = BlobFetcher(
-                self._blob_queue,
-                self._db,
-                self._num_classes,
-                self._ims_per_batch,
-                self._transformer,
-                self._input_name,
-                self._image_dims,
-                self._crop_dims,
-            )
-            self._prefetch_process.start()
-            # Terminate the child process when the parent exists
-            def cleanup():
-                print 'Terminating BlobFetcher'
-                self._prefetch_process.terminate()
-                self._prefetch_process.join()
-            import atexit
-            atexit.register(cleanup)
 
     def _setup_from_params(self):
         # parse the layer parameter string, which must be valid JSON
@@ -126,8 +102,6 @@ class BalancedImageDataLayer(caffe.Layer):
         #self._shuffle = layer_params['shuffle']
         #self._balance = layer_params['balance']
         self._balance = True
-        # TODO: Fix prefetching in different process...
-        self._use_prefetch = False
 
         self._image_dims = (
             layer_params['new_height'],
@@ -157,8 +131,16 @@ class BalancedImageDataLayer(caffe.Layer):
         if channel_swap is not None:
             self._transformer.set_channel_swap(self._input_name, channel_swap)
 
+    def set_random_seed(self, random_seed):
+        """Sets random seed, so we can have reproductible results."""
+        self._random_seed = random_seed
+
     def setup(self, bottom, top):
         """Setup the DataLayer."""
+        if hasattr(self, '_random_seed'):
+            npr.seed(self._random_seed)
+            random.seed(self._random_seed)
+
         self._setup_from_params()
 
         # Load db from textfile
@@ -193,63 +175,3 @@ class BalancedImageDataLayer(caffe.Layer):
     def reshape(self, bottom, top):
         """Reshaping happens during the call to forward."""
         pass
-
-
-class BlobFetcher(Process):
-    """Experimental class for prefetching blobs in a separate process."""
-    # make 'daemon' attribute always return False
-    def _get_daemon(self):
-        return False
-
-    def _set_daemon(self, value):
-        pass
-
-    daemon = property(_get_daemon, _set_daemon)
-
-    def __init__(self, queue, db, num_classes, ims_per_batch,
-                transformer, input_name, image_dims, crop_dims):
-        super(BlobFetcher, self).__init__()
-        self._queue = queue
-        self._db = db
-        self._num_classes = num_classes
-        self._perm = None
-        self._cur = 0
-        self._ims_per_batch = ims_per_batch
-        self._transformer = transformer
-        self._input_name = input_name
-        self._image_dims = image_dims
-        self._crop_dims = crop_dims
-        self._shuffle_db_inds()
-        # fix the random seed for reproducibility
-        np.random.seed(0)
-
-    def _shuffle_db_inds(self):
-        """Randomly permute the training db."""
-        # TODO(rbg): remove duplicated code
-        self._perm = np.random.permutation(np.arange(len(self._db)))
-        self._cur = 0
-
-    def _get_next_minibatch_inds(self):
-        """Return the db indices for the next minibatch."""
-        # TODO(rbg): remove duplicated code
-        if self._cur + self._ims_per_batch >= len(self._db):
-            self._shuffle_db_inds()
-
-        db_inds = self._perm[self._cur:self._cur + self._ims_per_batch]
-        self._cur += self._ims_per_batch
-        return db_inds
-
-    def run(self):
-        print 'BlobFetcher started'
-        while True:
-            db_inds = self._get_next_minibatch_inds()
-            minibatch_db = [self._db[i] for i in db_inds]
-            blobs = get_minibatch(
-                minibatch_db,
-                self._num_classes,
-                self._transformer,
-                self._input_name,
-                self._image_dims,
-                self._crop_dims,
-            )
-            self._queue.put(blobs)
