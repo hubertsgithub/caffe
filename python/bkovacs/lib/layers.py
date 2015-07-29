@@ -100,8 +100,7 @@ class BalancedImageDataLayer(caffe.Layer):
         self._ims_per_batch = layer_params['batch_size']
         # TODO: Use these parameters
         #self._shuffle = layer_params['shuffle']
-        #self._balance = layer_params['balance']
-        self._balance = True
+        self._balance = layer_params['balance']
 
         self._image_dims = (
             layer_params['new_height'],
