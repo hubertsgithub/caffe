@@ -140,6 +140,7 @@ class BalancedImageDataLayer(caffe.Layer):
             npr.seed(self._random_seed)
             random.seed(self._random_seed)
 
+        self._cur = 0
         self._setup_from_params()
 
         # Load db from textfile
