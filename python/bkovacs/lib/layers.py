@@ -23,6 +23,12 @@ from minibatch import get_minibatch
 class BalancedImageDataLayer(caffe.Layer):
     """Image data layer used for training which can balance the dataset."""
 
+    def __init__(self):
+        super(BalancedImageDataLayer, self).__init__(self)
+        # Set default values
+        self._random_seed = 0
+        self._is_training = True
+
     def _shuffle_db_inds(self):
         """Randomly permute the training set."""
         if self._balance:
@@ -63,6 +69,7 @@ class BalancedImageDataLayer(caffe.Layer):
         db_inds = self._get_next_minibatch_inds()
         minibatch_db = [self._db[i] for i in db_inds]
         return get_minibatch(
+            self._is_training,
             minibatch_db,
             self._num_classes,
             self._transformer,
@@ -134,6 +141,10 @@ class BalancedImageDataLayer(caffe.Layer):
         """Sets random seed, so we can have reproductible results."""
         self._random_seed = random_seed
 
+    def set_is_training(self, is_training):
+        """Sets is_training attribute so we know which phase we are in."""
+        self._is_training = is_training
+
     def setup(self, bottom, top):
         """Setup the DataLayer."""
         if hasattr(self, '_random_seed'):
@@ -161,6 +172,7 @@ class BalancedImageDataLayer(caffe.Layer):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()
 
+        # TODO: Performance evaluation of this layer, see why it is so slow...
         for blob_name, blob in blobs.iteritems():
             top_ind = self._name_to_top_map[blob_name]
             # Reshape net's input blobs
