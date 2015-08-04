@@ -13,14 +13,18 @@ import numpy.random as npr
 import caffe
 
 
-def get_minibatch(db, num_classes, transformer, input_name, image_dims, crop_dims):
+def get_minibatch(db, is_training, num_classes, transformer, input_name,
+                  image_dims, crop_dims):
     """Given a db, construct a minibatch sampled from it."""
     num_images = len(db)
 
     # Get the input image blob, formatted for caffe
-    im_blob = _get_image_blob(db, transformer, input_name, image_dims, crop_dims)
+    im_blob = _get_image_blob(
+        db, 'image', is_training, transformer, input_name, image_dims,
+        crop_dims
+    )
 
-    # Now, build the region of interest and label blobs
+    # Now, build the label blobs
     labels_blob = np.zeros((0), dtype=np.float32)
     for i in xrange(num_images):
         labels = db[i]['label']
@@ -32,20 +36,45 @@ def get_minibatch(db, num_classes, transformer, input_name, image_dims, crop_dim
     # _vis_minibatch(im_blob, labels_blob)
 
     blobs = {
-        'data': im_blob,
+        input_name: im_blob,
         'label': labels_blob
     }
 
     return blobs
 
 
-def _get_image_blob(is_training, db, transformer, input_name, image_dims,
-                    crop_dims):
+def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
+                      input_name, image_dims, crop_dims):
+    """Given a db, construct a minibatch sampled from it."""
+    num_images = len(db)
+
+    # Get the input image blob, formatted for caffe
+    im_blob = _get_image_blob(
+        db, 'filepath', is_training, transformer, input_name, image_dims,
+        crop_dims
+    )
+
+    blobs = {input_name: im_blob}
+
+    # Now, build the tag blobs
+    for tn, nc in zip(tag_names, num_classes):
+        tags_blob = np.zeros((num_images, nc), dtype=np.float32)
+        for i in xrange(num_images):
+            tag_list = db[i]['tags_dic'][tn]
+            tags_blob[i, tag_list] = 1
+
+        blobs[tn] = tags_blob
+
+    return blobs
+
+
+def _get_image_blob(db, image_name, is_training, transformer, input_name,
+                    image_dims, crop_dims):
     """Builds an input blob from the images in the db"""
     num_images = len(db)
 
     inputs = [
-        caffe.io.load_image(db[i]['image'])
+        caffe.io.load_image(db[i][image_name])
         for i in xrange(num_images)
     ]
 
