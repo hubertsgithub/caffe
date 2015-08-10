@@ -14,7 +14,7 @@ import caffe
 
 
 def get_minibatch(db, is_training, num_classes, transformer, input_name,
-                  image_dims, crop_dims):
+                  image_dims, crop_dims, make_full_label_blob):
     """Given a db, construct a minibatch sampled from it."""
     num_images = len(db)
 
@@ -25,12 +25,15 @@ def get_minibatch(db, is_training, num_classes, transformer, input_name,
     )
 
     # Now, build the label blobs
-    labels_blob = np.zeros((0), dtype=np.float32)
-    for i in xrange(num_images):
-        labels = db[i]['label']
-
-        # Add to labels blob
-        labels_blob = np.hstack((labels_blob, labels))
+    if make_full_label_blob:
+        labels_blob = np.zeros((num_images, num_classes), dtype=np.float32)
+        for i in xrange(num_images):
+            label = db[i]['label']
+            labels_blob[i, label] = 1
+    else:
+        labels_blob = np.zeros((num_images), dtype=np.float32)
+        for i in xrange(num_images):
+            labels_blob[i] = db[i]['label']
 
     # For debug visualizations
     # _vis_minibatch(im_blob, labels_blob)

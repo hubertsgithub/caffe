@@ -90,6 +90,11 @@ void SoftmaxWithTagLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
     LOG(FATAL) << this->type()
                << " Layer cannot backpropagate to label inputs.";
   }
+  if (propagate_down.size() > 2 && propagate_down[2]) {
+    LOG(FATAL) << this->type()
+               << " Layer cannot backpropagate to label frequency inputs.";
+  }
+
   if (propagate_down[0]) {
     Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
     const Dtype* prob_data = prob_.cpu_data();

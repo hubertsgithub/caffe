@@ -25,6 +25,8 @@ __global__ void SoftmaxTagLossForwardGPU(const int nthreads,
 		if (tag == 1) {
 			loss[ind] = -log(max(prob_data[ind], Dtype(FLT_MIN)));
 			++ccount;
+		} else {
+			loss[ind] = 0;
 		}
 	}
 	if (ccount == 0) return;

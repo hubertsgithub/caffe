@@ -59,6 +59,7 @@ class BalancedImageDataLayer(PythonDataLayer):
             self._input_name,
             self._image_dims,
             self._crop_dims,
+            self._make_full_label_blob,
         )
 
     def _load_db(self):
@@ -83,10 +84,14 @@ class BalancedImageDataLayer(PythonDataLayer):
 
     def _setup_extra_from_params(self, layer_params):
         self._balance = layer_params['balance']
+        self._make_full_label_blob = True
 
     def _reshape_tops(self, top):
         # data blob: holds a batch of N images, each with 3 channels
         top[0].reshape(self._ims_per_batch, 3, *self._crop_dims)
 
         # label blob: N categorical labels in [0, ..., K] for K classes
-        top[1].reshape(self._ims_per_batch)
+        if self._make_full_label_blob:
+            top[1].reshape(self._ims_per_batch, self._num_classes)
+        else:
+            top[1].reshape(self._ims_per_batch)
