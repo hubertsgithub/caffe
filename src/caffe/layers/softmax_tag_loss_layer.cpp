@@ -39,9 +39,62 @@ void SoftmaxWithTagLossLayer<Dtype>::Reshape(
       << "e.g., if prediction shape is (N, C, H, W), "
       << "label count (number of labels) must be N*C*H*W, "
       << "with integer values in {0, 1}.";
+  if (bottom.size() > 2) {
+    CHECK_EQ(bottom[0]->count() / (outer_num_ * inner_num_), bottom[2]->count())
+        << "Number of tag frequencies must match length of softmax axis (the number of tags).";
+  }
+  // Reshape weights to the size equal to the number of possible different tags
+  vector<int> weights_shape(4, 1);
+  weights_shape[softmax_axis_] = prob_.shape(softmax_axis_);
+  weights_.Reshape(weights_shape);
+    
   if (top.size() >= 2) {
     // softmax output
     top[1]->ReshapeLike(*bottom[0]);
+  }
+}
+
+template <typename Dtype>
+void SoftmaxWithTagLossLayer<Dtype>::SetupWeights_cpu(const vector<Blob<Dtype>*>& bottom) {
+  Dtype* weights_ptr = weights_.mutable_cpu_data();
+  int class_num = prob_.shape(softmax_axis_);
+  if (bottom.size() > 2) {
+    // Compute reciprocal frequencies, use the diff array of weights_ as a temporary store, since it's not used anyway...
+    caffe_set(class_num, (Dtype)1, weights_.mutable_cpu_diff());
+    caffe_div(
+      class_num, 
+      weights_.cpu_diff(), 
+      bottom[2]->cpu_data(),
+      weights_ptr
+    );
+    // We want the weights to sum up to class_num, because if all weights are 1, we get back the non-weighted version
+    Dtype scale = class_num / caffe_cpu_asum(class_num, weights_ptr);
+    caffe_scal(class_num, scale, weights_ptr);
+  } else {
+    caffe_set(class_num, (Dtype)1, weights_ptr);
+  }
+}
+
+template <typename Dtype>
+void SoftmaxWithTagLossLayer<Dtype>::SetupWeights_gpu(const vector<Blob<Dtype>*>& bottom) {
+  Dtype* weights_ptr = weights_.mutable_gpu_data();
+  int class_num = prob_.shape(softmax_axis_);
+  if (bottom.size() > 2) {
+    // Compute reciprocal frequencies, use the diff array of weights_ as a temporary store, since it's not used anyway...
+    caffe_gpu_set(class_num, (Dtype)1, weights_.mutable_gpu_diff());
+    caffe_gpu_div(
+      class_num, 
+      weights_.gpu_diff(), 
+      bottom[2]->gpu_data(),
+      weights_ptr
+    );
+    // We want the weights to sum up to class_num, because if all weights are 1, we get back the non-weighted version
+    Dtype scale;
+    caffe_gpu_asum(class_num, weights_ptr, &scale);
+    scale = class_num / scale;
+    caffe_gpu_scal(class_num, scale, weights_ptr);
+  } else {
+    caffe_gpu_set(class_num, (Dtype)1, weights_ptr);
   }
 }
 
@@ -55,6 +108,9 @@ void SoftmaxWithTagLossLayer<Dtype>::Forward_cpu(
   int dim = prob_.count() / outer_num_;
   int class_num = prob_.shape(softmax_axis_);
   Dtype loss = 0;
+  SetupWeights_cpu(bottom);
+  const Dtype* weights_ptr = weights_.cpu_data();
+
   for (int i = 0; i < outer_num_; ++i) {
 	for (int j = 0; j < inner_num_; j++) {
 		Dtype closs = 0;
@@ -65,7 +121,7 @@ void SoftmaxWithTagLossLayer<Dtype>::Forward_cpu(
 			DCHECK_GE(tag, 0);
 			DCHECK_LT(tag, 1);
 			if (tag == 1) {
-				closs -= log(std::max(prob_data[ind], Dtype(FLT_MIN)));
+				closs -= log(std::max(prob_data[ind], Dtype(FLT_MIN))) * weights_ptr[label_value];
 				++ccount;
 			}
 		}
@@ -102,9 +158,12 @@ void SoftmaxWithTagLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
     const Dtype* label = bottom[1]->cpu_data();
     int class_num = prob_.shape(softmax_axis_);
     int dim = prob_.count() / outer_num_;
+    SetupWeights_cpu(bottom);
+    const Dtype* weights_ptr = weights_.cpu_data();
 	for (int i = 0; i < outer_num_; ++i) {
 		for (int j = 0; j < inner_num_; j++) {
 			int ccount = 0;
+			Dtype sum_weights = 0;
 			// First count how many attributes we have for this item
 			for (int label_value = 0; label_value < class_num; ++label_value) {
 				const int ind = i * dim + label_value * inner_num_ + j;
@@ -113,6 +172,7 @@ void SoftmaxWithTagLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
 				DCHECK_LT(tag, 1);
 				if (tag == 1) {
 					++ccount;
+					sum_weights += weights_ptr[label_value];
 				}
 			}
 			for (int label_value = 0; label_value < class_num; ++label_value) {
@@ -120,8 +180,9 @@ void SoftmaxWithTagLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& to
 				const int tag = static_cast<int>(label[ind]);
 				DCHECK_GE(tag, 0);
 				DCHECK_LT(tag, 1);
+				bottom_diff[ind] *= sum_weights / ccount;
 				if (tag == 1) {
-					bottom_diff[ind] -= 1.0 / ccount;
+					bottom_diff[ind] -= 1.0 / ccount * weights_ptr[label_value];
 				} else if (ccount == 0) {
 					bottom_diff[ind] = 0;
 				}

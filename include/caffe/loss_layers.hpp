@@ -810,6 +810,7 @@ class SoftmaxWithTagLossLayer : public LossLayer<Dtype> {
       const vector<Blob<Dtype>*>& top);
 
   virtual inline const char* type() const { return "SoftmaxWithTagLoss"; }
+  virtual inline int ExactNumBottomBlobs() const { return -1; }
   virtual inline int ExactNumTopBlobs() const { return -1; }
   virtual inline int MinTopBlobs() const { return 1; }
   virtual inline int MaxTopBlobs() const { return 2; }
@@ -853,6 +854,8 @@ class SoftmaxWithTagLossLayer : public LossLayer<Dtype> {
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
+  void SetupWeights_cpu(const vector<Blob<Dtype>*>& bottom);
+  void SetupWeights_gpu(const vector<Blob<Dtype>*>& bottom);
 
   /// The internal SoftmaxLayer used to map predictions to a distribution.
   shared_ptr<Layer<Dtype> > softmax_layer_;
@@ -865,6 +868,8 @@ class SoftmaxWithTagLossLayer : public LossLayer<Dtype> {
   /// Whether to normalize the loss by the total number of values present
   /// (otherwise just by the batch size).
   bool normalize_;
+  /// stores the weights used to balance between tags with different frequencies
+  Blob<Dtype> weights_;
 
   int softmax_axis_, outer_num_, inner_num_;
 };

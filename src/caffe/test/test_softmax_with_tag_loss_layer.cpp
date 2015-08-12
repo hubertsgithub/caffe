@@ -26,6 +26,7 @@ class SoftmaxWithTagLossLayerTest : public MultiDeviceTest<TypeParam> {
   SoftmaxWithTagLossLayerTest()
 	  : blob_bottom_data_(new Blob<Dtype>(10, 5, 2, 3)),
 		blob_bottom_label_(new Blob<Dtype>(10, 5, 2, 3)),
+		blob_bottom_freqs_(new Blob<Dtype>(1, 5, 1, 1)),
         blob_bottom_label_softmax_(new Blob<Dtype>(10, 1, 2, 3)),
         blob_bottom_label_softmax_tag_(new Blob<Dtype>(10, 5, 2, 3)),
         blob_top_loss_(new Blob<Dtype>()) {
@@ -43,10 +44,16 @@ class SoftmaxWithTagLossLayerTest : public MultiDeviceTest<TypeParam> {
     }
     blob_bottom_vec_.push_back(blob_bottom_label_);
 
+    for (int i = 0; i < blob_bottom_freqs_->count(); ++i) {
+      // Make sure it's positive
+      blob_bottom_freqs_->mutable_cpu_data()[i] = caffe_rng_rand() % 100 + 1;
+    }
+    blob_bottom_vec_.push_back(blob_bottom_freqs_);
+
     caffe_set(
     		blob_bottom_label_softmax_tag_->count(),
     		static_cast<Dtype>(0),
-    		blob_bottom_label_softmax_tag_->mutable_cpu_diff()
+    		blob_bottom_label_softmax_tag_->mutable_cpu_data()
     );
 	// Fill in the two label blobs with the "same" data
     for (int i = 0; i < blob_bottom_label_softmax_->shape(0); ++i) {
@@ -137,12 +144,14 @@ class SoftmaxWithTagLossLayerTest : public MultiDeviceTest<TypeParam> {
   virtual ~SoftmaxWithTagLossLayerTest() {
     delete blob_bottom_data_;
     delete blob_bottom_label_;
+    delete blob_bottom_freqs_;
     delete blob_bottom_label_softmax_;
     delete blob_bottom_label_softmax_tag_;
     delete blob_top_loss_;
   }
   Blob<Dtype>* const blob_bottom_data_;
   Blob<Dtype>* const blob_bottom_label_;
+  Blob<Dtype>* const blob_bottom_freqs_;
   Blob<Dtype>* const blob_bottom_label_softmax_;
   Blob<Dtype>* const blob_bottom_label_softmax_tag_;
   Blob<Dtype>* const blob_top_loss_;
