@@ -113,19 +113,21 @@ class PythonDataLayer(caffe.Layer):
             npr.seed(self._random_seed)
             random.seed(self._random_seed)
 
+        self._setup_from_params()
+
         # Getting values which were set by the Caffe Python wrapper
         self._is_training = self.phase_ == 'TRAIN'
         name_list = [name for name in self.top_names_]
         self._input_name = name_list[0]
-        self._tag_names = name_list[1:self._num_classes+1]
+        nc_num = len(self._num_classes)
+        self._tag_names = name_list[1:nc_num+1]
         # If frequencies were defined, they should be the last top blobs
         if self._freqs:
-            self._freq_names = name_list[self._num_classes+1:2*self._num_classes+1]
+            self._freq_names = name_list[nc_num+1:2*nc_num+1]
 
         self._name_to_top_map = {name: i for i, name in enumerate(name_list)}
 
         self._cur = 0
-        self._setup_from_params()
         self._setup_transformer()
 
         # Load db from textfile
