@@ -26,7 +26,7 @@ class TagDataLayer(PythonDataLayer):
         """
         db_inds = self._get_next_minibatch_inds()
         minibatch_db = [self._db[i] for i in db_inds]
-        return get_tag_minibatch(
+        blobs = get_tag_minibatch(
             minibatch_db,
             self._is_training,
             self._tag_names,
@@ -36,6 +36,12 @@ class TagDataLayer(PythonDataLayer):
             self._image_dims,
             self._crop_dims,
         )
+        # If frequencies were defined, they should be the last top blobs
+        if self._freqs:
+            for fn in self._freq_names:
+                blobs[fn] = self._freqs[fn]
+
+        return blobs
 
     def _load_db(self):
         """Set the db to be used by this layer during training."""
@@ -57,3 +63,8 @@ class TagDataLayer(PythonDataLayer):
         # label blob: N categorical labels in [0, ..., K] for K classes
         for i, nc in enumerate(self._num_classes):
             top[i + 1].reshape(self._ims_per_batch, nc)
+
+        # Blobs containing the label frequencies for balancing
+        if self._freqs:
+            for i, nc in enumerate(self._num_classes):
+                top[i + 1 + len(self._num_classes)].reshape(nc)

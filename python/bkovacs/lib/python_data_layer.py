@@ -15,8 +15,6 @@ import numpy as np
 import numpy.random as npr
 
 import caffe
-from minibatch import get_tag_minibatch
-from utils.misc.progressbaraux import progress_bar
 
 
 class PythonDataLayer(caffe.Layer):
@@ -60,6 +58,13 @@ class PythonDataLayer(caffe.Layer):
         self._num_classes = layer_params['num_classes']
         self._source = layer_params['source']
         self._ims_per_batch = layer_params['batch_size']
+        if 'freqs' in layer_params:
+            # This attribute should point to a JSON file which contains a
+            # dictionary which has a one dimensional array for each label/tag
+            # type
+            self._freqs = json.load(open(layer_params['freqs']))
+        else:
+            self._freqs = None
 
         self._setup_extra_from_params(layer_params)
         # TODO: Use these parameters
@@ -112,7 +117,11 @@ class PythonDataLayer(caffe.Layer):
         self._is_training = self.phase_ == 'TRAIN'
         name_list = [name for name in self.top_names_]
         self._input_name = name_list[0]
-        self._tag_names = name_list[1:]
+        self._tag_names = name_list[1:self._num_classes+1]
+        # If frequencies were defined, they should be the last top blobs
+        if self._freqs:
+            self._freq_names = name_list[self._num_classes+1:2*self._num_classes+1]
+
         self._name_to_top_map = {name: i for i, name in enumerate(name_list)}
 
         self._cur = 0
@@ -127,12 +136,6 @@ class PythonDataLayer(caffe.Layer):
         """Give initial shape to the top blobs according to the parsed layer
         parameters"""
         raise NotImplementedError('Please override this method in the child class')
-        # data blob: holds a batch of N images, each with 3 channels
-        top[0].reshape(self._ims_per_batch, 3, *self._crop_dims)
-
-        # label blob: N categorical labels in [0, ..., K] for K classes
-        for i, nc in enumerate(self._num_classes):
-            top[i + 1].reshape(self._ims_per_batch, nc)
 
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""
