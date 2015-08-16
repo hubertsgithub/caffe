@@ -13,6 +13,8 @@ TagDataLayer implements a Caffe Python layer.
 
 import json
 
+import numpy as np
+
 from minibatch import get_tag_minibatch
 from python_data_layer import PythonDataLayer
 from utils.misc.progressbaraux import progress_bar
@@ -39,7 +41,7 @@ class TagDataLayer(PythonDataLayer):
         # If frequencies were defined, they should be the last top blobs
         if self._freqs:
             for fn in self._freq_names:
-                blobs[fn] = self._freqs[fn]
+                blobs[fn] = np.array(self._freqs[fn])
 
         return blobs
 
