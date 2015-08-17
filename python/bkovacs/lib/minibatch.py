@@ -47,7 +47,7 @@ def get_minibatch(db, is_training, num_classes, transformer, input_name,
 
 
 def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
-                      input_name, image_dims, crop_dims):
+                      input_name, image_dims, crop_dims, make_one_tag_blob):
     """Given a db, construct a minibatch sampled from it."""
     num_images = len(db)
 
@@ -61,23 +61,35 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
 
     # Now, build the tag blobs
     for tn, nc in zip(tag_names, num_classes):
-        tags_blob = np.zeros((num_images, nc), dtype=np.float32)
-        for i in xrange(num_images):
-            tag_list = db[i]['tags_dic'][tn]
-            tags_blob[i, tag_list] = 1
+        if make_one_tag_blob:
+            tags_blob = np.zeros((num_images, 1), dtype=np.float32)
+            for i in xrange(num_images):
+                # The label should be an integer value
+                label = int(db[i]['tags_dic'][tn])
+                if label < 0 or label >= nc:
+                    raise ValueError(
+                        'Label {} is out or range, number of classes: {}'.format(label, nc)
+                    )
+                tags_blob[i, 0] = label
+        else:
+            tags_blob = np.zeros((num_images, nc), dtype=np.float32)
+            for i in xrange(num_images):
+                tag_list = db[i]['tags_dic'][tn]
+                # Set values to 1 where we have tags
+                tags_blob[i, tag_list] = 1
 
         blobs[tn] = tags_blob
 
     return blobs
 
 
-def _get_image_blob(db, image_name, is_training, transformer, input_name,
+def _get_image_blob(db, image_key, is_training, transformer, input_name,
                     image_dims, crop_dims):
     """Builds an input blob from the images in the db"""
     num_images = len(db)
 
     inputs = [
-        caffe.io.load_image(db[i][image_name])
+        caffe.io.load_image(db[i][image_key])
         for i in xrange(num_images)
     ]
 
