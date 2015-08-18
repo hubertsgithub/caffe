@@ -1,6 +1,7 @@
 import numpy as np
-import skimage.io
 from scipy.ndimage import zoom
+
+import skimage.io
 from skimage.transform import resize
 
 try:
@@ -313,6 +314,10 @@ def resize_image(im, new_dims, interp_order=1):
     -------
     im : resized ndarray with shape (new_dims[0], new_dims[1], K)
     """
+    # Don't resize if we don't have to
+    if im.shape[:2] == new_dims:
+        return im
+
     if im.shape[-1] == 1 or im.shape[-1] == 3:
         im_min, im_max = im.min(), im.max()
         if im_max > im_min:
