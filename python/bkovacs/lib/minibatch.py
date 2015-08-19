@@ -7,12 +7,15 @@
 
 """Compute minibatch blobs for training a Fast R-CNN network."""
 
+import json
+import os
 import time
 
 import numpy as np
 import numpy.random as npr
 
 import caffe
+import skimage.io
 
 
 def get_minibatch(db, is_training, num_classes, transformer, input_name,
@@ -82,7 +85,43 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
 
         blobs[tn] = tags_blob
 
+    #save_blobs_debug(db, 'filepath', input_name, transformer, blobs)
+
     return blobs
+
+
+def save_blobs_debug(db, image_key, input_name, transformer, blobs):
+    root_dir = 'python_data_layer_debug'
+    if not os.path.exists(root_dir):
+        os.mkdir(root_dir)
+
+    for blob_name, blob in blobs.iteritems():
+        count = blob.shape[0]
+
+        for i in range(count):
+            orig_filepath = db[i][image_key]
+            filename = os.path.basename(orig_filepath)
+            filename, _ = os.path.splitext(filename)
+            filepath = os.path.join(
+                root_dir,
+                '{}-{}-{}'.format(filename, i, blob_name)
+            )
+            if blob_name == input_name:
+                blob_data = transformer.deprocess(input_name, blob[i])
+            else:
+                blob_data = blob[i]
+
+            if blob_data.ndim >= 2:
+                full_filepath = filepath + '.jpg'
+                skimage.io.imsave(full_filepath, blob_data)
+            else:
+                # If these are tags, just list the indices
+                unique_items = np.unique(blob_data)
+                if np.array_equal(unique_items, [0, 1]) or np.array_equal(unique_items, [0]):
+                    data_to_save = np.nonzero(blob_data)[0]
+                else:
+                    data_to_save = blob_data.tolist()
+                json.dump(list(data_to_save), open(filepath + '.json', 'w'))
 
 
 def _get_image_blob(db, image_key, is_training, transformer, input_name,
@@ -103,10 +142,12 @@ def _get_image_blob(db, image_key, is_training, transformer, input_name,
     # Scale to standardize input dimensions.
     start = time.clock()
     input_ = np.zeros(
-        (len(inputs),
-        image_dims[0],
-        image_dims[1],
-        inputs[0].shape[2]),
+        (
+            len(inputs),
+            image_dims[0],
+            image_dims[1],
+            inputs[0].shape[2]
+        ),
         dtype=np.float32
     )
     for ix, in_ in enumerate(inputs):
