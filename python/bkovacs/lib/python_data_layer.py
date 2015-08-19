@@ -9,7 +9,11 @@
 """
 
 import json
+import os
 import random
+import signal
+from Queue import Full, Queue
+from threading import Thread
 
 import numpy as np
 import numpy.random as npr
@@ -107,6 +111,24 @@ class PythonDataLayer(caffe.Layer):
         """Sets random seed, so we can have reproductible results."""
         self._random_seed = random_seed
 
+    def _setup_blobfetcher(self):
+        self._blob_queue = Queue(10)
+        self._prefetch_thread = BlobFetcher(
+            self._blob_queue, self
+        )
+        self._prefetch_thread.start()
+
+        def signal_handler(signal, frame):
+            print 'Stopping BlobFetcher...'
+            self._prefetch_thread.stop()
+            print 'Joining BlobFetcher thread...'
+            self._prefetch_thread.join()
+            print 'Exiting...'
+            # "Hard" exit, because sys.exit won't exit the C++, because the
+            # exception gets intercepted...
+            os._exit(0)
+        signal.signal(signal.SIGINT, signal_handler)
+
     def setup(self, bottom, top):
         """Setup the DataLayer."""
         if hasattr(self, '_random_seed'):
@@ -133,6 +155,7 @@ class PythonDataLayer(caffe.Layer):
         # Load db from textfile
         self._load_db()
         self._reshape_tops(top)
+        #self._setup_blobfetcher()
 
     def _reshape_tops(self, top):
         """Give initial shape to the top blobs according to the parsed layer
@@ -141,6 +164,7 @@ class PythonDataLayer(caffe.Layer):
 
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""
+        #blobs = self._blob_queue.get()
         blobs = self._get_next_minibatch()
 
         # TODO: Performance evaluation of this layer, see why it is so slow...
@@ -158,3 +182,30 @@ class PythonDataLayer(caffe.Layer):
     def reshape(self, bottom, top):
         """Reshaping happens during the call to forward."""
         pass
+
+
+class BlobFetcher(Thread):
+    """Class for prefetching blobs on a separate thread."""
+    def __init__(self, queue, layer):
+        super(BlobFetcher, self).__init__()
+        self._queue = queue
+        self._layer = layer
+        self._stopping = False
+
+    def run(self):
+        print 'BlobFetcher started'
+        while not self._stopping:
+            print 'Getting minibatch in BlobFetcher...'
+            blobs = self._layer._get_next_minibatch()
+            while not self._stopping:
+                # If the queue is full, retry until we can put the blobs in the
+                # queue
+                try:
+                    self._queue.put(blobs, timeout=1)
+                    break
+                except Full:
+                    pass
+        print 'BlobFetcher exited'
+
+    def stop(self):
+        self._stopping = True
