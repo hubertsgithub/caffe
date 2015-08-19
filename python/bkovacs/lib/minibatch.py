@@ -7,6 +7,8 @@
 
 """Compute minibatch blobs for training a Fast R-CNN network."""
 
+import time
+
 import numpy as np
 import numpy.random as npr
 
@@ -86,14 +88,20 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
 def _get_image_blob(db, image_key, is_training, transformer, input_name,
                     image_dims, crop_dims):
     """Builds an input blob from the images in the db"""
+    verbose = False
     num_images = len(db)
 
+    start = time.clock()
     inputs = [
         caffe.io.load_image(db[i][image_key])
         for i in xrange(num_images)
     ]
+    elapsed = time.clock() - start
+    if verbose:
+        print 'Loading images took {:.2f} seconds.'.format(elapsed)
 
     # Scale to standardize input dimensions.
+    start = time.clock()
     input_ = np.zeros(
         (len(inputs),
         image_dims[0],
@@ -104,7 +112,12 @@ def _get_image_blob(db, image_key, is_training, transformer, input_name,
     for ix, in_ in enumerate(inputs):
         input_[ix] = caffe.io.resize_image(in_, image_dims)
 
-    # TODO: We may include oversampling for validation?
+    elapsed = time.clock() - start
+    if verbose:
+        print 'Resizing images took {:.2f} seconds.'.format(elapsed)
+
+    # TODO: We take the same crop for all images...
+    start = time.clock()
     if is_training:
         # Take random crop.
         center = np.array([
@@ -124,6 +137,9 @@ def _get_image_blob(db, image_key, is_training, transformer, input_name,
         crop_dims / 2.0
     ])
     input_ = input_[:, crop[0]:crop[2], crop[1]:crop[3], :]
+    elapsed = time.clock() - start
+    if verbose:
+        print 'Cropping images took {:.2f} seconds.'.format(elapsed)
 
     if is_training:
         # random vertical flip
@@ -135,7 +151,11 @@ def _get_image_blob(db, image_key, is_training, transformer, input_name,
         np.array(input_.shape)[[0, 3, 1, 2]],
         dtype=np.float32
     )
+    start = time.clock()
     for ix, in_ in enumerate(input_):
         caffe_in[ix] = transformer.preprocess(input_name, in_)
+    elapsed = time.clock() - start
+    if verbose:
+        print 'Caffe preprocessing images took {:.2f} seconds.'.format(elapsed)
 
     return caffe_in
