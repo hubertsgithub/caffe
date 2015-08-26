@@ -38,6 +38,7 @@ class TagDataLayer(PythonDataLayer):
             self._image_dims,
             self._crop_dims,
             self._make_one_tag_blob,
+            self._regression,
         )
         # If frequencies were defined, they should be the last top blobs
         if self._freqs:
@@ -68,6 +69,13 @@ class TagDataLayer(PythonDataLayer):
             self._make_one_tag_blob = False
         else:
             self._make_one_tag_blob = layer_params['make_one_tag_blob']
+
+        # This means that all parameters should have num_classes == 1 and we
+        # parse them as float values
+        if 'regression' not in layer_params:
+            self._regression = False
+        else:
+            self._regression = layer_params['regression']
 
     def _reshape_tops(self, top):
         # data blob: holds a batch of N images, each with 3 channels

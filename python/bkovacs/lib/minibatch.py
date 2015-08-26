@@ -52,7 +52,8 @@ def get_minibatch(db, is_training, num_classes, transformer, input_name,
 
 
 def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
-                      input_name, image_dims, crop_dims, make_one_tag_blob):
+                      input_name, image_dims, crop_dims, make_one_tag_blob,
+                      regression):
     """Given a db, construct a minibatch sampled from it."""
     num_images = len(db)
 
@@ -75,6 +76,12 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
                     raise ValueError(
                         'Label {} is out or range, number of classes: {}'.format(label, nc)
                     )
+                tags_blob[i, 0] = label
+        elif regression:
+            tags_blob = np.zeros((num_images, 1), dtype=np.float32)
+            for i in xrange(num_images):
+                # The label should be an float value
+                label = float(db[i]['tags_dic'][tn])
                 tags_blob[i, 0] = label
         else:
             tags_blob = np.zeros((num_images, nc), dtype=np.float32)
