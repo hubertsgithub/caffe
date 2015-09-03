@@ -44,9 +44,10 @@ class Classifier(caffe.Net):
             image_dims = self.crop_dims
         self.image_dims = image_dims
 
-    def predict(self, inputs, oversample=True, auto_reshape=False):
+
+    def preprocess_inputs(self, inputs, oversample=True):
         """
-        Predict classification probabilities of inputs.
+        Preprocesses inputs.
 
         Parameters
         ----------
@@ -57,15 +58,16 @@ class Classifier(caffe.Net):
 
         Returns
         -------
-        predictions: (N x C) ndarray of class probabilities for N images and C
-            classes.
+        caffe_in: Preprocessed input which can be passed to forward.
         """
         # Scale to standardize input dimensions.
-        input_ = np.zeros((len(inputs),
-                           self.image_dims[0],
-                           self.image_dims[1],
-                           inputs[0].shape[2]),
-                          dtype=np.float32)
+        input_ = np.zeros(
+            (len(inputs),
+            self.image_dims[0],
+            self.image_dims[1],
+            inputs[0].shape[2]),
+            dtype=np.float32
+        )
         for ix, in_ in enumerate(inputs):
             input_[ix] = caffe.io.resize_image(in_, self.image_dims)
 
@@ -82,14 +84,42 @@ class Classifier(caffe.Net):
             input_ = input_[:, crop[0]:crop[2], crop[1]:crop[3], :]
 
         # Classify
-        caffe_in = np.zeros(np.array(input_.shape)[[0, 3, 1, 2]],
-                            dtype=np.float32)
+        caffe_in = np.zeros(
+            np.array(input_.shape)[[0, 3, 1, 2]],
+            dtype=np.float32
+        )
         for ix, in_ in enumerate(input_):
             caffe_in[ix] = self.transformer.preprocess(self.inputs[0], in_)
 
+        return caffe_in
+
+    def reshape_by_input(self, caffe_in):
+        """
+        Reshapes the whole net according to the input
+        """
+        self.blobs[self.inputs[0]].reshape(*caffe_in.shape)
+        self.reshape()
+
+    def predict(self, inputs, oversample=True, auto_reshape=False):
+        """
+        Predict classification probabilities of inputs.
+
+        Parameters
+        ----------
+        inputs : iterable of (H x W x K) input ndarrays.
+        oversample : boolean
+            average predictions across center, corners, and mirrors
+            when True (default). Center-only prediction when False.
+
+        Returns
+        -------
+        predictions: (N x C) ndarray of class probabilities for N images and C
+            classes.
+        """
+        caffe_in = self.preprocess_inputs(inputs, oversample)
+
         if auto_reshape:
-            self.blobs[self.inputs[0]].reshape(*caffe_in.shape)
-            self.reshape()
+            self.reshape_by_input(caffe_in)
 
         out = self.forward_all(**{self.inputs[0]: caffe_in})
         predictions = out[self.outputs[0]]
