@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage import zoom
 
 import skimage.io
-from skimage.transform import resize
+from PIL import Image
 
 try:
     # Python3 will most likely not be able to load protobuf
@@ -306,7 +306,7 @@ def resize_image(im, new_dims, interp_order=1):
 
     Parameters
     ----------
-    im : (H x W x K) ndarray
+    im : (H x W x K) ndarray with values in [0, 1]
     new_dims : (height, width) tuple of new dimensions.
     interp_order : interpolation order, default is linear.
 
@@ -321,11 +321,13 @@ def resize_image(im, new_dims, interp_order=1):
     if im.shape[-1] == 1 or im.shape[-1] == 3:
         im_min, im_max = im.min(), im.max()
         if im_max > im_min:
-            # skimage is fast but only understands {1,3} channel images
-            # in [0, 1].
-            im_std = (im - im_min) / (im_max - im_min)
-            resized_std = resize(im_std, new_dims, order=interp_order)
-            resized_im = resized_std * (im_max - im_min) + im_min
+            im_rgb = np.clip(im * 255, 0, 255).astype('uint8')
+            pil_img = Image.fromarray(im_rgb, 'RGB')
+            pil_img = pil_img.resize(new_dims[::-1], Image.ANTIALIAS)
+            resized_im = np.array(pil_img, dtype=np.float32) / 255.
+            #im_std = (im - im_min) / (im_max - im_min)
+            #resized_std = resize(im_std, new_dims, order=interp_order)
+            #resized_im = resized_std * (im_max - im_min) + im_min
         else:
             # the image is a constant -- avoid divide by 0
             ret = np.empty((new_dims[0], new_dims[1], im.shape[-1]),
