@@ -31,6 +31,8 @@ namespace caffe {
 // For Python, for now, we'll just always use float as the type.
 typedef float Dtype;
 const int NPY_DTYPE = NPY_FLOAT32;
+//typedef double Dtype;
+//const int NPY_DTYPE = NPY_FLOAT64;
 
 // Selecting mode.
 void set_mode_cpu() { Caffe::set_mode(Caffe::CPU); }
@@ -57,7 +59,7 @@ void CheckContiguousArray(PyArrayObject* arr, string name,
   if (PyArray_NDIM(arr) != 4) {
     throw std::runtime_error(name + " must be 4-d");
   }
-  if (PyArray_TYPE(arr) != NPY_FLOAT32) {
+  if (PyArray_TYPE(arr) != NPY_DTYPE) {
     throw std::runtime_error(name + " must be float32");
   }
   if (PyArray_DIMS(arr)[1] != channels) {
@@ -167,7 +169,7 @@ struct NdarrayCallPolicies : public bp::default_call_policies {
     const int num_axes = blob->num_axes();
     vector<npy_intp> dims(blob->shape().begin(), blob->shape().end());
     PyObject *arr_obj = PyArray_SimpleNewFromData(num_axes, dims.data(),
-                                                  NPY_FLOAT32, data);
+                                                  NPY_DTYPE, data);
     // SetBaseObject steals a ref, so we need to INCREF.
     Py_INCREF(pyblob.ptr());
     PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
