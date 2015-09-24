@@ -4,6 +4,9 @@
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
 # --------------------------------------------------------
+# --------------------------------------------------------
+# Adapted by Balazs Kovacs
+# --------------------------------------------------------
 
 """The abstract parent of all python data layers. PythonDataLayer implements a Caffe Python layer.
 """
@@ -141,11 +144,20 @@ class PythonDataLayer(caffe.Layer):
         self._is_training = self.phase_ == 'TRAIN'
         name_list = [name for name in self.top_names_]
         self._input_name = name_list[0]
+
         nc_num = len(self._num_classes)
-        self._tag_names = name_list[1:nc_num+1]
+        # Compute how many input image blobs we expect
+        if self._freqs:
+            input_num = len(name_list) - nc_num * 2
+        else:
+            input_num = len(name_list) - nc_num
+
+        self._input_names = name_list[:input_num]
+
+        self._tag_names = name_list[input_num:nc_num+input_num]
         # If frequencies were defined, they should be the last top blobs
         if self._freqs:
-            self._freq_names = name_list[nc_num+1:2*nc_num+1]
+            self._freq_names = name_list[nc_num+input_num:2*nc_num+input_num]
 
         self._name_to_top_map = {name: i for i, name in enumerate(name_list)}
 

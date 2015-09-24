@@ -52,18 +52,26 @@ def get_minibatch(db, is_training, num_classes, transformer, input_name,
 
 
 def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
-                      input_name, image_dims, crop_dims, make_one_tag_blob,
+                      input_names, image_dims, crop_dims, make_one_tag_blob,
                       regression):
     """Given a db, construct a minibatch sampled from it."""
     num_images = len(db)
 
-    # Get the input image blob, formatted for caffe
-    im_blob = _get_image_blob(
-        db, 'filepath', is_training, transformer, input_name, image_dims,
-        crop_dims
-    )
+    blobs = {}
+    for input_name in input_names:
+        # For backward compatibility, we handle the one input case differently
+        if len(input_names) == 1:
+            image_key = 'filepath'
+        else:
+            image_key = 'filepath-{}'.format(input_name)
 
-    blobs = {input_name: im_blob}
+        # Note: There is only one transformer for all image inputs, so we just
+        # use the first input_name to pass to the transformer
+        im_blob = _get_image_blob(
+            db, image_key, is_training, transformer, input_names[0],
+            image_dims, crop_dims
+        )
+        blobs[input_name] = im_blob
 
     # Now, build the tag blobs
     for tn, nc in zip(tag_names, num_classes):
@@ -92,29 +100,25 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
 
         blobs[tn] = tags_blob
 
-    #save_blobs_debug(db, 'filepath', input_name, transformer, blobs)
+    #save_blobs_debug(input_names, transformer, blobs, make_one_tag_blob, regression)
 
     return blobs
 
 
-def save_blobs_debug(db, image_key, input_name, transformer, blobs):
+def save_blobs_debug(input_names, transformer, blobs, make_one_tag_blob, regression):
     root_dir = 'python_data_layer_debug'
     if not os.path.exists(root_dir):
         os.mkdir(root_dir)
+
+    print 'Saving debug images to {}'.format(os.path.abspath(root_dir))
 
     for blob_name, blob in blobs.iteritems():
         count = blob.shape[0]
 
         for i in range(count):
-            orig_filepath = db[i][image_key]
-            filename = os.path.basename(orig_filepath)
-            filename, _ = os.path.splitext(filename)
-            filepath = os.path.join(
-                root_dir,
-                '{}-{}-{}'.format(filename, i, blob_name)
-            )
-            if blob_name == input_name:
-                blob_data = transformer.deprocess(input_name, blob[i])
+            filepath = os.path.join(root_dir, '{}-{}'.format(i, blob_name))
+            if blob_name in input_names:
+                blob_data = transformer.deprocess(input_names[0], blob[i])
             else:
                 blob_data = blob[i]
 
@@ -123,8 +127,9 @@ def save_blobs_debug(db, image_key, input_name, transformer, blobs):
                 skimage.io.imsave(full_filepath, blob_data)
             else:
                 # If these are tags, just list the indices
-                unique_items = np.unique(blob_data)
-                if np.array_equal(unique_items, [0, 1]) or np.array_equal(unique_items, [0]):
+                #unique_items = np.unique(blob_data)
+                #if np.array_equal(unique_items, [0, 1]) or np.array_equal(unique_items, [0]):
+                if not make_one_tag_blob and not regression:
                     data_to_save = np.nonzero(blob_data)[0]
                 else:
                     data_to_save = blob_data.tolist()

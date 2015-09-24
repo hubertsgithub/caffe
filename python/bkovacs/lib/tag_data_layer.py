@@ -4,6 +4,9 @@
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
 # --------------------------------------------------------
+# --------------------------------------------------------
+# Adapted by Balazs Kovacs
+# --------------------------------------------------------
 
 """The data layer used during training to train a network with multiple tags.
 Tags can mean attributes or normal class labels.
@@ -34,7 +37,7 @@ class TagDataLayer(PythonDataLayer):
             self._tag_names,
             self._num_classes,
             self._transformer,
-            self._input_name,
+            self._input_names,
             self._image_dims,
             self._crop_dims,
             self._make_one_tag_blob,
@@ -78,17 +81,18 @@ class TagDataLayer(PythonDataLayer):
             self._regression = layer_params['regression']
 
     def _reshape_tops(self, top):
-        # data blob: holds a batch of N images, each with 3 channels
-        top[0].reshape(self._ims_per_batch, 3, *self._crop_dims)
+        # data blobs: they hold a batch of N images, each with 3 channels
+        for i in range(len(self._input_names)):
+            top[i].reshape(self._ims_per_batch, 3, *self._crop_dims)
 
         # label blob: N categorical labels in [0, ..., K] for K classes
         for i, nc in enumerate(self._num_classes):
             if self._make_one_tag_blob:
-                top[i + 1].reshape(self._ims_per_batch, 1)
+                top[i + len(self._input_names)].reshape(self._ims_per_batch, 1)
             else:
-                top[i + 1].reshape(self._ims_per_batch, nc)
+                top[i + len(self._input_names)].reshape(self._ims_per_batch, nc)
 
         # Blobs containing the label frequencies for balancing
         if self._freqs:
             for i, nc in enumerate(self._num_classes):
-                top[i + 1 + len(self._num_classes)].reshape(nc)
+                top[i + len(self._input_names) + len(self._num_classes)].reshape(nc)
