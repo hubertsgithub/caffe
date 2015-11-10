@@ -103,6 +103,8 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
 
         blobs[tn] = tags_blob
 
+    #print tag_names
+    #print db
     #save_blobs_debug(input_names, transformer, blobs, make_one_tag_blob, regression)
 
     return blobs
