@@ -34,7 +34,12 @@ class PythonDataLayer(caffe.Layer):
 
     def _shuffle_db_inds(self):
         """Randomly permute the training set."""
-        self._perm = npr.permutation(np.arange(len(self._db)))
+        # Don't use random permutation for testing!
+        if self._is_training:
+            self._perm = npr.permutation(np.arange(len(self._db)))
+        else:
+            self._perm = np.arange(len(self._db))
+
         self._cur = 0
 
     def _get_next_minibatch_inds(self):
