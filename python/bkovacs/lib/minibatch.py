@@ -79,11 +79,14 @@ def get_tag_minibatch(db, is_training, tag_names, num_classes, transformer,
             tags_blob = np.zeros((num_images, 1), dtype=np.float32)
             for i in xrange(num_images):
                 # The label should be an integer value
-                label = int(db[i]['tags_dic'][tn])
-                if label < 0 or label >= nc:
-                    raise ValueError(
-                        'Label {} is out or range, number of classes: {}'.format(label, nc)
-                    )
+                if tn not in db[i]['tags_dic']:
+                    label = -1
+                else:
+                    label = int(db[i]['tags_dic'][tn])
+                    if label < 0 or label >= nc:
+                        raise ValueError(
+                            'Label {} is out or range, number of classes: {}'.format(label, nc)
+                        )
                 tags_blob[i, 0] = label
         elif regression:
             tags_blob = np.zeros((num_images, 1), dtype=np.float32)
