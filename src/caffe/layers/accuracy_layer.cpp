@@ -94,7 +94,11 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
 
   // LOG(INFO) << "Accuracy: " << accuracy;
-  top[0]->mutable_cpu_data()[0] = accuracy / count;
+  if (count != 0)
+    top[0]->mutable_cpu_data()[0] = accuracy / count;
+  else
+    top[0]->mutable_cpu_data()[0] = 0;
+
   if (top.size() > 1) {
     for (int i = 0; i < top[1]->count(); ++i) {
       top[1]->mutable_cpu_data()[i] =
