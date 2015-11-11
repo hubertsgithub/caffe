@@ -7,6 +7,7 @@
 #include <boost/python.hpp>
 #include <boost/python/raw_function.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 #include <numpy/arrayobject.h>
 
 // these need to be included after boost on OS X
@@ -285,6 +286,8 @@ BOOST_PYTHON_MODULE(_caffe) {
     .add_property("net", &Solver<Dtype>::net)
     .add_property("test_nets", bp::make_function(&Solver<Dtype>::test_nets,
           bp::return_internal_reference<>()))
+    .add_property("test_mean_scores", bp::make_function(&Solver<Dtype>::test_mean_scores,
+          bp::return_internal_reference<>()))
     .add_property("iter", &Solver<Dtype>::iter)
     .def("solve", static_cast<void (Solver<Dtype>::*)(const char*)>(
           &Solver<Dtype>::Solve), SolveOverloads())
@@ -332,6 +335,11 @@ BOOST_PYTHON_MODULE(_caffe) {
     .def(bp::vector_indexing_suite<vector<shared_ptr<Net<Dtype> > >, true>());
   bp::class_<vector<bool> >("BoolVec")
     .def(bp::vector_indexing_suite<vector<bool> >());
+  bp::class_<vector<map<string, Dtype> > >("TestMeanScoreVec")
+    .def(bp::vector_indexing_suite<vector<map<string, Dtype> > >());
+  // map wrappers for all the vector types we use
+  bp::class_<map<string, Dtype> >("TestMeanScoreMap")
+    .def(bp::map_indexing_suite<map<string, Dtype> >());
 
   // boost python expects a void (missing) return value, while import_array
   // returns NULL for python3. import_array1() forces a void return value.

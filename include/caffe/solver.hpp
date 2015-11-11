@@ -72,6 +72,9 @@ class Solver {
   inline const vector<shared_ptr<Net<Dtype> > >& test_nets() {
     return test_nets_;
   }
+  inline const vector<map<string, Dtype> >& test_mean_scores() {
+    return test_mean_scores_;
+  }
   int iter() { return iter_; }
 
   // Invoked at specific points during an iteration
@@ -113,6 +116,7 @@ class Solver {
   int current_step_;
   shared_ptr<Net<Dtype> > net_;
   vector<shared_ptr<Net<Dtype> > > test_nets_;
+  vector<map<string, Dtype> > test_mean_scores_;
   vector<Callback*> callbacks_;
 
   // The root solver that holds root nets (actually containing shared layers)

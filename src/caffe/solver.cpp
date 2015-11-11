@@ -165,6 +165,7 @@ void Solver<Dtype>::InitTestNets() {
     }
   }
   test_nets_.resize(num_test_net_instances);
+  test_mean_scores_.resize(num_test_net_instances);
   for (int i = 0; i < num_test_net_instances; ++i) {
     // Set the correct NetState.  We start with the solver defaults (lowest
     // precedence); then, merge in any NetState specified by the net_param
@@ -345,6 +346,9 @@ void Solver<Dtype>::Test(const int test_net_id) {
   vector<int> test_score_output_id;
   vector<Blob<Dtype>*> bottom_vec;
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
+  map<string, Dtype>& test_mean_scores_list = test_mean_scores_[test_net_id];
+  test_mean_scores_list.clear();
+
   Dtype loss = 0;
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
     SolverAction::Enum request = GetRequestedAction();
@@ -407,6 +411,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
     }
     LOG(INFO) << "    Test net output #" << i << ": " << output_name << " = "
               << mean_score << loss_msg_stream.str();
+    test_mean_scores_list[output_name] = mean_score;
   }
 }
 
