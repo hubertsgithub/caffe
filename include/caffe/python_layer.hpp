@@ -18,9 +18,16 @@ class PythonLayer : public Layer<Dtype> {
 
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-      self_.attr("param_str_") = bp::str(
-         this->layer_param_.python_param().param_str()
-      );
+    // Disallow PythonLayer in MultiGPU training stage, due to GIL issues
+    // Details: https://github.com/BVLC/caffe/issues/2936
+    if (this->phase_ == TRAIN && Caffe::solver_count() > 1
+        && !ShareInParallel()) {
+      LOG(FATAL) << "PythonLayer is not implemented in Multi-GPU training";
+    }
+
+    self_.attr("param_str_") = bp::str(
+       this->layer_param_.python_param().param_str()
+    );
 
 	  Phase phase = this->layer_param_.phase();
 	  std::string phase_str;
@@ -37,7 +44,7 @@ class PythonLayer : public Layer<Dtype> {
       }
 	  self_.attr("top_names_") = top_names;
 
-      self_.attr("setup")(bottom, top);
+    self_.attr("setup")(bottom, top);
   }
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
