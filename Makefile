@@ -25,7 +25,7 @@ else
 endif
 
 # All of the directories containing code.
-SRC_DIRS := $(shell find src tools -type d -exec bash -c "find {} -maxdepth 1 \
+SRC_DIRS := $(shell find src tools examples -type d -exec bash -c "find {} -maxdepth 1 \
 	\( -name '*.cpp' -o -name '*.proto' \) | grep -q ." \; -print)
 
 # The target shared library name
