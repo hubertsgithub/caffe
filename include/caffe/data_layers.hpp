@@ -91,6 +91,46 @@ class BasePrefetchingDataLayer :
   Blob<Dtype> transformed_data_;
 };
 
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE, JUST FOR COMPATIBILITY FOR THE MINC DATA LAYER
+/////////////////////////////////////////////////////////////////////////
+
+template <typename Dtype>
+class BasePrefetchingDataLayerOLD :
+    public BaseDataLayer<Dtype>, public InternalThread {
+ public:
+  explicit BasePrefetchingDataLayerOLD(const LayerParameter& param)
+      : BaseDataLayer<Dtype>(param) {}
+  virtual ~BasePrefetchingDataLayerOLD() {}
+  // LayerSetUp: implements common data layer setup functionality, and calls
+  // DataLayerSetUp to do special data layer setup for individual layer types.
+  // This method may not be overridden.
+  void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void CreatePrefetchThread();
+  virtual void JoinPrefetchThread();
+  // The thread's function
+  virtual void InternalThreadEntry() {}
+
+ protected:
+  // Maximum number of outputs (top blobs) of a prefetch data layer
+  static const int MAX_NUM_PREFETCH = 8;
+  Blob<Dtype> prefetch_blob_[MAX_NUM_PREFETCH]; // output blobs
+  int num_prefetch_; // top.size()
+
+  Blob<Dtype> transformed_data_;
+};
+
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE END
+/////////////////////////////////////////////////////////////////////////
+
 template <typename Dtype>
 class DataLayer : public BasePrefetchingDataLayer<Dtype> {
  public:
@@ -304,6 +344,50 @@ class MemoryDataLayer : public BaseDataLayer<Dtype> {
   Blob<Dtype> added_data_;
   Blob<Dtype> added_label_;
   bool has_new_data_;
+};
+
+/**
+ * @brief Provides data to the Net from multiple image files.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class MultiImageDataLayer : public BasePrefetchingDataLayerOLD<Dtype> {
+ public:
+  explicit MultiImageDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayerOLD<Dtype>(param) {}
+  virtual ~MultiImageDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Skip(int n);
+
+  //virtual inline LayerParameter_LayerType type() const {
+    //return LayerParameter_LayerType_MULTI_IMAGE_DATA;
+  //}
+  virtual inline const char* type() const { return "MultiImageData"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
+
+ protected:
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleImages();
+  virtual void InternalThreadEntry();
+
+  struct patch_info {
+    std::string path;
+    float ax,ay,bx,by;
+    int c;
+  };
+  struct line {
+    std::vector<struct patch_info> image;
+    float s,r,j;
+    int label;
+  };
+  vector<struct line> lines_;
+  vector<vector<int> > label_index_set_;
+  vector<int> label_index_set_tail_;
+  vector<int> unbalanced_index_set_;
+  int unbalanced_index_set_tail_;
 };
 
 /**
