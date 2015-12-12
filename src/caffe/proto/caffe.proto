@@ -370,6 +370,7 @@ message LayerParameter {
   optional HDF5OutputParameter hdf5_output_param = 113;
   optional HingeLossParameter hinge_loss_param = 114;
   optional ImageDataParameter image_data_param = 115;
+  optional MultiImageDataParameter multi_image_data_param = 51415;
   optional InfogainLossParameter infogain_loss_param = 116;
   optional InnerProductParameter inner_product_param = 117;
   optional LogParameter log_param = 134;
@@ -414,6 +415,8 @@ message TransformationParameter {
   optional bool force_color = 6 [default = false];
   // Force the decoded image to have 1 color channels.
   optional bool force_gray = 7 [default = false];
+  // per-channel intensity jitter
+  repeated float channel_jitter = 61415;
 }
 
 // Message that stores parameters shared by loss layers
@@ -704,6 +707,50 @@ message ImageDataParameter {
   // data.
   optional bool mirror = 6 [default = false];
   optional string root_folder = 12 [default = ""];
+}
+
+message MultiImageDataParameter {
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size.
+  optional uint32 batch_size = 2;
+  // The rand_skip variable is for the data layer to skip a few data points
+  // to avoid all asynchronous sgd clients to start at the same point. The skip
+  // point would be set as rand_skip * rand(0,1). Note that rand_skip should not
+  // be larger than the number of keys in the database.
+  optional uint32 rand_skip = 3 [default = 0];
+  // Whether or not ImageLayer should shuffle the list of files at every epoch.
+  optional bool shuffle = 4 [default = false];
+  // It will also resize images if new_height or new_width are not zero.
+  optional uint32 new_height = 5 [default = 0];
+  optional uint32 new_width = 6 [default = 0];
+  // Prepended to the image path
+  optional string root_folder = 7 [default = ""];
+  // number of images per line in the data source
+  optional uint32 num_image = 8 [default = 1];
+  // valid labels are 0, 1, ..., num_label-1
+  optional uint32 num_label = 9 [default = 2];
+  optional bool verbose = 10 [default = false];
+  // On startup, check if images exist and either
+  // discard missing images or halt
+  optional bool check_existence = 11 [default = false];
+  optional bool require_existence = 12 [default = false];
+  // Read at most N samples from source
+  optional int32 sample_maximum = 13 [default = 2147483647];
+  // Ratio r in [0, +inf) augments scale in the range s/(1+r) and s(1+r)
+  optional float ratio_jitter = 14 [default = 0.];
+  // Position jitter in [0, 0.5)
+  optional float position_jitter = 15 [default = 0.];
+  // Jitter the spatial scale of the patch. 0: no scale jitter, 1: full scale jitter
+  optional float spatial_scale_jitter = 16 [default = 0.];
+  // Categories appear evenly in batches unless unbalanced is true
+  optional bool unbalanced = 17 [default = false];
+  // Pixels inside the footprint but outside the image will be filled
+  // will the border value
+  optional bool edge_fill = 18 [default = false];
+  repeated uint32 border_value = 19;
+  // if > 0 each sample produces 10 in the output (5 crops and 2 mirrors)
+  optional bool oversample = 20 [default = false];
 }
 
 message InfogainLossParameter {

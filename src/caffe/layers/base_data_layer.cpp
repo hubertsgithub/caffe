@@ -125,4 +125,73 @@ STUB_GPU_FORWARD(BasePrefetchingDataLayer, Forward);
 INSTANTIATE_CLASS(BaseDataLayer);
 INSTANTIATE_CLASS(BasePrefetchingDataLayer);
 
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE, JUST FOR COMPATIBILITY FOR THE MINC DATA LAYER
+/////////////////////////////////////////////////////////////////////////
+
+template <typename Dtype>
+void BasePrefetchingDataLayerOLD<Dtype>::LayerSetUp(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  num_prefetch_ = top.size();
+  CHECK_LT(num_prefetch_, sizeof(this->prefetch_blob_) / sizeof(this->prefetch_blob_[0]));
+  BaseDataLayer<Dtype>::LayerSetUp(bottom, top);
+  // Now, start the prefetch thread. Before calling prefetch, we make two
+  // cpu_data calls so that the prefetch thread does not accidentally make
+  // simultaneous cudaMalloc calls when the main thread is running. In some
+  // GPUs this seems to cause failures if we do not so.
+  for (int i = 0; i < num_prefetch_; i++) {
+    this->prefetch_blob_[i].mutable_cpu_data();
+  }
+  DLOG(INFO) << "Initializing prefetch";
+  this->CreatePrefetchThread();
+  DLOG(INFO) << "Prefetch initialized.";
+}
+
+template <typename Dtype>
+void BasePrefetchingDataLayerOLD<Dtype>::CreatePrefetchThread() {
+  //this->phase_ = Caffe::phase();
+  this->data_transformer_->InitRand();
+  //CHECK(StartInternalThread()) << "Thread execution failed";
+  StartInternalThread();
+  DLOG(INFO) << "Prefetch initialized.";
+}
+
+template <typename Dtype>
+void BasePrefetchingDataLayerOLD<Dtype>::JoinPrefetchThread() {
+  //CPUTimer join_timer;
+  //join_timer.Start();
+
+  //CHECK(WaitForInternalThreadToExit()) << "Thread joining failed";
+  this->StopInternalThread();
+
+  //LOG(INFO) << "Join time: " << join_timer.MilliSeconds() << " ms.";
+}
+
+template <typename Dtype>
+void BasePrefetchingDataLayerOLD<Dtype>::Forward_cpu(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  // First, join the thread
+  JoinPrefetchThread();
+  DLOG(INFO) << "Thread joined";
+  // Copy the data
+  for (int i = 0; i < num_prefetch_; i++) {
+    caffe_copy(prefetch_blob_[i].count(), prefetch_blob_[i].cpu_data(),
+               top[i]->mutable_cpu_data());
+  }
+  // Start a new prefetch thread
+  DLOG(INFO) << "CreatePrefetchThread";
+  CreatePrefetchThread();
+}
+
+#ifdef CPU_ONLY
+STUB_GPU_FORWARD(BasePrefetchingDataLayerOLD, Forward);
+#endif
+
+//INSTANTIATE_CLASS(BaseDataLayer);
+INSTANTIATE_CLASS(BasePrefetchingDataLayerOLD);
+
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE END
+/////////////////////////////////////////////////////////////////////////
+
 }  // namespace caffe

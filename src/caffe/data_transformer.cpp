@@ -36,6 +36,12 @@ DataTransformer<Dtype>::DataTransformer(const TransformationParameter& param,
       mean_values_.push_back(param_.mean_value(c));
     }
   }
+  // check if we want to use channel_jitter
+  if (param_.channel_jitter_size() > 0) {
+    for (int c = 0; c < param_.channel_jitter_size(); ++c) {
+      channel_jitter_log_ranges_.push_back(param_.channel_jitter(c));
+    }
+  }
 }
 
 template<typename Dtype>
@@ -224,8 +230,8 @@ void DataTransformer<Dtype>::Transform(const vector<cv::Mat> & mat_vector,
 
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
-                                       Blob<Dtype>* transformed_blob) {
-  const int crop_size = param_.crop_size();
+                                       Blob<Dtype>* transformed_blob,
+                                       int oversample /*= 0*/) {
   const int img_channels = cv_img.channels();
   const int img_height = cv_img.rows;
   const int img_width = cv_img.cols;
@@ -241,12 +247,20 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   CHECK_LE(width, img_width);
   CHECK_GE(num, 1);
 
+  CHECK_GE(oversample, 0);
+  //CHECK_LE(oversample, 10);
+  CHECK_LE(oversample, 5);
+
   CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
 
+  const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
-  const bool do_mirror = param_.mirror() && Rand(2);
+  //const bool do_mirror = param_.mirror() && Rand(2);
+  //const bool do_mirror = ( oversample ? (oversample - 1) / 5 : param_.mirror() && Rand(2) );
+  const bool do_mirror = ( oversample ? false : param_.mirror() && Rand(2) );
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
+  const bool has_channel_jitter = param_.channel_jitter_size() > 0;
 
   CHECK_GT(img_channels, 0);
   CHECK_GE(img_height, crop_size);
@@ -270,14 +284,57 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
     }
   }
 
+  vector<Dtype> channel_jitter(img_channels);
+  if (has_channel_jitter && phase_ == TRAIN) {
+      CHECK_EQ(channels, channel_jitter_log_ranges_.size());
+      vector<Dtype> x(img_channels);
+      caffe_rng_uniform(img_channels, -Dtype(1), Dtype(1), x.data());
+      for (int c = 0; c < img_channels; c++) {
+          if (channel_jitter_log_ranges_[c] > Dtype(0)) {
+              channel_jitter[c] = scale * exp(channel_jitter_log_ranges_[c] * x[c]);
+          } else {
+              channel_jitter[c] = scale;
+          }
+      }
+  } else {
+      for (int c = 0; c < img_channels; c++) {
+          channel_jitter[c] = scale;
+      }
+  }
+
   int h_off = 0;
   int w_off = 0;
   cv::Mat cv_cropped_img = cv_img;
   if (crop_size) {
     CHECK_EQ(crop_size, height);
     CHECK_EQ(crop_size, width);
-    // We only do random crop when we do training.
-    if (phase_ == TRAIN) {
+    if (oversample) {
+      // Forced crop: CENTER, NW, NE, SW, SE
+      switch((oversample-1) % 5) {
+        case 0:
+          h_off = (img_height - crop_size) / 2;
+          w_off = (img_width - crop_size) / 2;
+          break;
+        case 1:
+          h_off = 0;
+          w_off = 0;
+          break;
+        case 2:
+          h_off = 0;
+          w_off = img_width - crop_size;
+          break;
+        case 3:
+          h_off = img_height - crop_size;
+          w_off = 0;
+          break;
+        case 4:
+          h_off = img_height - crop_size;
+          w_off = img_width - crop_size;
+          break;
+        default: LOG(FATAL) << "Bad oversample value!";
+      }
+    } else if (phase_ == TRAIN) {
+      // We only do random crop when we do training.
       h_off = Rand(img_height - crop_size + 1);
       w_off = Rand(img_width - crop_size + 1);
     } else {
@@ -310,13 +367,13 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
         if (has_mean_file) {
           int mean_index = (c * img_height + h_off + h) * img_width + w_off + w;
           transformed_data[top_index] =
-            (pixel - mean[mean_index]) * scale;
+            (pixel - mean[mean_index]) * channel_jitter[c];
         } else {
           if (has_mean_values) {
             transformed_data[top_index] =
-              (pixel - mean_values_[c]) * scale;
+              (pixel - mean_values_[c]) * channel_jitter[c];
           } else {
-            transformed_data[top_index] = pixel * scale;
+            transformed_data[top_index] = pixel * channel_jitter[c];
           }
         }
       }
