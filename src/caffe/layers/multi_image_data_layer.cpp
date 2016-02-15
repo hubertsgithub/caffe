@@ -402,6 +402,36 @@ void MultiImageDataLayer<Dtype>::ShuffleImages() {
   if(verbose) { LOG(INFO) << "List shuffled in " << (t1-t0) << " seconds."; }
 }
 
+template <typename Dtype>
+cv::Mat MultiImageDataLayer<Dtype>::ToGrayscale(const cv::Mat& cv_img) {
+  const int img_channels = cv_img.channels();
+  const int img_height = cv_img.rows;
+  const int img_width = cv_img.cols;
+  cv::Mat cv_img_gray = cv_img;
+  for (int h = 0; h < img_height; ++h) {
+    const uchar* ptr = cv_img.ptr<uchar>(h);
+    uchar* ptr_gray = cv_img_gray.ptr<uchar>(h);
+    int img_index = 0;
+    for (int w = 0; w < img_width; ++w) {
+      Dtype gray_pixel = 0;
+      for (int c = 0; c < img_channels; ++c) {
+        // int top_index = (c * height + h) * width + w;
+        Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+        gray_pixel += pixel;
+      }
+      gray_pixel /= img_channels;
+      img_index -= img_channels;
+      for (int c = 0; c < img_channels; ++c) {
+        // int top_index = (c * height + h) * width + w;
+        ptr_gray[img_index++] = (uchar)gray_pixel;
+      }
+    }
+  }
+
+  return cv_img_gray;
+}
+
+
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
 void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
@@ -421,6 +451,7 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
   const bool verbose = multi_image_data_param.verbose();
   const bool unbalanced = multi_image_data_param.unbalanced();
   const bool edge_fill = multi_image_data_param.edge_fill();
+  const bool grayscale = multi_image_data_param.grayscale();
   const float spatial_scale_jitter = this->layer_param_.multi_image_data_param().spatial_scale_jitter();
   caffe::rng_t* prefetch_rng = static_cast<caffe::rng_t*>(prefetch_rng_->generator());
 
@@ -602,6 +633,9 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
         cv_img[i] = ReadImageFootprintToCVMat(root_folder + im.path, new_height, new_width, im.c==3, ax, ay, bx, by);
       }
       CHECK(cv_img[i].data); // This is bad, but nothing to do about it now
+      if (grayscale) {
+        cv_img[i] = this->ToGrayscale(cv_img[i]);
+      }
       mv.push_back(cv_img[i]);
       mv_channel_offset+=cv_img[i].channels();
     }
