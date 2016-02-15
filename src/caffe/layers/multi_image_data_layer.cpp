@@ -635,6 +635,9 @@ void MultiImageDataLayer<Dtype>::InternalThreadEntry() {
       CHECK(cv_img[i].data); // This is bad, but nothing to do about it now
       if (grayscale) {
         cv_img[i] = this->ToGrayscale(cv_img[i]);
+        //std::stringstream ss;
+        //ss << "grayimage-" << i << "-" << j << ".jpg";
+        //LOG(INFO) << "imwrite returned:" << imwrite("/mnt/data/projects/finegrained/data/tmp/" + ss.str(), cv_img[i]);
       }
       mv.push_back(cv_img[i]);
       mv_channel_offset+=cv_img[i].channels();
