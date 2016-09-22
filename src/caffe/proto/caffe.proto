@@ -393,6 +393,7 @@ message LayerParameter {
   optional RecurrentParameter recurrent_param = 146;
   optional ReductionParameter reduction_param = 136;
   optional ReLUParameter relu_param = 123;
+  optional RepackParameter repack_param = 1050;
   optional ReshapeParameter reshape_param = 133;
   optional ScaleParameter scale_param = 142;
   optional SigmoidParameter sigmoid_param = 124;
@@ -991,6 +992,18 @@ message ReLUParameter {
     CUDNN = 2;
   }
   optional Engine engine = 2 [default = DEFAULT];
+}
+
+// Message that stores parameters used by RepackLayer
+message RepackParameter {
+  enum Operation {
+    PACK_IMAGE = 0;
+    UNPACK_IMAGE = 1;
+  }
+  optional Operation operation = 1 [default = PACK_IMAGE];
+  optional uint32 stride = 2 [default = 1]; // The stride (equal in Y, X)
+  optional uint32 stride_h = 3; // The stride height
+  optional uint32 stride_w = 4; // The stride width
 }
 
 message ReshapeParameter {
