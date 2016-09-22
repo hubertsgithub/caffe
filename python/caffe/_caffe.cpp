@@ -6,10 +6,13 @@
 #include <boost/make_shared.hpp>
 #include <boost/python.hpp>
 #include <boost/python/raw_function.hpp>
+#include <boost/python/slice.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <google/protobuf/text_format.h>
 #include <numpy/arrayobject.h>
 
 // these need to be included after boost on OS X
+#include <algorithm> // NOLINT
 #include <string>  // NOLINT(build/include_order)
 #include <vector>  // NOLINT(build/include_order)
 #include <fstream>  // NOLINT
@@ -184,6 +187,26 @@ Solver<Dtype>* GetSolverFromFile(const string& filename) {
   ReadSolverParamsFromTextFileOrDie(filename, &param);
   return SolverRegistry<Dtype>::CreateSolver(param);
 }
+
+Solver<Dtype>* GetSolverFromString(const string& proto_txt) {
+  using google::protobuf::TextFormat;
+  SolverParameter param;
+  bool success = TextFormat::ParseFromString(proto_txt, &param);
+  if (!success)
+    LOG(FATAL) << "Malformatted proto_txt string";
+  return SolverRegistry<Dtype>::CreateSolver(param);
+}
+
+shared_ptr<Net<Dtype> > GetNetFromString(const string& proto_txt, int phase) {
+  using google::protobuf::TextFormat;
+  NetParameter param;
+  bool success = TextFormat::ParseFromString(proto_txt, &param);
+  param.mutable_state()->set_phase(static_cast<caffe::Phase>(phase));
+  if (!success)
+    LOG(FATAL) << "Malformatted proto_txt string";
+  return shared_ptr<Net<Dtype> >(new Net<Dtype>(param));
+}
+
 
 struct NdarrayConverterGenerator {
   template <typename T> struct apply;
@@ -399,6 +422,9 @@ BOOST_PYTHON_MODULE(_caffe) {
 
   bp::def("get_solver", &GetSolverFromFile,
       bp::return_value_policy<bp::manage_new_object>());
+  bp::def("get_solver_from_string", &GetSolverFromString,
+    bp::return_value_policy<bp::manage_new_object>());
+  bp::def("get_net_from_string", &GetNetFromString);
 
   // vector wrappers for all the vector types we use
   bp::class_<vector<shared_ptr<Blob<Dtype> > > >("BlobVec")
