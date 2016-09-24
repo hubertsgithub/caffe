@@ -4,6 +4,8 @@
 % Copyright (c) 2016 Adobe Systems Incorporated and Carnegie Mellon University. 
 % All rights reserved.[see LICENSE for details]
 % -------------------------------------------------------------------------- %
+
+% Written by Aayush Bansal. Please contact ab.nsit@gmail.com
 */
 
 #include <vector>
