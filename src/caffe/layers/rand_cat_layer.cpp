@@ -1,3 +1,11 @@
+/*
+% --------------------------------------------------------------------------- %
+% MarrRevisited - Surface Normal Estimation
+% Copyright (c) 2016 Adobe Systems Incorporated and Carnegie Mellon University. 
+% All rights reserved.[see LICENSE for details]
+% -------------------------------------------------------------------------- %
+*/
+
 #include <vector>
 #include <math.h>
 #include "caffe/layer.hpp"
