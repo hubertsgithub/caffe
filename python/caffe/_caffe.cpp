@@ -7,6 +7,7 @@
 #include <boost/python.hpp>
 #include <boost/python/raw_function.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 #include <numpy/arrayobject.h>
 
 // these need to be included after boost on OS X
@@ -46,6 +47,8 @@ namespace caffe {
 // For Python, for now, we'll just always use float as the type.
 typedef float Dtype;
 const int NPY_DTYPE = NPY_FLOAT32;
+//typedef double Dtype;
+//const int NPY_DTYPE = NPY_FLOAT64;
 
 // Selecting mode.
 void set_mode_cpu() { Caffe::set_mode(Caffe::CPU); }
@@ -74,7 +77,7 @@ void CheckContiguousArray(PyArrayObject* arr, string name,
   if (PyArray_NDIM(arr) != 4) {
     throw std::runtime_error(name + " must be 4-d");
   }
-  if (PyArray_TYPE(arr) != NPY_FLOAT32) {
+  if (PyArray_TYPE(arr) != NPY_DTYPE) {
     throw std::runtime_error(name + " must be float32");
   }
   if (PyArray_DIMS(arr)[1] != channels) {
@@ -215,7 +218,7 @@ struct NdarrayCallPolicies : public bp::default_call_policies {
     const int num_axes = blob->num_axes();
     vector<npy_intp> dims(blob->shape().begin(), blob->shape().end());
     PyObject *arr_obj = PyArray_SimpleNewFromData(num_axes, dims.data(),
-                                                  NPY_FLOAT32, data);
+                                                  NPY_DTYPE, data);
     // SetBaseObject steals a ref, so we need to INCREF.
     Py_INCREF(pyblob.ptr());
     PyArray_SetBaseObject(reinterpret_cast<PyArrayObject*>(arr_obj),
@@ -369,6 +372,8 @@ BOOST_PYTHON_MODULE(_caffe) {
     .add_property("net", &Solver<Dtype>::net)
     .add_property("test_nets", bp::make_function(&Solver<Dtype>::test_nets,
           bp::return_internal_reference<>()))
+    .add_property("test_mean_scores", bp::make_function(&Solver<Dtype>::test_mean_scores,
+          bp::return_internal_reference<>()))
     .add_property("iter", &Solver<Dtype>::iter)
     .def("add_callback", &Solver_add_callback<Dtype>)
     .def("solve", static_cast<void (Solver<Dtype>::*)(const char*)>(
@@ -418,6 +423,11 @@ BOOST_PYTHON_MODULE(_caffe) {
     .def(bp::vector_indexing_suite<vector<shared_ptr<Net<Dtype> > >, true>());
   bp::class_<vector<bool> >("BoolVec")
     .def(bp::vector_indexing_suite<vector<bool> >());
+  bp::class_<vector<map<string, Dtype> > >("TestMeanScoreVec")
+    .def(bp::vector_indexing_suite<vector<map<string, Dtype> > >());
+  // map wrappers for all the vector types we use
+  bp::class_<map<string, Dtype> >("TestMeanScoreMap")
+    .def(bp::map_indexing_suite<map<string, Dtype> >());
 
   // boost python expects a void (missing) return value, while import_array
   // returns NULL for python3. import_array1() forces a void return value.

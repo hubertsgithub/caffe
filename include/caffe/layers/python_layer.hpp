@@ -24,9 +24,26 @@ class PythonLayer : public Layer<Dtype> {
         && !ShareInParallel()) {
       LOG(FATAL) << "PythonLayer is not implemented in Multi-GPU training";
     }
-    self_.attr("param_str") = bp::str(
-        this->layer_param_.python_param().param_str());
     self_.attr("phase") = static_cast<int>(this->phase_);
+
+    self_.attr("param_str_") = bp::str(
+       this->layer_param_.python_param().param_str()
+    );
+
+	  Phase phase = this->layer_param_.phase();
+	  std::string phase_str;
+	  if (phase == TRAIN) {
+	  	  phase_str = "TRAIN";
+	  } else {
+	  	  phase_str = "TEST";
+	  }
+	  self_.attr("phase_") = bp::str(phase_str);
+
+	  std::vector<std::string> top_names;
+      for (int i = 0; i < this->layer_param_.top_size(); ++i) {
+		top_names.push_back(this->layer_param_.top(i));
+      }
+	  self_.attr("top_names_") = top_names;
     self_.attr("setup")(bottom, top);
   }
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,

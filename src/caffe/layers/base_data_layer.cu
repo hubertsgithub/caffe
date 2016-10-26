@@ -28,4 +28,29 @@ void BasePrefetchingDataLayer<Dtype>::Forward_gpu(
 
 INSTANTIATE_LAYER_GPU_FORWARD(BasePrefetchingDataLayer);
 
+
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE, JUST FOR COMPATIBILITY FOR THE MINC DATA LAYER
+/////////////////////////////////////////////////////////////////////////
+
+template <typename Dtype>
+void BasePrefetchingDataLayerOLD<Dtype>::Forward_gpu(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  // First, join the thread
+  JoinPrefetchThread();
+  // Copy the data
+  for (int i = 0; i < num_prefetch_; i++) {
+    caffe_copy(prefetch_blob_[i].count(), prefetch_blob_[i].cpu_data(),
+        top[i]->mutable_gpu_data());
+  }
+  // Start a new prefetch thread
+  CreatePrefetchThread();
+}
+
+INSTANTIATE_LAYER_GPU_FORWARD(BasePrefetchingDataLayerOLD);
+
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE END
+/////////////////////////////////////////////////////////////////////////
+
 }  // namespace caffe
