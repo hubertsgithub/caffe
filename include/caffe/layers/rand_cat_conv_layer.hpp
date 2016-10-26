@@ -50,7 +50,7 @@ class RandCatConvLayer : public Layer<Dtype> {
  int N_;
  // if we need to run the random no. generator
  bool if_rand_;
- // number of bottom blobs containing hypercol data 
+ // number of bottom blobs containing hypercol data
  int n_hblobs_;
  // bottom-blobs start and end ids
  int start_id_;
@@ -61,7 +61,7 @@ class RandCatConvLayer : public Layer<Dtype> {
  std::vector<int> rand_points_;
  // pooling factor
  std::vector<int> poolf_;
- // pading factor
+ // padding factor
  std::vector<Dtype> padf_;
  // make a vector of height, width, num_pixels for diff conv.layers --
  std::vector<int> height_, width_, pixels_;
