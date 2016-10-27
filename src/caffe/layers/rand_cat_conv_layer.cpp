@@ -64,7 +64,9 @@ void RandCatConvLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   top[0]->Reshape(top_shape);
 
   // set the surface-norm layer to be nx3 --
-  top_shape[1] = 3; // TODO - make it flexible by providing param
+  //top_shape[1] = 3; // TODO - make it flexible by providing param
+  // set the antishadow layer to be nx1 --
+  top_shape[1] = 1; // TODO - make it flexible by providing param
   top[1]->Reshape(top_shape);
 }
 
@@ -236,8 +238,14 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     }
 
     // and accumulate the surface normals (hard-coded for surface normals)
-    for(int bc = 0; bc < 3; bc++){
-      int init_sn = n*3*bottom_width*bottom_height +
+    //for(int bc = 0; bc < 3; bc++){
+      //int init_sn = n*3*bottom_width*bottom_height +
+              //bc*bottom_width*bottom_width + y_pt*bottom_width + x_pt;
+      //top_sn[s_sn++] = sn_data[init_sn];
+    //}
+    // and accumulate the antishadow (hard-coded for antishadow)
+    for(int bc = 0; bc < 1; bc++){
+      int init_sn = n*1*bottom_width*bottom_height +
               bc*bottom_width*bottom_width + y_pt*bottom_width + x_pt;
       top_sn[s_sn++] = sn_data[init_sn];
     }
