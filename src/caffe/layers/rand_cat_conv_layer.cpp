@@ -22,6 +22,9 @@ void RandCatConvLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 
   // if random sampling is required else choose all the points --
   if_rand_ = params_.rand_selection();
+  // class label balancing for the antishadow task (this is triggered only if
+  // rand_selection is true!
+  if_balanced_ = params_.balanced();
   if(if_rand_){
  	  N_ = params_.num_output();
   } else {
@@ -76,46 +79,126 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   // At training time, randomly select N_ points per image
   // At test time, take all the points in the image (1 image at test time)
-  const Dtype* valid_data = bottom[end_id_+1]->cpu_data();
+  // NOTE: The original code assumed that all images in the batch have the same
+  // valid mask. Now they can have different ones.
+  Blob<Dtype>* valid_data_bottom = bottom[end_id_+1];
+  const Dtype* valid_data = valid_data_bottom->cpu_data();
+
+  // Currently we use these to store labels instead of surface normals
+  Blob<Dtype>* sn_data_bottom = bottom[end_id_+2];
+  const Dtype* sn_data = sn_data_bottom->cpu_data();
+
+  // NOTE: We assume that the pooling factor for the first bottom is 1, i.e. it
+  // has the same resolution as the input image.
+  CHECK_EQ(valid_data_bottom->num(), bottom[start_id_]->num());
+  CHECK_EQ(valid_data_bottom->channels(), 1);
+  CHECK_EQ(valid_data_bottom->height(), bottom[start_id_]->height());
+  CHECK_EQ(valid_data_bottom->width(), bottom[start_id_]->width());
+  CHECK_EQ(valid_data_bottom->num(), sn_data_bottom->num());
+  CHECK_EQ(sn_data_bottom->channels(), 1);
+  CHECK_EQ(valid_data_bottom->height(), sn_data_bottom->height());
+  CHECK_EQ(valid_data_bottom->width(), sn_data_bottom->width());
+
+  // rand_points_ store the selected random points. For each point we have three consecutive elements in the array:
+  // 1) n (the batch_idx of the input image)
+  // 2) x_pt (the x coordinate of the point)
+  // 3) y_pt (the y coordinate of the point)
   rand_points_.clear();
+
   if(if_rand_) {
     // generate the list of points --
     std::srand ( unsigned ( std::time(0) ) );
     std::vector<int> shuffle_data_points;
-    const int num_data_points = (bottom[start_id_]->height())*(bottom[start_id_]->width());
-    for(int i = 0; i < num_data_points; i++){
-      shuffle_data_points.push_back(i);
-    }
 
-	  for(int i = 0; i < (bottom[start_id_]->num()); i++) {
-      // shuffle the points in the image --
+    if (if_balanced_) {
+      // Hard code that we have two different labels
+      int label_count = 2;
+      std::vector<int> cnt_by_label(label_count, 0);
+      // First collect all points for each label
+      const int num_pixels = (bottom[start_id_]->height())*(bottom[start_id_]->width());
+      const int num_data_points = (bottom[start_id_]->num())*num_pixels;
+      for(int i = 0; i < num_data_points; i++){
+        shuffle_data_points.push_back(i);
+      }
+      // shuffle the points in all images --
       std::random_shuffle(shuffle_data_points.begin(), shuffle_data_points.end());
-      // find the N-valid-points from a image --
-      int cnt_vp = 0;
-      for(int j = 0; j < num_data_points; j++){
-        int j_pt = shuffle_data_points[j];
-        int data_pt = valid_data[j_pt];
-        if(data_pt == 1) {
-          cnt_vp++;
-          rand_points_.push_back(i);
+
+      // find the batch_size * N // (label_count) valid-points across all
+      // images in the batch
+      int max_label_count = (bottom[start_id_]->num()) * N_ / label_count;
+      for(int i = 0; i < num_data_points; i++) {
+        // find the chosen random point
+        int i_rnd = shuffle_data_points[i];
+        int n = i_rnd / num_pixels;
+        int j_pt = i_rnd % num_pixels;
+
+        int data_pt = valid_data[i_rnd];
+        int label_pt = sn_data[i_rnd];
+        if(data_pt == 1 && cnt_by_label[label_pt] < max_label_count) {
+          cnt_by_label[label_pt]++;
+          rand_points_.push_back(n);
           int x_pt = j_pt % (bottom[start_id_]->width());
           int y_pt = (int) j_pt/(bottom[start_id_]->width());
 
-          //LOG(INFO) << "J_pt" << j_pt << " X_pt: " << x_pt << " Y_pt: " << y_pt;
+          //LOG(INFO) << "n: " << n << " X_pt: " << x_pt << " Y_pt: " << y_pt;
           rand_points_.push_back(x_pt);
           rand_points_.push_back(y_pt);
         }
-        if(cnt_vp >= N_){
+        bool not_enough = false;
+        for (int l = 0; l < label_count; ++l) {
+          not_enough |= cnt_by_label[l] < max_label_count;
+        }
+        // If we have enough samples, we can stop sampling
+        if (!not_enough) {
+          LOG(INFO) << "Generated labels";
+          for (int l = 0; l < label_count; ++l) {
+            LOG(INFO) << "label (" << l << "): " << cnt_by_label[l];
+          }
+          LOG(INFO) << "rand_points_:" << rand_points_.size();
           break;
         }
       }
-	  }
-	  shuffle_data_points.clear();
+      for (int l = 0; l < label_count; ++l) {
+        CHECK_EQ(cnt_by_label[l], max_label_count) << "Label (" << l << ") count not enough: " << cnt_by_label[l];
+      }
+    } else {
+      const int num_data_points = (bottom[start_id_]->height())*(bottom[start_id_]->width());
+      for(int i = 0; i < num_data_points; i++){
+        shuffle_data_points.push_back(i);
+      }
+
+      for(int i = 0; i < (bottom[start_id_]->num()); i++) {
+        const Dtype* local_valid_data = valid_data + i*valid_data_bottom->height()*valid_data_bottom->width();
+        // shuffle the points in the image --
+        std::random_shuffle(shuffle_data_points.begin(), shuffle_data_points.end());
+        // find the N-valid-points from a image --
+        int cnt_vp = 0;
+        for(int j = 0; j < num_data_points; j++){
+          int j_pt = shuffle_data_points[j];
+          int data_pt = local_valid_data[j_pt];
+          if(data_pt == 1) {
+            cnt_vp++;
+            rand_points_.push_back(i);
+            int x_pt = j_pt % (bottom[start_id_]->width());
+            int y_pt = (int) j_pt/(bottom[start_id_]->width());
+
+            //LOG(INFO) << "J_pt" << j_pt << " X_pt: " << x_pt << " Y_pt: " << y_pt;
+            rand_points_.push_back(x_pt);
+            rand_points_.push_back(y_pt);
+          }
+          if(cnt_vp >= N_){
+            break;
+          }
+        }
+      }
+    }
+    shuffle_data_points.clear();
   } else {
 	  // considering all the data points are considered --
 	  for (int i = 0; i < (bottom[start_id_]->num()); i++) {
+      const Dtype* local_valid_data = valid_data + i*valid_data_bottom->height()*valid_data_bottom->width();
       for (int j = 0; j < (bottom[start_id_]->height()*bottom[start_id_]->width()); j++) {
-        int data_pt = valid_data[j];
+        int data_pt = local_valid_data[j];
         if(data_pt == 1) {
           rand_points_.push_back(i);
           int x_pt = j % (bottom[start_id_]->width());
@@ -148,7 +231,6 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   for (int i = 0; i < n_hblobs_; i++) {
     bottom_layers[i] = bottom[i]->cpu_data();
   }
-  const Dtype* sn_data = bottom[end_id_+2]->cpu_data();
 
   // get the hypercolumn features for the selected points --
   int i = 0; int j = 0;
@@ -160,8 +242,10 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     n = int(rand_points_[j++]);
     x_pt = int(rand_points_[j++]);
     y_pt = int(rand_points_[j++]);
+
     // then find the corresponding locations
    	for (int b = 0; b < n_hblobs_; b++) {
+      //LOG(INFO) << "n: " << n << " X_pt: " << x_pt << " Y_pt: " << y_pt << " b: " << b;
       tx = (x_pt-padf_[b])/poolf_[b];
       ty = (y_pt-padf_[b])/poolf_[b];
       tx1 = static_cast<int>(floor(tx));
@@ -176,7 +260,7 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       //	tx2 = tx1;
       //}
 
-      CHECK_LT(tx2, width_[b]);
+      CHECK_LT(tx2, width_[b]) << "n: " << n << " X_pt: " << x_pt << " Y_pt: " << y_pt << " b: " << b;
       // CHECK_GE(ty1, 0);
       ty1 = ty1 > 0 ? ty1 : 0;
       ty2 = ty2 > 0 ? ty2 : 0;

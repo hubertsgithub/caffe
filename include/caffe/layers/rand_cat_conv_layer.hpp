@@ -50,6 +50,8 @@ class RandCatConvLayer : public Layer<Dtype> {
  int N_;
  // if we need to run the random no. generator
  bool if_rand_;
+ // if we need to do class balancing when random sampling
+ bool if_balanced_;
  // number of bottom blobs containing hypercol data
  int n_hblobs_;
  // bottom-blobs start and end ids

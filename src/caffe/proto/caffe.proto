@@ -995,9 +995,9 @@ message PythonParameter {
   optional bool share_in_parallel = 4 [default = false];
 }
 
-// added by ab -- 
+// added by ab --
 message RandCatParameter {
-  // for rand_cat_param -- 
+  // for rand_cat_param --
   // Specify if we should randomly sample or not
   optional bool rand_selection = 1 [default = true];
 
@@ -1007,19 +1007,24 @@ message RandCatParameter {
 }
 
 message RandCatConvParameter {
-  // for rand_cat_param -- 
+  // for rand_cat_param --
   // Specify if we should randomly sample or not
   optional bool rand_selection = 1 [default = true];
 
   // Specify no. of outputs randomy sampled from the data --
   optional uint32 num_output = 2 [default = 1000];
 
-  // 
+  //
   repeated int32 pooling_factor = 3;
 
   // specify the amount of padding done during the test time
   // this is to avoid redundant computation --
   optional uint32 pad_factor = 4 [default = 0];
+
+  // If this is true, we will sample the same number of examples for each label
+  // (this doesn't work with the normals, only the antishadows task).
+  // Note: This parameter is used only if rand_selection is true!
+  optional bool balanced = 5 [default = false];
 }
 
 // Message that stores parameters used by RecurrentLayer
