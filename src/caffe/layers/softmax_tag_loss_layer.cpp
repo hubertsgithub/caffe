@@ -77,6 +77,7 @@ void SoftmaxWithTagLossLayer<Dtype>::SetupWeights_cpu(const vector<Blob<Dtype>*>
 
 template <typename Dtype>
 void SoftmaxWithTagLossLayer<Dtype>::SetupWeights_gpu(const vector<Blob<Dtype>*>& bottom) {
+#ifndef CPU_ONLY
   Dtype* weights_ptr = weights_.mutable_gpu_data();
   int class_num = prob_.shape(softmax_axis_);
   if (bottom.size() > 2) {
@@ -96,6 +97,7 @@ void SoftmaxWithTagLossLayer<Dtype>::SetupWeights_gpu(const vector<Blob<Dtype>*>
   } else {
     caffe_gpu_set(class_num, (Dtype)1, weights_ptr);
   }
+#endif
 }
 
 template <typename Dtype>
