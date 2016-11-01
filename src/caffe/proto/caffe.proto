@@ -1025,6 +1025,9 @@ message RandCatConvParameter {
   // (this doesn't work with the normals, only the antishadows task).
   // Note: This parameter is used only if rand_selection is true!
   optional bool balanced = 5 [default = false];
+
+  // Number of channels for the labels
+  optional uint32 label_channels = 6 [default = 3];
 }
 
 // Message that stores parameters used by RecurrentLayer

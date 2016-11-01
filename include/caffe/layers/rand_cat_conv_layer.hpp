@@ -52,6 +52,9 @@ class RandCatConvLayer : public Layer<Dtype> {
  bool if_rand_;
  // if we need to do class balancing when random sampling
  bool if_balanced_;
+ // Number of channels for the labels. E.g. it's 3 for normals, 1 for
+ // antishadow labels.
+ int label_channels_;
  // number of bottom blobs containing hypercol data
  int n_hblobs_;
  // bottom-blobs start and end ids
