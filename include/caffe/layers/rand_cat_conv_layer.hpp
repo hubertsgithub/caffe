@@ -55,6 +55,12 @@ class RandCatConvLayer : public Layer<Dtype> {
  // Number of channels for the labels. E.g. it's 3 for normals, 1 for
  // antishadow labels.
  int label_channels_;
+ // This determines the ratio when balancing between classes
+ std::vector<float> class_balance_;
+ // This should be equal to sum(class_balance_)
+ int full_class_weight_;
+ // This should be equal to class_balance_.size()
+ int class_count_;
  // number of bottom blobs containing hypercol data
  int n_hblobs_;
  // bottom-blobs start and end ids

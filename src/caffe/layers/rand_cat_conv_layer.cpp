@@ -32,6 +32,13 @@ void RandCatConvLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 	       (bottom[start_id_]->width() - 2*params_.pad_factor());
   }
   label_channels_ = params_.label_channels();
+  // Hard code the number of different labels
+  class_balance_.clear();
+  class_balance_.push_back(0.5);
+  class_balance_.push_back(0.5);
+  class_balance_.push_back(1.0);
+  class_count_ = class_balance_.size();
+  full_class_weight_ = 2;
 
   // get the pooling factor for the conv-layers
   // and their corresponding padding requirements --
@@ -111,9 +118,7 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     std::vector<int> shuffle_data_points;
 
     if (if_balanced_) {
-      // Hard code that we have two different labels
-      int label_count = 2;
-      std::vector<int> cnt_by_label(label_count, 0);
+      std::vector<int> cnt_by_label(class_count_, 0);
       // First collect all points for each label
       const int num_pixels = (bottom[start_id_]->height())*(bottom[start_id_]->width());
       const int num_data_points = (bottom[start_id_]->num())*num_pixels;
@@ -123,9 +128,13 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       // shuffle the points in all images --
       std::random_shuffle(shuffle_data_points.begin(), shuffle_data_points.end());
 
-      // find the batch_size * N // (label_count) valid-points across all
+      // find the batch_size * N // (class_count) valid-points across all
       // images in the batch
-      int max_label_count = (bottom[start_id_]->num()) * N_ / label_count;
+      std::vector<int> max_label_counts;
+      for(int i = 0; i < class_count_; i++) {
+        int max_label_count = int((bottom[start_id_]->num()) * N_ * class_balance_[i] / full_class_weight_);
+        max_label_counts.push_back(max_label_count);
+      }
       for(int i = 0; i < num_data_points; i++) {
         // find the chosen random point
         int i_rnd = shuffle_data_points[i];
@@ -134,7 +143,7 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
         int data_pt = valid_data[i_rnd];
         int label_pt = sn_data[i_rnd];
-        if(data_pt == 1 && cnt_by_label[label_pt] < max_label_count) {
+        if(data_pt == 1 && cnt_by_label[label_pt] < max_label_counts[label_pt]) {
           cnt_by_label[label_pt]++;
           rand_points_.push_back(n);
           int x_pt = j_pt % (bottom[start_id_]->width());
@@ -145,21 +154,21 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
           rand_points_.push_back(y_pt);
         }
         bool not_enough = false;
-        for (int l = 0; l < label_count; ++l) {
-          not_enough |= cnt_by_label[l] < max_label_count;
+        for (int l = 0; l < class_count_; ++l) {
+          not_enough |= cnt_by_label[l] < max_label_counts[l];
         }
         // If we have enough samples, we can stop sampling
         if (!not_enough) {
           LOG(INFO) << "Generated labels";
-          for (int l = 0; l < label_count; ++l) {
+          for (int l = 0; l < class_count_; ++l) {
             LOG(INFO) << "label (" << l << "): " << cnt_by_label[l];
           }
           LOG(INFO) << "rand_points_:" << rand_points_.size();
           break;
         }
       }
-      for (int l = 0; l < label_count; ++l) {
-        CHECK_EQ(cnt_by_label[l], max_label_count) << "Label (" << l << ") count not enough: " << cnt_by_label[l];
+      for (int l = 0; l < class_count_; ++l) {
+        CHECK_EQ(cnt_by_label[l], max_label_counts[l]) << "Label (" << l << ") count not enough: " << cnt_by_label[l];
       }
     } else {
       const int num_data_points = (bottom[start_id_]->height())*(bottom[start_id_]->width());
@@ -321,12 +330,27 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       }
     }
 
+    // TODO: This is hard-coded right now
+    // label 0: normal/depth discontinuity, negative label
+    // label 1: shadow boundary, negative label
+    // label 2: constant shading region, positive label
+    std::vector<int> label_mapping;
+    //label_mapping.push_back(0);
+    //label_mapping.push_back(0);
+    //label_mapping.push_back(1);
+    label_mapping.push_back(0);
+    label_mapping.push_back(1);
+    label_mapping.push_back(2);
     // and accumulate the surface normals (hard-coded for surface normals)
     // and accumulate the antishadow (hard-coded for antishadow)
     for(int bc = 0; bc < label_channels_; bc++){
       int init_sn = n*label_channels_*bottom_width*bottom_height +
               bc*bottom_width*bottom_width + y_pt*bottom_width + x_pt;
-      top_sn[s_sn++] = sn_data[init_sn];
+      // Join sub-labels
+      int label = sn_data[init_sn];
+      CHECK_GE(label, 0);
+      CHECK_LT(label, class_count_);
+      top_sn[s_sn++] = label_mapping[label];
     }
   }
 }
