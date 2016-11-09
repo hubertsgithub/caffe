@@ -1028,6 +1028,8 @@ message RandCatConvParameter {
 
   // Number of channels for the labels
   optional uint32 label_channels = 6 [default = 3];
+
+  repeated float class_weight = 7;
 }
 
 // Message that stores parameters used by RecurrentLayer

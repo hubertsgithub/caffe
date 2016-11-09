@@ -32,13 +32,15 @@ void RandCatConvLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 	       (bottom[start_id_]->width() - 2*params_.pad_factor());
   }
   label_channels_ = params_.label_channels();
-  // Hard code the number of different labels
+
   class_balance_.clear();
-  class_balance_.push_back(0.5);
-  class_balance_.push_back(0.5);
-  class_balance_.push_back(1.0);
+  full_class_weight_ = 0;
+  for (int i = 0; i < params_.class_weight_size(); i++) {
+    float cw = params_.class_weight(i);
+    class_balance_.push_back(cw);
+    full_class_weight_ += cw;
+  }
   class_count_ = class_balance_.size();
-  full_class_weight_ = 2;
 
   // get the pooling factor for the conv-layers
   // and their corresponding padding requirements --
