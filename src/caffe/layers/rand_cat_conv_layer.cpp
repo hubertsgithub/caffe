@@ -336,13 +336,6 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     // label 0: normal/depth discontinuity, negative label
     // label 1: shadow boundary, negative label
     // label 2: constant shading region, positive label
-    std::vector<int> label_mapping;
-    //label_mapping.push_back(0);
-    //label_mapping.push_back(0);
-    //label_mapping.push_back(1);
-    label_mapping.push_back(0);
-    label_mapping.push_back(1);
-    label_mapping.push_back(2);
     // and accumulate the surface normals (hard-coded for surface normals)
     // and accumulate the antishadow (hard-coded for antishadow)
     for(int bc = 0; bc < label_channels_; bc++){
@@ -352,7 +345,7 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       int label = sn_data[init_sn];
       CHECK_GE(label, 0);
       CHECK_LT(label, class_count_);
-      top_sn[s_sn++] = label_mapping[label];
+      top_sn[s_sn++] = label;
     }
   }
 }
