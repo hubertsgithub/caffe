@@ -341,11 +341,15 @@ void RandCatConvLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     for(int bc = 0; bc < label_channels_; bc++){
       int init_sn = n*label_channels_*bottom_width*bottom_height +
               bc*bottom_width*bottom_width + y_pt*bottom_width + x_pt;
-      // Join sub-labels
-      int label = sn_data[init_sn];
-      CHECK_GE(label, 0);
-      CHECK_LT(label, class_count_);
-      top_sn[s_sn++] = label;
+
+      if (if_balanced_) {
+        int label = sn_data[init_sn];
+        CHECK_GE(label, 0);
+        CHECK_LT(label, class_count_);
+        top_sn[s_sn++] = label;
+      } else {
+        top_sn[s_sn++] = sn_data[init_sn];
+      }
     }
   }
 }
