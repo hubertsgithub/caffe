@@ -751,6 +751,9 @@ message MultiImageDataParameter {
   repeated uint32 border_value = 19;
   // if > 0 each sample produces 10 in the output (5 crops and 2 mirrors)
   optional bool oversample = 20 [default = false];
+  // Whether or not to convert the loaded image to grayscale (and still keep
+  // the 3 color channels)
+  optional bool grayscale = 21 [default = false];
 }
 
 message InfogainLossParameter {

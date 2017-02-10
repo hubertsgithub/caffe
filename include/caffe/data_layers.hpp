@@ -372,6 +372,7 @@ class MultiImageDataLayer : public BasePrefetchingDataLayerOLD<Dtype> {
   shared_ptr<Caffe::RNG> prefetch_rng_;
   virtual void ShuffleImages();
   virtual void InternalThreadEntry();
+  virtual cv::Mat ToGrayscale(const cv::Mat& cv_img);
 
   struct patch_info {
     std::string path;
