@@ -72,6 +72,9 @@ class Solver {
   inline const vector<shared_ptr<Net<Dtype> > >& test_nets() {
     return test_nets_;
   }
+  inline const vector<map<string, Dtype> >& test_mean_scores() {
+    return test_mean_scores_;
+  }
   int iter() const { return iter_; }
 
   // Invoked at specific points during an iteration
