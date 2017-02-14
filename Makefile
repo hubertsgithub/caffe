@@ -28,6 +28,8 @@ endif
 SRC_DIRS := $(shell find src tools examples -type d -exec bash -c "find {} -maxdepth 1 \
 	\( -name '*.cpp' -o -name '*.proto' \) | grep -q ." \; -print)
 
+#SRC_DIRS := $(shell find . -type d \( -path ./snapshots -o -path ./data -o -path ./training_runs -o -path ./.git -o -path ./.gitattributes -o -path ./models \) -prune -o -name "*" -exec bash -c "find {} -maxdepth 1 \
+
 # The target shared library name
 LIBRARY_NAME := $(PROJECT)
 LIB_BUILD_DIR := $(BUILD_DIR)/lib
