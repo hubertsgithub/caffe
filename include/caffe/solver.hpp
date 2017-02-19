@@ -80,7 +80,7 @@ class Solver {
     return test_nets_;
   }
 
-  int_tp iter() {
+  int_tp iter() const {
     return iter_;
   }
 
@@ -89,6 +89,9 @@ class Solver {
   }
 
   virtual void SnapshotSolverState(const string& model_filename) = 0;
+  inline const vector<map<string, Dtype> >& test_mean_scores() {
+    return test_mean_scores_;
+  }
 
   // Invoked at specific points during an iteration
   class Callback {
@@ -138,6 +141,7 @@ class Solver {
   shared_ptr<Net<Dtype> > net_;
   vector<shared_ptr<Net<Dtype> > > test_nets_;
   device* device_;
+  vector<map<string, Dtype> > test_mean_scores_;
   vector<Callback*> callbacks_;
   vector<Dtype> losses_;
   Dtype smoothed_loss_;

@@ -231,6 +231,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
       } else if (type == "innerproduct") {
         layer_param->mutable_inner_product_param()->set_num_output(
             v0_layer_param.num_output());
+      } else if (type == "rand_cat") {
+        layer_param->mutable_rand_cat_param()->set_num_output(
+            v0_layer_param.num_output());
+      } else if (type == "rand_cat_conv") {
+        layer_param->mutable_rand_cat_conv_param()->set_num_output(
+            v0_layer_param.num_output());
       } else {
         LOG(ERROR)<< "Unknown parameter num_output for layer type " << type;
         is_fully_compatible = false;
@@ -580,8 +586,14 @@ V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return V1LayerParameter_LayerType_LRN;
   } else if (type == "multinomial_logistic_loss") {
     return V1LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS;
+  } else if (type == "normalize") {
+    return V1LayerParameter_LayerType_NORMALIZE;
   } else if (type == "pool") {
     return V1LayerParameter_LayerType_POOLING;
+  } else if (type == "rand_cat_conv") {
+    return V1LayerParameter_LayerType_RAND_CAT_CONV;
+  } else if (type == "rand_cat") {
+    return V1LayerParameter_LayerType_RAND_CAT;
   } else if (type == "relu") {
     return V1LayerParameter_LayerType_RELU;
   } else if (type == "sigmoid") {
@@ -949,10 +961,16 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
       return "MultinomialLogisticLoss";
     case V1LayerParameter_LayerType_MVN:
       return "MVN";
+    case V1LayerParameter_LayerType_NORMALIZE:
+      return "Normalize";
     case V1LayerParameter_LayerType_POOLING:
       return "Pooling";
     case V1LayerParameter_LayerType_POWER:
       return "Power";
+    case V1LayerParameter_LayerType_RAND_CAT_CONV:
+      return "RandCatConv";
+    case V1LayerParameter_LayerType_RAND_CAT:
+      return "RandCat";
     case V1LayerParameter_LayerType_RELU:
       return "ReLU";
     case V1LayerParameter_LayerType_SIGMOID:
@@ -976,10 +994,10 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     case V1LayerParameter_LayerType_THRESHOLD:
       return "Threshold";
     default:
-      LOG(FATAL)<< "Unknown V1LayerParameter layer type: " << type;
+      LOG(FATAL) << "Unknown V1LayerParameter layer type: " << type;
       return "";
-    }
   }
+}
 
 bool NetNeedsInputUpgrade(const NetParameter& net_param) {
   return net_param.input_size() > 0;

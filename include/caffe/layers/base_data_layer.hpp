@@ -45,6 +45,46 @@ class BaseDataLayer : public Layer<Dtype> {
   bool output_labels_;
 };
 
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE, JUST FOR COMPATIBILITY FOR THE MINC DATA LAYER
+/////////////////////////////////////////////////////////////////////////
+
+template <typename Dtype>
+class BasePrefetchingDataLayerOLD :
+    public BaseDataLayer<Dtype>, public InternalThread {
+ public:
+  explicit BasePrefetchingDataLayerOLD(const LayerParameter& param)
+      : BaseDataLayer<Dtype>(param) {}
+  virtual ~BasePrefetchingDataLayerOLD() {}
+  // LayerSetUp: implements common data layer setup functionality, and calls
+  // DataLayerSetUp to do special data layer setup for individual layer types.
+  // This method may not be overridden.
+  void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void CreatePrefetchThread();
+  virtual void JoinPrefetchThread();
+  // The thread's function
+  virtual void InternalThreadEntry() {}
+
+ protected:
+  // Maximum number of outputs (top blobs) of a prefetch data layer
+  static const int MAX_NUM_PREFETCH = 8;
+  Blob<Dtype> prefetch_blob_[MAX_NUM_PREFETCH]; // output blobs
+  int num_prefetch_; // top.size()
+
+  Blob<Dtype> transformed_data_;
+};
+
+/////////////////////////////////////////////////////////////////////////
+// OLD CODE END
+/////////////////////////////////////////////////////////////////////////
+
 template <typename Dtype>
 class Batch {
  public:

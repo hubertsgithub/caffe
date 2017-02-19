@@ -37,6 +37,8 @@ endif
 SRC_DIRS := $(shell find src tools examples -type d -exec bash -c "find {} -maxdepth 1 \
 	\( -name '*.cpp' -o -name '*.proto' \) | grep -q ." \; -print)
 
+#SRC_DIRS := $(shell find . -type d \( -path ./snapshots -o -path ./data -o -path ./training_runs -o -path ./.git -o -path ./.gitattributes -o -path ./models \) -prune -o -name "*" -exec bash -c "find {} -maxdepth 1 \
+
 # The target shared library name
 LIBRARY_NAME := $(PROJECT)
 LIB_BUILD_DIR := $(BUILD_DIR)/lib
@@ -547,11 +549,11 @@ CXXFLAGS += -MMD -MP
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
-CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
+CXXFLAGS += -pthread -fopenmp -fPIC $(COMMON_FLAGS) $(WARNINGS)
 NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
-LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
+LINKFLAGS += -pthread -fopenmp -fPIC $(COMMON_FLAGS) $(WARNINGS)
 
 USE_PKG_CONFIG ?= 0
 ifeq ($(USE_PKG_CONFIG), 1)

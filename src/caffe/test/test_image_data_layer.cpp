@@ -50,7 +50,7 @@ class ImageDataLayerTest : public MultiDeviceTest<TypeParam> {
     std::ofstream spacefile(filename_space_.c_str(), std::ofstream::out);
     LOG(INFO) << "Using temporary file " << filename_space_;
     spacefile << EXAMPLES_SOURCE_DIR "images/cat.jpg " << 0 << std::endl;
-    spacefile << EXAMPLES_SOURCE_DIR "images/cat gray.jpg " << 1 << std::endl;
+    spacefile << EXAMPLES_SOURCE_DIR "images/cat_gray.jpg " << 1 << std::endl;
     spacefile.close();
   }
 

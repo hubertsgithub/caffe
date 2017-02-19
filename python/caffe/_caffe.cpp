@@ -6,6 +6,7 @@
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/raw_function.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 #include <numpy/arrayobject.h>
 
 // these need to be included after boost on OS X
@@ -86,6 +87,8 @@ namespace caffe {
 // For Python, for now, we'll just always use float as the type.
 typedef float Dtype;
 const int NPY_DTYPE = NPY_FLOAT32;
+//typedef double Dtype;
+//const int NPY_DTYPE = NPY_FLOAT64;
 
 // Selecting mode.
 void set_mode_cpu() { Caffe::set_mode(Caffe::CPU); }
@@ -140,7 +143,8 @@ void CheckContiguousArray(PyArrayObject* arr, string name,
     throw std::runtime_error(name + " must be 4-d");
   }
   */
-  if (PyArray_TYPE(arr) != NPY_FLOAT32) {
+  //Merged: if (PyArray_TYPE(arr) != NPY_FLOAT32) {
+  if (PyArray_TYPE(arr) != NPY_DTYPE) {
     throw std::runtime_error(name + " must be float32");
   }
   for (int_tp i = 1; i < PyArray_NDIM(arr); ++i) {
@@ -334,7 +338,7 @@ struct NdarrayCallPolicies : public bp::default_call_policies {
 #else
     vector<npy_intp> dims(blob->shape().begin(), blob->shape().end());
     PyObject *arr_obj = PyArray_SimpleNewFromData(num_axes, dims.data(),
-                                                  NPY_FLOAT32, data);
+                                                  NPY_DTYPE, data);
 #endif
     // SetBaseObject steals a ref, so we need to INCREF.
     Py_INCREF(pyblob.ptr());
@@ -625,6 +629,8 @@ BOOST_PYTHON_MODULE(_caffe) {
     .add_property("max_iter", &Solver<Dtype>::max_iter)
     .add_property("test_nets", bp::make_function(&Solver<Dtype>::test_nets,
           bp::return_internal_reference<>()))
+    .add_property("test_mean_scores", bp::make_function(&Solver<Dtype>::test_mean_scores,
+          bp::return_internal_reference<>()))
     .add_property("iter", &Solver<Dtype>::iter)
     .add_property("solver_params", &Solver<Dtype>::GetSolverParams,
                                    &Solver<Dtype>::UpdateSolverParams)
@@ -786,6 +792,11 @@ BOOST_PYTHON_MODULE(_caffe) {
     .def(bp::vector_indexing_suite<vector<shared_ptr<Net<Dtype> > >, true>());
   bp::class_<vector<bool> >("BoolVec")
     .def(bp::vector_indexing_suite<vector<bool> >());
+  bp::class_<vector<map<string, Dtype> > >("TestMeanScoreVec")
+    .def(bp::vector_indexing_suite<vector<map<string, Dtype> > >());
+  // map wrappers for all the vector types we use
+  bp::class_<map<string, Dtype> >("TestMeanScoreMap")
+    .def(bp::map_indexing_suite<map<string, Dtype> >());
 
   bp::class_<NCCL<Dtype>, shared_ptr<NCCL<Dtype> >,
     boost::noncopyable>("NCCL",
