@@ -18,7 +18,6 @@
 #include "caffe/layers/softmax_layer.hpp"
 #include "caffe/layers/tanh_layer.hpp"
 #include "caffe/proto/caffe.pb.h"
-#include "caffe/layers/accuracy_precision_recall_layer.hpp"
 
 #ifdef USE_CUDNN
 #include "caffe/layers/cudnn_conv_layer.hpp"
@@ -390,14 +389,6 @@ shared_ptr<Layer<Dtype> > GetTanHLayer(const LayerParameter& param) {
 }
 
 REGISTER_LAYER_CREATOR(TanH, GetTanHLayer);
-
-// Get accuracy precision recall layer
-template <typename Dtype>
-shared_ptr<Layer<Dtype> > GetAccuracyPrecisionRecallLayer(const LayerParameter& param) {
-  return shared_ptr<Layer<Dtype> >(new AccuracyPrecisionRecallLayer<Dtype>(param));
-}
-
-REGISTER_LAYER_CREATOR(AccuracyPrecisionRecallLayer, GetAccuracyPrecisionRecallLayer);
 
 #ifdef WITH_PYTHON_LAYER
 template <typename Dtype>
