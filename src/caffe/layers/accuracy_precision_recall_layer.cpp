@@ -37,7 +37,7 @@ void AccuracyPrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>
   double fp = 1e-5;
   double tn = 1e-5;
   double fn = 1e-5;
-  for (int i = 0; i < bottom[0]->count(); i++)
+  for (int i = 0; i < bottom[0]->count(); ++i)
   {
     const int label_value = static_cast<int>(bottom_label[i]);
     if (has_ignore_label_ && label_value == ignore_label_)
@@ -61,14 +61,16 @@ void AccuracyPrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>
 
   double precision = tp / (tp + fp);
   double recall = tp / (tp + fn);
-  double tpr = tp / (tp + fn);
-  double fpr = tn / (tn + fp);
+  double tnr = tn / (tn + fp);
+  double accuracy = (tp + tn) / (tp + tn + fp + fn);
+
+  // std::cout << tp << " " << tn << " " << fp << " " << fn << std::endl;
 
   top[0]->mutable_cpu_data()[0] = (Dtype)( (2.0 * precision * recall) / (precision + recall));
   top[1]->mutable_cpu_data()[0] = (Dtype)( precision );
   top[2]->mutable_cpu_data()[0] = (Dtype)( recall );
-  top[3]->mutable_cpu_data()[0] = (Dtype)( tpr );
-  top[4]->mutable_cpu_data()[0] = (Dtype)( fpr );
+  top[3]->mutable_cpu_data()[0] = (Dtype)( tnr );
+  top[4]->mutable_cpu_data()[0] = (Dtype)(accuracy);
 }
 
 INSTANTIATE_CLASS(AccuracyPrecisionRecallLayer);
