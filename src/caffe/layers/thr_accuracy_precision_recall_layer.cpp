@@ -24,7 +24,7 @@ void ThrAccuracyPrecisionRecallLayer<Dtype>::Reshape( const vector<Blob<Dtype>*>
   CHECK_EQ(bottom[0]->count(), bottom[1]->count())
       << "Number of labels must match number of predictions; ";
   vector<int> top_shape(0);  // Accuracy is a scalar; 0 axes.
-  for (int k = 0; k < 6; ++k)
+  for (int k = 0; k < 7; ++k)
     top[k]->Reshape(top_shape);
 }
 
@@ -39,6 +39,49 @@ void ThrAccuracyPrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype
   double best_tnr = 0.0;
   double best_accuracy = 0.0;
   double best_fm = 0.0;
+  double num_data = 0.0;
+  double top1_accuracy = 0.0;
+
+  for (int n = 0; n < bottom[0]->num(); ++n)
+  {
+    for (int h = 0; h < bottom[0]->height(); ++h)
+    {
+      for (int w = 0; w < bottom[0]->width(); ++w)
+      {
+
+        int most_likely_label_id = -1;
+        double max_prob = 0.0f;        
+        for (int c = 0; c < bottom[0]->channels(); ++c)
+        {
+          int doffset = bottom[0]->offset(n, c, h, w);
+          double prob = (double)bottom_data[doffset];
+          if (prob > max_prob)
+          {
+            most_likely_label_id = c;
+            max_prob = prob;
+          }
+
+          // std::cout << "=> " << doffset << " " << c << " " << prob << " " << max_prob << " " << most_likely_label_id << std::endl;
+        }
+
+        int loffset = bottom[1]->offset(n, most_likely_label_id, h, w);
+        const int label_value = static_cast<int>(bottom_label[loffset]);
+
+        // std::cout << "===> " << loffset << " " << label_value << " " << most_likely_label_id << " |  ";
+
+        if (has_ignore_label_ && label_value == ignore_label_)
+          continue;
+
+        num_data++;
+        if (label_value == 1)
+          top1_accuracy++;
+        
+        // std::cout << num_data << " " << top1_accuracy << std::endl;
+
+      }
+    }
+  }
+  top1_accuracy /= num_data;
 
   for (double thr = 0.05; thr < 0.55; thr += 0.05)
   {
@@ -85,7 +128,6 @@ void ThrAccuracyPrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype
       best_tnr = tnr;
       best_accuracy = accuracy;
       best_fm = fm;
-
       // std::cout << "=> thr: " << best_thr << " fm: " << best_fm << " pr: " << best_precision << " rec: " << best_recall << " tnr: " << best_tnr << " acc: " << best_accuracy << std::endl;
     }
   }
@@ -97,6 +139,7 @@ void ThrAccuracyPrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype
   top[3]->mutable_cpu_data()[0] = (Dtype)best_tnr;
   top[4]->mutable_cpu_data()[0] = (Dtype)best_accuracy;
   top[5]->mutable_cpu_data()[0] = (Dtype)best_thr;
+  top[6]->mutable_cpu_data()[0] = (Dtype)top1_accuracy;
 }
 
 INSTANTIATE_CLASS(ThrAccuracyPrecisionRecallLayer);

@@ -12,7 +12,7 @@
 namespace caffe {
 
 /**
- * @brief Computes F-score / precision / recall / true negative rate / accuracy  for a multi-label classification task  / automatic prob threshold based on F-score
+ * @brief Computes F-score / precision / recall / true negative rate / accuracy  for a multi-label classification task  / automatic prob threshold based on F-score / top-1 accuracy
  */
 template <typename Dtype>
 class ThrAccuracyPrecisionRecallLayer : public Layer<Dtype> {
@@ -27,8 +27,8 @@ class ThrAccuracyPrecisionRecallLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "ThrAccuracyPrecisionRecall"; }
   virtual inline int ExactNumBottomBlobs() const { return 2; }
 
-  virtual inline int MinTopBlobs() const { return 6; }
-  virtual inline int MaxTopBlos() const { return 6; }
+  virtual inline int MinTopBlobs() const { return 7; }
+  virtual inline int MaxTopBlos() const { return 7; }
 
  protected:
   /**
@@ -56,6 +56,8 @@ class ThrAccuracyPrecisionRecallLayer : public Layer<Dtype> {
    *      accuracy: @f$
    *   -# @f$ (1 \times 1 \times 1 \times 1) @f$
    *      threshold that optimizes F-measure: @f$
+   *   -# @f$ (1 \times 1 \times 1 \times 1) @f$
+   *      top-1 accuracy: @f$
    */
 
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
