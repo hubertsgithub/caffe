@@ -20,6 +20,7 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/layers/accuracy_precision_recall_layer.hpp"
 #include "caffe/layers/thr_accuracy_precision_recall_layer.hpp"
+#include "caffe/layers/triplet_loss_layer.hpp"
 
 #ifdef USE_CUDNN
 #include "caffe/layers/cudnn_conv_layer.hpp"
